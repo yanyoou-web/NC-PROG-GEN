@@ -1,0 +1,744 @@
+/* 全体スタイル */
+body { font-family: sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 5px; }
+.container { max-width: 900px; margin: 0 auto; background: #1e1e1e; padding: 15px; border-radius: 8px; position: relative; }
+
+/* 言語（ラベルなし・左寄せ・コンパクト） */
+.ui-lang-row {
+  margin-bottom: 8px;
+  justify-content: flex-start;
+}
+.ui-lang-select {
+  width: 7.25rem;
+  max-width: 100%;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+/* 上段: 左＝選択式（機械・テンプレ）／右＝入力系（ファイル名・基本） */
+.form-layout-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 20px;
+  align-items: start;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #333;
+}
+.form-layout-split__col {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+.form-layout-split__col--select {
+  padding: 10px 12px 10px 10px;
+  background: rgba(77, 166, 255, 0.06);
+  border-radius: 6px;
+  border: 1px solid #2a3540;
+}
+.form-layout-split__col--input {
+  padding: 10px 10px 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  border: 1px solid #333;
+}
+.group.group--split {
+  margin-bottom: 0;
+  padding-bottom: 12px;
+  margin-top: 0;
+  border-bottom: 1px solid #2f2f2f;
+}
+.group.group--split:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.form-layout-split__col .group.group--split:first-child h3 {
+  margin-top: 0;
+}
+.form-layout-split__col--select .row label {
+  min-width: 100px;
+}
+/* トンボワーク種別: ラベル列と同じ幅のスペーサーで、上段のプルダウンと横位置を揃える */
+.form-layout-split__col--select .tonbo-variant-row .tonbo-variant-row__spacer {
+  flex: 0 0 auto;
+  min-width: 100px;
+  width: 100px;
+}
+.form-layout-split__col--input .row {
+  flex-wrap: wrap;
+}
+@media (max-width: 720px) {
+  .form-layout-split {
+    grid-template-columns: 1fr;
+    gap: 12px 0;
+  }
+  .form-layout-split__col--select {
+    padding-bottom: 12px;
+    border-bottom: 1px solid #333;
+  }
+}
+
+.group { margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+.group:last-child { border-bottom: none; }
+h3 { margin-top: 0; font-size: 0.9rem; color: #bbb; border-left: 3px solid #4da6ff; padding-left: 8px; margin-bottom: 8px; }
+
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-bottom: 8px; }
+
+label { display: inline-block; min-width: 140px; font-size: 0.85rem; color: #888; }
+
+input, select {
+  padding: 8px 10px; font-size: 15px; background: #2c2c2c; border: 1px solid #333;
+  color: #e0e0e0; border-radius: 4px; text-align: left; box-sizing: border-box;
+}
+input:focus, select:focus { border-color: #4da6ff; outline: none; background: #37474f; }
+
+input:disabled { background: #444; color: #888; border-color: #555; cursor: not-allowed; }
+input[type="checkbox"] { accent-color: #4da6ff; width: 18px; height: 18px; cursor: pointer; vertical-align: middle; }
+
+.w-short { width: 100px; } .w-mid { width: 150px; } .w-long { width: 250px; } .w-full { width: 100%; }
+
+/* M12・交差穴小: 半月ドリル深さ（CP+1.2 自動）など、読み取り専用の数値欄 */
+input.input--readonly-computed {
+  background: #2a2a2a;
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+.fix-txt { font-weight: bold; color: #888; font-size: 0.9rem; margin: 0 1px; }
+#v1a { width: 6em; } #v1b { width: 3em; } #v1c { width: 5em; color: #4da6ff; font-weight: bold; } #v2 { width: 4em; }
+
+.btns { display: flex; flex-wrap: wrap; gap: 3px; margin: 5px 0 10px 0; width: 100%; }
+.qb {
+  flex: 1; min-width: 50px; padding: 6px 0; font-size: 0.75rem; background: #37474f;
+  border: 1px solid #555; color: #fff; border-radius: 4px; cursor: pointer;
+  transition: background 0.2s;
+}
+.qb:hover { background: #455a64; }
+.qb.active { background: #4da6ff; border-color: #fff; color: #fff; font-weight: bold; }
+
+.qb-c { background: #263238; border-color: #4da6ff; }
+.qb-c:hover { background: #37474f; }
+
+.drill-stack { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.drill-item { display: flex; align-items: center; gap: 5px; }
+
+.cb-label {
+  display: flex; align-items: center; gap: 5px;
+  cursor: pointer; color: #fff; font-size: 0.9rem; margin-left: 8px;
+  min-width: auto;
+}
+
+/* M12 カスケード（仕上げタイプ → プロファイル / バイト用ドリル） */
+.m12-cascade .m12-cascade__primary label,
+.m12-cascade .m12-cascade__sub label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  color: #aaa;
+}
+.m12-cascade__sub {
+  margin-top: 10px;
+}
+.m12-baito-controls .row {
+  align-items: center;
+}
+
+/* 加工設定: 左＝最大径モード＋内径スタイルカード／右＝入力欄 */
+.machining-layout-split {
+  display: grid;
+  grid-template-columns: minmax(260px, 42%) minmax(0, 1fr);
+  gap: 14px 18px;
+  align-items: start;
+}
+.machining-layout__col--cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.machining-card-section {
+  padding: 10px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #333;
+  border-radius: 6px;
+}
+.machining-section-label {
+  display: block;
+  width: 100%;
+  margin: 0 0 8px 0;
+  color: #aaa;
+  font-size: 0.85rem;
+  font-weight: normal;
+}
+.machining-mode-cards.selector-container {
+  margin-bottom: 0;
+}
+.machining-layout__col--cards .machining-style-grid.selector-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 0;
+}
+.machining-inputs-panel {
+  padding: 10px 12px;
+  background: rgba(77, 166, 255, 0.06);
+  border: 1px solid #2a3540;
+  border-radius: 6px;
+  min-width: 0;
+}
+.machining-input-block {
+  margin-bottom: 10px;
+}
+.machining-inputs-panel > .machining-input-block:last-child {
+  margin-bottom: 0;
+}
+.machining-field-hint {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 4px;
+  line-height: 1.35;
+}
+.machining-input-label {
+  min-width: 140px;
+}
+.machining-maxod-row {
+  margin-top: 0;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.machining-drill-stack.drill-stack {
+  margin-top: 0;
+}
+.yose-settings-panel {
+  background: transparent;
+  padding: 8px 0;
+  border-radius: 0;
+  border: none;
+}
+.oku-bite-title {
+  color: #00e676;
+  font-weight: bold;
+  width: 100%;
+  margin: 0 0 6px 0;
+  display: block;
+}
+@media (max-width: 820px) {
+  .machining-layout-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* チューブ規格はトンボの「トンボワーク種別」と同じく form-layout-split 左カラムに配置 */
+.form-layout-split__col--select #tubeVariantGroup .tube-variant-length-row label {
+  min-width: 72px;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+#previewContainer {
+  display: none;
+  margin-top: 15px;
+  background: #000;
+  border: 1px solid #555;
+  text-align: center;
+  padding: 10px;
+}
+
+/* 画面追従: 左上固定（リサイズ時は左上を基準に右下へ広がる）。グリップはパネル内右下 */
+#previewContainer.preview-sticky {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  display: block;
+  text-align: left;
+  margin-top: 0;
+  background: rgba(30, 30, 30, 0.95);
+  border: 1px solid #666;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+  padding: 10px;
+  overflow: hidden;
+  min-width: 300px;
+  min-height: 200px;
+  max-width: calc(100vw - 20px);
+  max-height: calc(100vh - 20px);
+  width: 820px;
+  height: 480px;
+}
+#previewContainer.preview-sticky .preview-heading {
+  text-align: center;
+  margin-bottom: 6px;
+  cursor: move;
+  user-select: none;
+  min-height: 10px;
+}
+#previewContainer.preview-sticky #toolBtnArea {
+  margin-bottom: 6px;
+}
+#previewContainer.preview-sticky #simCanvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.preview-resize-grip {
+  display: none;
+}
+#previewContainer.preview-sticky .preview-resize-grip {
+  display: block;
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 20px;
+  height: 20px;
+  z-index: 20;
+  cursor: nwse-resize;
+  background: linear-gradient(-45deg, transparent 0%, transparent 35%, #888 35%, #888 38%, transparent 38%, transparent 62%, #888 62%, #888 65%, transparent 65%);
+  border-radius: 0 0 2px 0;
+  touch-action: none;
+}
+#previewContainer.preview-sticky .preview-resize-grip:hover {
+  background: linear-gradient(-45deg, transparent 0%, transparent 35%, #4da6ff 35%, #4da6ff 38%, transparent 38%, transparent 62%, #4da6ff 62%, #4da6ff 65%, transparent 65%);
+}
+/* 見出し文言は削除。画面追従時のみドラッグ用の帯として高さを確保 */
+.preview-heading {
+  margin: 0;
+  font-size: 0;
+  line-height: 0;
+  overflow: hidden;
+}
+#simCanvas {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  cursor: crosshair;
+}
+
+.cp-calc-footer {
+  margin-top: 8px;
+  padding-top: 0;
+}
+
+.main-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+  align-items: center;
+}
+button.main-btn {
+  width: 100%; padding: 12px; font-size: 16px; font-weight: bold;
+  color: #fff; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px;
+}
+button.main-btn.main-btn--compact {
+  width: auto;
+  flex: 1 1 180px;
+  max-width: 340px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-sizing: border-box;
+}
+.btn-gen { background: #4da6ff; } .btn-gen:hover { background: #2188ff; }
+.btn-save { background: #00e676; color: #000; margin-top: 10px; display: none; } .btn-save:hover:not(:disabled) { background: #00c853; }
+.btn-save:disabled { opacity: 0.45; cursor: not-allowed; }
+.main-action-row .btn-save { margin-top: 0; }
+
+/* 右上「?」: 背景ほぼ透過・極小。中身はドロップダウンで開発用デバッグを隠す */
+.help-easter-wrap {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  z-index: 25;
+}
+/* 通常は .container と同色 (#1e1e1e) で目立たせない。開いているときだけ従来どおり見える色に */
+.help-easter-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  margin: 0;
+  padding: 1px 3px;
+  line-height: 1;
+  font-size: 10px;
+  font-weight: 600;
+  color: #1e1e1e;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  box-shadow: none;
+}
+.help-easter-trigger:hover,
+.help-easter-trigger:focus-visible {
+  color: #1e1e1e;
+  background: transparent;
+  outline: none;
+}
+.help-easter-trigger[aria-expanded="true"],
+.help-easter-trigger[aria-expanded="true"]:hover,
+.help-easter-trigger[aria-expanded="true"]:focus-visible {
+  color: rgba(180, 200, 230, 0.95);
+  background: rgba(255, 255, 255, 0.07);
+}
+.help-easter-dropdown {
+  position: absolute;
+  top: calc(100% + 3px);
+  right: 0;
+  min-width: 240px;
+  max-width: min(96vw, 360px);
+  padding: 10px 10px 8px;
+  background: rgba(28, 28, 30, 0.97);
+  border: 1px solid #444;
+  border-radius: 6px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+  text-align: left;
+}
+.help-easter-msg {
+  margin: 0 0 8px 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #b0b8c0;
+}
+.help-easter-author {
+  margin: 0 0 10px 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: #7a8a9a;
+  border-bottom: 1px solid #333;
+  padding-bottom: 8px;
+}
+.help-easter-dev-row {
+  margin: 0 0 10px 0;
+}
+.help-easter-dev-btn {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #b8c0c8;
+  background: #3a3d42;
+  border: 1px solid #555;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.help-easter-dev-btn:hover {
+  background: #484c52;
+  color: #e8ecf0;
+}
+.help-easter-dev-btn.help-easter-dev-btn--on {
+  background: rgba(77, 166, 255, 0.22);
+  border-color: #4da6ff;
+  color: #9ecbff;
+}
+.help-easter-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.help-easter-menu--presets {
+  max-height: min(68vh, 400px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.debug-preset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start !important;
+  gap: 2px;
+  padding: 5px 7px !important;
+}
+.debug-preset-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #e0e0e0;
+  line-height: 1.2;
+}
+.debug-preset-desc {
+  font-size: 9px;
+  color: #8899aa;
+  line-height: 1.25;
+  word-break: break-word;
+}
+.debug-btn {
+  background: #444; color: #aaa;
+  border: 1px solid #555; padding: 5px 10px; font-size: 12px; cursor: pointer;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+.help-easter-menu .debug-btn { position: static; }
+.debug-btn:hover { background: #555; color: #fff; }
+
+#resultArea {
+  width: 100%; min-height: 500px; height: auto;
+  font-family: monospace; font-size: 13px; line-height: 1.4;
+  padding: 10px; margin-top: 15px;
+  background: #151515; color: #ffffff;
+  border: 1px solid #333; border-radius: 4px; box-sizing: border-box;
+  white-space: pre-wrap; word-break: break-all;
+  column-count: 2; column-gap: 15px; column-rule: 1px solid #444;
+}
+.h-val { color: #ffff00; font-weight: bold; }
+
+/* プレビュー内の .qb: 親が flex のとき global の .qb { flex:1 } により、
+   折り返しで1行に1個だけ残ったボタン（例: T0616 / T1016）が横幅いっぱいに伸びるのを防ぐ */
+#toolBtnArea .qb {
+  flex: 0 0 auto;
+}
+
+/* プレビュー：ツールバーを左詰め・詰め表示（中央寄せによる余白を防ぐ） */
+#toolBtnArea.preview-tool-btn-area {
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+.preview-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  justify-content: flex-start;
+  width: 100%;
+}
+.preview-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+/* G0 と切削(G1〜) のチェックだけ間隔を詰める */
+.preview-toolbar-group--path-toggles {
+  gap: 2px;
+}
+.preview-toolbar-group--tools {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+#toolBtnArea .preview-tool-filter-btn {
+  min-width: 0;
+  padding: 3px 7px;
+  font-size: 11px;
+}
+/* リセット・全画面・画面追従を同じボタン見た目に統一（従来は全画面だけ #2c3e50 がインライン指定だった） */
+#toolBtnArea .preview-toolbar-btn-main {
+  padding: 4px 8px;
+  font-size: 11px;
+  background: #2c3e50;
+  border: 1px solid #555;
+  color: #fff;
+}
+#toolBtnArea .preview-toolbar-btn-main:hover {
+  background: #34495e;
+}
+#toolBtnArea .preview-toolbar-btn-main.active {
+  background: #4da6ff;
+  border-color: #6bb3ff;
+  color: #fff;
+}
+#toolBtnArea .preview-check-label {
+  font-size: 11px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* === ビジュアル選択カード (汎用) === */
+.selector-container { display: flex; gap: 10px; margin-bottom: 10px; }
+/* カード幅を均等にする */
+.selector-container .select-card { flex: 1; }
+
+/* 内径加工スタイル 6 カードを1行 */
+.selector-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.select-card {
+  background: #2d2d2d; border: 2px solid #444; border-radius: 6px;
+  padding: 8px 4px; cursor: pointer; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; transition: all 0.2s; opacity: 0.7; min-height: 70px;
+}
+.select-card:hover { opacity: 1; background: #333; }
+.select-card.active { border-color: #4da6ff; background: #252526; opacity: 1; box-shadow: 0 0 8px rgba(77, 166, 255, 0.2); }
+
+.card-label { font-size: 0.75rem; color: #ccc; font-weight: bold; margin-top: 4px; text-align: center; line-height: 1.2; }
+.card-icon { width: 32px; height: 32px; margin-bottom: 4px; position: relative; }
+
+/* === アイコン描画 === */
+/* 最大径系 */
+  .icon-hole-normal { width: 24px; height: 32px; position: relative; left: 5px }
+  .icon-hole-normal::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: #ccc; }
+  .icon-hole-normal::after { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 2px; background: #ccc; }
+
+.icon-circle { width: 30px; height: 30px; border: 2px solid #ccc; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-sizing: border-box; }
+/* 通常(直入力)モードのアイコンを四角(角丸)にする */
+#modeNormal .icon-circle { border-radius: 6px; }
+
+.icon-axis-cross { position: absolute; width: 100%; height: 100%; top: 0; left: 0; }
+.icon-axis-cross::before { content: ''; position: absolute; width: 36px; height: 1px; background: #4da6ff; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.icon-axis-cross::after { content: ''; position: absolute; width: 1px; height: 36px; background: #ff4d4d; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+.icon-square-ecc { width: 28px; height: 28px; border: 2px solid #ccc; position: absolute; top:40%; left: 50%; transform: translate(-35%, -35%); box-sizing: border-box; }
+.icon-axis-ecc { position: absolute; width: 100%; height: 100%; top: 0; left: 0; }
+.icon-axis-ecc::before { content: ''; position: absolute; width: 85%; height: 1px; background: #4da6ff; top: 70%; left: 15%; }
+.icon-axis-ecc::after { content: ''; position: absolute; width: 1px; height: 85%; background: #ff4d4d; top: 15%; left: 70%; }
+
+.icon-kaku-base { width: 32px; height: 20px; border: 2px solid #ccc; position: absolute; bottom: 0px; left: 50%; transform: translateX(-50%); box-sizing: border-box; }
+.icon-kaku-top { width: 14px; height: 12px; border: 2px solid #ccc; border-bottom: none; position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); box-sizing: border-box; }
+.icon-axis-kaku { position: absolute; width: 100%; height: 100%; top: 4px; left: 0; }
+.icon-axis-kaku::before { content: ''; position: absolute; width: 38px; height: 1px; background: #4da6ff; top: 65%; left: 50%; transform: translate(-50%, -50%); }
+.icon-axis-kaku::after { content: ''; position: absolute; width: 1px; height: 34px; background: #ff4d4d; top: -5px; left: 50%; transform: translateX(-50%); }
+
+
+
+
+/* 内径加工系アイコン */
+/* 平底 */
+.icon-hole-flat { 
+  width: 20px; height: 26px; border: 2px solid #ccc; border-top: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+}
+.icon-hole-flat::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: #ccc; }
+
+/* 一文字 */
+.icon-hole-ichi { 
+  width: 20px; height: 26px; border: 2px solid #4da6ff; border-top: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+}
+.icon-hole-ichi::before { content: 'T2'; position: absolute; font-size: 10px; color: #4da6ff; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+/* === 交差穴 (リニューアル版: 左壁+右穴) === */
+.icon-hole-cross {
+  width: 30px; height: 30px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+}
+/* 左側の壁 */
+.icon-hole-cross::before {
+  content: ''; position: absolute;
+  left: 6px; top: 0; bottom: 0; width: 2px; background: #ccc;
+}
+/* 右側の構造 (上下のL字) */
+.icon-hole-cross::after {
+  content: ''; position: absolute;
+  right: 4px; top: 0; bottom: 0; width: 14px; /* 横穴の線の長さ */
+}
+
+  /* --- 4. ヨセ加工 (V5: 幅広・中間調整版) --- */
+  /* 幅を 24px -> 30px に変更して線を広げました */
+  .icon-hole-yose { width: 30px; height: 32px; position: relative; }
+  
+  /* 縦線: 高さ22px (前回と同じ) */
+  .icon-hole-yose::before { 
+    content: ''; position: absolute; left: 0; top: 0; height: 22px; width: 2px; background: #ccc; 
+  }
+  .icon-hole-yose::after { 
+    content: ''; position: absolute; right: 0; top: 0; height: 22px; width: 2px; background: #ccc; 
+  }
+  /* V底エリア */
+  .icon-hole-yose-bottom {
+    position: absolute; 
+    bottom: 0; left: 0; width: 100%; height: 12px;
+  }
+  /* 左下の斜め線 (幅が広がった分、線を少し長くしました: 15px -> 18px) */
+  .icon-hole-yose-bottom::before {
+    content: ''; position: absolute; 
+    left: 2px; 
+    top: 2px; 
+    width: 18px; height: 2px; background: #ccc;
+    transform: rotate(60deg); transform-origin: left top;
+  }
+  /* 右下の斜め線 */
+  .icon-hole-yose-bottom::after {
+    content: ''; position: absolute; 
+    right: 2px; 
+    top: 2px; 
+    width: 18px; height: 2px; background: #ccc;
+    transform: rotate(-60deg); transform-origin: right top;
+  }
+/* --- 共通設定：アイコンの枠 --- */
+.icon-hole-cross { 
+  width: 30px; 
+  height: 30px; 
+  position: relative; 
+}
+
+/* --- 左側の縦線 (::before) --- */
+/* まずは基本設定 (加工径小のスタイル) */
+.icon-hole-cross::before {
+  content: ''; 
+  position: absolute;
+  top: 0; 
+  bottom: 0; 
+  width: 2px; 
+  background: #ccc;
+  
+  /* ▼ デフォルトの位置 (加工径小用) */
+  left: 9px;
+}
+
+/* ★ここがポイント：加工径大 (#styleCrossBig) の時だけ位置を上書き */
+#styleCrossBig .icon-hole-cross::before {
+  /* ▼ ここで大の時だけ右に動かす (好きな数値に調整可) */
+  left: 5px;
+}
+
+
+/* --- 右側のL字部分 (::after) --- */
+/* ベースの設定 */
+.icon-hole-cross::after {
+  content: ''; 
+  position: absolute; 
+  right: -5px; 
+  top: 0; 
+  bottom: 0; 
+  width: 14px;
+  /* 背景(デザイン)は下で個別に指定 */
+}
+
+/* 5. 加工径大のデザイン (縦11px / 位置9px) */
+#styleCrossBig .icon-hole-cross::after {
+  background:
+    linear-gradient(#ccc,#ccc) top left / 2px 11px no-repeat,
+    linear-gradient(#ccc,#ccc) 0 9px / 100% 2px no-repeat,
+    linear-gradient(#ccc,#ccc) bottom left / 2px 11px no-repeat,
+    linear-gradient(#ccc,#ccc) left bottom 9px / 100% 2px no-repeat;
+}
+
+/* 6. 加工径小のデザイン (縦8px / 位置6px) */
+#styleCrossSmall .icon-hole-cross::after {
+  background:
+    linear-gradient(#ccc,#ccc) top left / 2px 8px no-repeat,
+    linear-gradient(#ccc,#ccc) 0 6px / 100% 2px no-repeat,
+    linear-gradient(#ccc,#ccc) bottom left / 2px 8px no-repeat,
+    linear-gradient(#ccc,#ccc) left bottom 6px / 100% 2px no-repeat;
+}
+
+/* 追加入力（偏心・角・CP 等）: 右列パネルと同じ地の色のまま。グレー箱は付けない */
+.calc-inputs {
+  display: none;
+  background: transparent;
+  padding: 8px 0;
+  border: none;
+  margin-bottom: 10px;
+  animation: fadeIn 0.3s;
+}
+.machining-inputs-panel .calc-inputs {
+  padding-left: 0;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 全角英数字などが拒否されたときのフィードバック（変換はせず入力前ブロック／巻き戻し） */
+@keyframes ncHalfwidthRejectFlash {
+  from { outline-color: #e53935; box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.45); }
+  to { outline-color: transparent; box-shadow: none; }
+}
+input.input--halfwidth-reject {
+  outline: 2px solid transparent;
+  animation: ncHalfwidthRejectFlash 0.35s ease-out;
+}

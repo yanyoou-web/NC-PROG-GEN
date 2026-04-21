@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="pageTitle">NCプログラム作成</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<div class="container">
+  <div class="help-easter-wrap">
+    <button type="button" class="help-easter-trigger" id="helpEasterBtn" aria-expanded="false" aria-haspopup="true" data-i18n-aria-label="easterBtnAria">?</button>
+    <div id="helpEasterDropdown" class="help-easter-dropdown" hidden role="menu" aria-labelledby="helpEasterBtn">
+      <p class="help-easter-msg" data-i18n="easterFoundMsg"></p>
+      <p class="help-easter-author" data-i18n="easterAuthorLine"></p>
+      <div class="help-easter-dev-row">
+        <button type="button" id="devModeToggleBtn" class="help-easter-dev-btn" aria-pressed="false"></button>
+      </div>
+      <div id="debugPresetMenu" class="help-easter-menu help-easter-menu--presets" hidden aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <div class="row ui-lang-row">
+    <select id="uiLang" class="ui-lang-select enter-target" data-i18n-aria-label="uiLanguage">
+      <option value="ja">日本語</option>
+      <option value="en">English</option>
+      <option value="vi">Tiếng Việt</option>
+    </select>
+  </div>
+
+  <div class="form-layout-split" data-i18n-aria-label="formAria" aria-label="ファイル情報・機械・ワークと基本入力">
+    <div class="form-layout-split__col form-layout-split__col--select">
+      <div class="group group--split">
+        <h3 data-i18n="fileInfo">ファイル情報</h3>
+        <div class="row">
+          <span class="fix-txt">PM-</span>
+          <input type="text" inputmode="decimal" id="v1a" placeholder="12345" class="enter-target" oninput="formatNum(this)">
+          <span class="fix-txt">-</span>
+          <input type="text" inputmode="decimal" id="v1b" value="2" class="enter-target" oninput="formatNum(this)">
+          <select id="v1c" class="enter-target">
+            <option value="NONE" selected>なし</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+            <option value="E">E</option>
+          </select>
+          <span class="fix-txt">=No,</span>
+          <input type="text" inputmode="decimal" id="v2" placeholder="1" class="enter-target" oninput="formatNum(this)">
+        </div>
+      </div>
+
+      <div class="group group--split">
+        <h3 data-i18n="machineSelect">機械選択</h3>
+        <div class="row">
+          <label data-i18n="machineLabel">使用機械</label>
+          <select id="machineSelect" class="w-long enter-target" onchange="onMachineSelectChange()">
+            <option value="NCL044">NCL044</option>
+            <option value="NCL085">NCL085</option>
+            <option value="NCL012">NCL012</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="group group--split">
+        <h3 data-i18n="workType">ワーク種別</h3>
+        <div class="row">
+          <label data-i18n="templateLabel">テンプレート</label>
+          <select id="workType" class="w-long enter-target" onchange="updateWorkTypeSettings()">
+            <option value="M12">M12</option>
+            <option value="M15">M15</option>
+            <option value="M18">M18</option>
+            <option value="M22">M22</option>
+            <option value="G78">G78</option>
+            <option value="M40">M40</option>
+            <option value="Tube" data-i18n="workTypeTube">チューブ</option>
+            <option value="Tonbo" id="workTypeOptionTonbo">トンボ（未実装）</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="m12CascadeGroup" class="group group--split m12-cascade" style="display:none;">
+        <h3 data-i18n="m12CascadeHeading">M12 仕上げ</h3>
+        <div class="row tonbo-variant-row">
+          <span class="tonbo-variant-row__spacer" aria-hidden="true"></span>
+          <div class="m12-cascade__primary">
+            <label data-i18n="m12FinishTypeLabel" for="m12FinishType">仕上げタイプ</label>
+            <select id="m12FinishType" class="w-long enter-target" data-i18n-aria-label="m12FinishTypeLabel" onchange="onM12FinishTypeChange()">
+              <option value="hss" data-i18n="m12FinishHss">HSSドリル仕上げ</option>
+              <option value="halfmoon" data-i18n="m12FinishHalfmoon">HGDRドリル仕上げ</option>
+              <option value="baito" data-i18n="m12FinishBaito2">バイト仕上げ</option>
+            </select>
+          </div>
+        </div>
+        <div id="m12PanelProfile" class="row tonbo-variant-row m12-cascade__sub" style="display:none;">
+          <span class="tonbo-variant-row__spacer" aria-hidden="true"></span>
+          <div>
+            <label data-i18n="m12ProfileLabel" for="m12Profile">加工プロファイル</label>
+            <select id="m12Profile" class="w-long enter-target" onchange="onM12ProfileChange()"></select>
+          </div>
+        </div>
+      </div>
+
+      <div id="tonboVariantGroup" class="group group--split" style="display:none;">
+        <h3 data-i18n="tonboVariantHeading">トンボワーク種別</h3>
+        <div class="row tonbo-variant-row">
+          <span class="tonbo-variant-row__spacer" aria-hidden="true"></span>
+          <select id="tonboVariant" class="w-long enter-target" aria-label="トンボワーク種別" onchange="runGeneration()">
+            <option value="nlx_g78">G78-PP1</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="tubeVariantGroup" class="group group--split" style="display:none;">
+        <h3 data-i18n="tubeSpec">チューブ規格選択</h3>
+        <div class="row tonbo-variant-row">
+          <span class="tonbo-variant-row__spacer" aria-hidden="true"></span>
+          <select id="tubeSpecSelect" class="w-long enter-target" onchange="updateTubeLengths()">
+            <option value="">-- 規格を選択 --</option>
+          </select>
+        </div>
+        <div class="row tonbo-variant-row tube-variant-length-row">
+          <span class="tonbo-variant-row__spacer" aria-hidden="true"></span>
+          <label data-i18n="tubeLen">長さ(L)</label>
+          <select id="tubeLengthSelect" class="w-mid enter-target"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-layout-split__col form-layout-split__col--input">
+      <div class="group group--split">
+        <h3 data-i18n="basicInfo">基本情報</h3>
+    <label style="width:100%" data-i18n="ateLength">アテ長さ</label>
+    <div id="ateLengthQuickBtns" class="ate-length-quick-btns">
+    <div class="btns">
+      <button type="button" class="qb qb-c" onclick="setAteCalc(42.5, this)">15角</button>
+      <button type="button" class="qb qb-c" onclick="setAteCalc(41, this)">18角</button>
+      <button type="button" class="qb qb-c" onclick="setAteCalc(39.5, this)">21角</button>
+      <button type="button" class="qb qb-c" onclick="setAteCalc(37.5, this)">25角</button>
+      <button type="button" class="qb qb-c" onclick="setAteCalc(33.25, this)">33.5角</button>
+      <button type="button" class="qb qb-c" onclick="setAteCalc(28.5, this)">43角</button>
+    </div>
+    <div class="btns">
+      <button type="button" class="qb" onclick="setAteOnly(6.25, this)">6.25</button>
+      <button type="button" class="qb" onclick="setAteOnly(11.25, this)">11.25</button>
+      <button type="button" class="qb" onclick="setAteOnly(20, this)">20.0</button>
+      <button type="button" class="qb" onclick="setAteOnly(24.5, this)">24.5</button>
+      <button type="button" class="qb" onclick="setAteOnly(31.5, this)">31.5</button>
+      <button type="button" class="qb" onclick="setAteOnly(36.75, this)">36.75</button>
+    </div>
+    </div>
+    <div class="row">
+      <input type="text" inputmode="decimal" id="ateLength" data-i18n-placeholder="phManual" placeholder="手入力" class="w-full enter-target">
+    </div>
+
+    <label style="width:100%; margin-top:10px; display:block;" data-i18n="author">作成者</label>
+    <div class="btns">
+      <button type="button" class="qb" onclick="setAuthor('YAMADA', this)">YAMADA</button>
+      <button type="button" class="qb" onclick="setAuthor('YAMAKAWA', this)">YAMAKAWA</button>
+      <button type="button" class="qb" onclick="setAuthor('TANIGUTI', this)">TANIGUTI</button>
+      <button type="button" class="qb" onclick="setAuthor('MURAKAMI', this)">MURAKAMI</button>
+    </div>
+    <div class="row">
+      <input type="text" id="workerName" data-i18n-placeholder="phDirect" placeholder="直接入力" class="w-full enter-target">
+    </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <h3 data-i18n="machiningSettings">加工設定</h3>
+
+    <div id="normalProcessArea">
+      <div class="machining-layout-split">
+        <div class="machining-layout__col machining-layout__col--cards">
+          <div id="blockMaxDiameterMode" class="machining-card-section">
+            <label class="machining-section-label" data-i18n="maxDiaMode">最大径 計算モード</label>
+            <div class="selector-container machining-mode-cards">
+              <div class="select-card active" id="modeNormal" onclick="setCalcMode('normal')">
+                <div class="card-icon">
+                  <div class="icon-circle"></div>
+                  <div class="icon-axis-cross" style="opacity:0.3;"></div>
+                </div>
+                <span class="card-label" data-i18n="modeNormal">通常</span>
+              </div>
+              <div class="select-card" id="modeEccentric" onclick="setCalcMode('eccentric')">
+                <div class="card-icon">
+                  <div class="icon-axis-ecc"></div>
+                  <div class="icon-square-ecc"></div>
+                </div>
+                <span class="card-label" data-i18n="modeEcc">偏心</span>
+              </div>
+              <div class="select-card" id="modeCorner" onclick="setCalcMode('corner')">
+                <div class="card-icon">
+                  <div class="icon-axis-kaku"></div>
+                  <div class="icon-kaku-base"></div>
+                  <div class="icon-kaku-top"></div>
+                </div>
+                <span class="card-label" data-i18n="modeCorner">角あり</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="machining-card-section machining-card-section--styles">
+            <label class="machining-section-label" data-i18n="internalStyle">内径加工スタイル</label>
+            <div class="selector-grid machining-style-grid">
+              <div class="select-card active" id="styleHirazoko" onclick="setInternalStyle('Hirazoko')">
+                <div class="card-icon"><div class="icon-hole-flat"></div></div>
+                <span class="card-label" data-i18n="style1">1. 平底</span>
+              </div>
+              <div class="select-card" id="styleIchimonji" onclick="setInternalStyle('Ichimonji')">
+                <div class="card-icon"><div class="icon-hole-ichi"></div></div>
+                <span class="card-label" data-i18n="style2">2. 一文字DR</span>
+              </div>
+              <div class="select-card" id="styleNormal" onclick="setInternalStyle('Normal')">
+                <div class="card-icon"><div class="icon-hole-normal"></div></div>
+                <span class="card-label" data-i18n="style3">3. 通常加工</span>
+              </div>
+              <div class="select-card" id="styleYose" onclick="setInternalStyle('Yose')">
+                <div class="card-icon"><div class="icon-hole-yose"><div class="icon-hole-yose-bottom"></div></div></div>
+                <span class="card-label" data-i18n="style4">4. ヨセ</span>
+              </div>
+              <div class="select-card" id="styleCrossSmall" onclick="setInternalStyle('CrossSmall')">
+                <div class="card-icon"><div class="icon-hole-cross"></div></div>
+                <span class="card-label" data-i18n="style5">5. 交差穴<br>加工径大</span>
+              </div>
+              <div class="select-card" id="styleCrossBig" onclick="setInternalStyle('CrossBig')">
+                <div class="card-icon"><div class="icon-hole-cross"></div></div>
+                <span class="card-label" data-i18n="style6">6. 交差穴<br>加工径小</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="machining-layout__col machining-layout__col--inputs machining-inputs-panel">
+          <div id="eccentricInputs" class="calc-inputs machining-input-block">
+            <div class="row">
+              <label data-i18n="distA">距離 A (横)</label>
+              <input type="text" inputmode="decimal" id="valA" data-i18n-placeholder="phEx" placeholder="例: 15.0" class="w-mid enter-target" oninput="calcEccentric()">
+            </div>
+            <div class="row">
+              <label data-i18n="distB">距離 B (縦)</label>
+              <input type="text" inputmode="decimal" id="valB" data-i18n-placeholder="phEx" placeholder="例: 20.0" class="w-mid enter-target" oninput="calcEccentric()">
+            </div>
+            <div class="machining-field-hint" data-i18n="eccHint">※ 自動計算: √(2A)² + (2B)²</div>
+          </div>
+
+          <div id="cornerInputs" class="calc-inputs machining-input-block">
+            <div class="row">
+              <label data-i18n="stockW">母材 幅</label>
+              <input type="text" inputmode="decimal" id="valCornW" data-i18n-placeholder="phEx" placeholder="例: 43.0" class="w-mid enter-target" oninput="calcCorner()">
+            </div>
+            <div class="row">
+              <label data-i18n="addH">追加 高さ</label>
+              <input type="text" inputmode="decimal" id="valCornH" data-i18n-placeholder="phEx" placeholder="例: 11.0" class="w-mid enter-target" oninput="calcCorner()">
+            </div>
+            <div class="machining-field-hint" data-i18n="cornerHint">※ 自動計算: √{2(幅/2 + 高さ)}² + 幅²</div>
+          </div>
+
+          <div id="cpCalcArea" class="calc-inputs machining-input-block" style="display:none;">
+            <div class="row">
+              <label class="machining-input-label" data-i18n="cpPartnerD">相手径 (Φ)</label>
+              <input type="text" inputmode="decimal" id="valPartnerD" data-i18n-placeholder="phEx" placeholder="例: 6.0" class="w-mid enter-target" oninput="calcAutoCP()">
+            </div>
+            <div class="row cp-calc-footer">
+              <label class="machining-input-label" data-i18n="cpAuto">CP (自動計算)</label>
+              <input type="text" id="cpVal" data-i18n-placeholder="cpPlaceholder" placeholder="自動入力" class="w-mid" readonly style="background:#333; color:#aaa; font-weight:bold; border:1px solid #555;">
+            </div>
+          </div>
+
+          <div id="okuBiteArea" class="calc-inputs machining-input-block" style="display:none; border-left: 2px solid #00e676;">
+            <label class="oku-bite-title" data-i18n="okuTitle">奥バイト面取り (M12専用)</label>
+            <div class="row">
+              <label class="cb-label" style="width:auto;">
+                <input type="checkbox" id="chkOkuBite" checked>
+                <span data-i18n="okuChk">奥バイト面取りを行う</span>
+              </label>
+            </div>
+            <div class="machining-field-hint" data-i18n="okuHint">※ 相手径が6.0mm以上の場合のみ出力されます</div>
+          </div>
+
+          <div id="yoseSettings" class="machining-input-block yose-settings-panel" style="display:none;">
+            <div class="row">
+              <label data-i18n="yoseMethod">加工方法</label>
+              <select id="yoseMethod" class="w-long enter-target">
+                <option value="1">① 同時加工 (バイト1本)</option>
+                <option value="2" selected>② 別工程 (バイト2本)</option>
+              </select>
+            </div>
+            <div class="row">
+              <label data-i18n="yoseAngle">テーパ角度</label>
+              <select id="yoseAngle" class="w-mid enter-target">
+                <option value="75">75度</option>
+                <option value="60" selected>60度</option>
+                <option value="45">45度</option>
+              </select>
+            </div>
+            <div class="row">
+              <label data-i18n="yoseD">相手径 (Φd)</label>
+              <input type="text" inputmode="decimal" id="yoseD" placeholder="4.0" class="w-mid enter-target">
+            </div>
+          </div>
+
+          <div class="row machining-input-block machining-maxod-row">
+            <label data-i18n="maxOD">外径最大径</label>
+            <input type="text" inputmode="decimal" id="maxOD" placeholder="30.1" class="w-mid enter-target">
+            <label class="cb-label">
+              <input type="checkbox" id="chkM99P100" class="enter-target" onchange="runGeneration()">
+              M99P100
+            </label>
+          </div>
+
+          <div class="drill-stack machining-input-block machining-drill-stack">
+            <div id="drillModeRow" class="drill-item">
+              <label data-i18n="drillMode">ドリル モード</label>
+              <select id="drillMode" class="w-mid enter-target">
+                <option value="G74">G74 (サイクル)</option>
+                <option value="G1">G1 (単動)</option>
+              </select>
+            </div>
+            <div class="drill-item">
+              <label id="drillDepthLabel" data-i18n="drillZ">ドリル深さ (Z)</label>
+              <input type="text" inputmode="decimal" id="drillDepth" placeholder="45.0" class="w-mid enter-target">
+            </div>
+            <div class="drill-item">
+              <label id="idDepthLabel" data-i18n="idDepth">内径深さ (図面値)</label>
+              <input type="text" inputmode="decimal" id="idDepth" placeholder="22.0" class="w-mid enter-target">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-action-row">
+    <button type="button" class="main-btn main-btn--compact btn-gen" onclick="runGeneration()" data-i18n="btnGen">Gコード生成</button>
+    <button type="button" id="saveBtn" class="main-btn main-btn--compact btn-save" disabled onclick="downloadFile()" data-i18n="btnSave">デスクトップに保存</button>
+  </div>
+
+  <div id="previewContainer">
+    <div class="preview-heading" data-i18n-title="previewHeadingDrag" data-i18n-aria-label="previewHeadingDrag" title="ドラッグでパネルを移動"></div>
+    <canvas id="simCanvas" width="800" height="400"></canvas>
+    <div id="previewResizeGrip" class="preview-resize-grip" data-i18n-title="previewResizeTitle" title="ドラッグしてサイズ変更" aria-hidden="true"></div>
+  </div>
+
+  <div id="resultArea" contenteditable="true" data-i18n="resultPlaceholder">ここにGコードが生成されます...</div>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/i18n.js"></script>
+<script src="テンプレート/data_template_G78.js"></script>
+<script src="テンプレート/data_template_M40.js"></script>
+<script src="テンプレート/data_template_M22.js"></script>
+<script src="テンプレート/data_template_M18.js"></script>
+<script src="テンプレート/data_template_M15.js"></script>
+<script src="テンプレート/data_template_M12HGDR.js"></script>
+<script src="テンプレート/data_template_M12HSS.js"></script>
+<script src="テンプレート/data_template_M12BAITO.js"></script>
+<script src="テンプレート/data_template_Tube.js"></script>
+<script src="テンプレート/data_template_Tonbo_NLX_G78.js"></script>
+<script src="テンプレート/data_template_Tonbo_NLX_M40.js"></script>
+<script src="テンプレート/data_template_Tonbo_CL_G78.js"></script>
+<script src="テンプレート/data_template_Tonbo_CL_M40.js"></script>
+<script src="テンプレート/data_template_Tonbo_CL_M22.js"></script>
+<script src="テンプレート/data_template_Tonbo_CL_M18.js"></script>
+<script src="テンプレート/data_template_Tonbo_CL_M15.js"></script>
+<script src="テンプレート/data_template_Tonbo_CL_M12.js"></script>
+<script src="assets/app.js"></script>
+
+</body>
+</html>
