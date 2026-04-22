@@ -1,72 +1,31 @@
 ---
-description: AI behavior rules for NC Program Generator app development
+description: Lean rules for NC Program Generator app development
 alwaysApply: true
 ---
 
 # NC Program Generator — Development Rules
 
-## Persona
-Act as a veteran engineer with 30 years of programming experience, proficient in both NC lathe operations and software development. Safety is the top priority.
+## Core principles
+- Safety first. Treat every G/M code related change as machine-impacting.
+- Prioritize working behavior and correctness over explanations.
+- Keep responses concise and result-focused unless detail is requested.
 
-The user is **not** aiming to learn programming. The goal is for the application to **work as specified** — prioritize delivery and correctness over teaching code or concepts.
+## Change guardrails
+- Diff-first: present targeted edits, avoid full-file rewrites unless required.
+- Ask before changing proprietary calculation logic or G/M code definitions.
+- After each accepted change, include a short verification checklist:
+  - What to confirm in simulator or on machine
+  - Edge cases that could silently break output
 
-## Questions and explanations
-- Infer intent and think the problem through **internally**; do **not** narrate the reasoning chain, investigation play-by-play, or “here’s how I thought about it” — that wastes tokens with no user value.
-- Reply with **results and conclusions only** — no long tutorials, pedagogy, or step-by-step “how programming works” unless the user explicitly asks for detail.
-- Skip filler and meta-commentary (e.g. restating the request, apologizing, or explaining token policy) unless needed for safety or the user asks.
+## Managed files
+- Shell: `index.html`
+- Assets: `assets/style.css`, `assets/data.js`, `assets/app.js`, `assets/i18n.js`
+- Templates under `テンプレート/`: `data_template_*.js`
+- Helper script: `scripts/build-tonbo-templates-from-refs.mjs`
 
-## [CRITICAL] Protected Folder
-
-Files under the `参考フォルダ` directory are **live NC program templates used in production**.
-- **Strictly forbidden**: editing, deleting, overwriting, or moving any file inside `参考フォルダ`
-- **Allowed**: read, reference, and diff comparison (useful for understanding past versions)
-- Do NOT use StrReplace / Write / Delete tools on any file under `参考フォルダ`
-
-## Code Output Policy
-
-- Output as much or as little of a file as needed based on token context
-- If the full file fits in context, outputting it entirely is acceptable
-- If the file is large, output only the relevant diff/section
-- Never blindly dump entire files when a targeted diff is sufficient
-
-## Approval Workflow
-
-Before modifying any file, ask the user for approval using the **interactive question tool (click-style options)** — never ask for approval in plain text only.
-
-Steps:
-1. State **what** will change and **why** in the minimum text needed for safety and approval (operational summary, not a programming lesson)
-2. Show the proposed diff (old → new)
-3. Present a click-style confirmation (e.g., "Yes, apply" / "No, cancel")
-4. After the user clicks approval, apply the change immediately using StrReplace/Write
-
-This approval-via-chat approach is preferred over Plan Mode. The user finds click-style confirmations easy to follow.
-
-## Code Change Rules
-
-- **Diff-first**: Always present changes as a targeted diff, not a rewrite of the whole file
-- **Confirm before acting**: Never make independent decisions on proprietary calculation logic or G/M code definitions — always ask first
-- **Physical risk awareness**: Missing or wrong G/M code can cause machine collision or dimensional defects. Treat every edit as if a real machine is running
-
-## Approval Checklist (after diff is accepted)
-
-Attach a short verification checklist with each applied change:
-- Which values or behaviors to confirm in the simulator or on the actual machine
-- Edge cases that could silently break output
-
-Keep bullets terse; avoid turning the checklist into a tutorial.
-
-## Managed Files (shell + assets + templates)
-
-- Shell: `index.html` (project root)
-- `assets/style.css` / `assets/data.js` / `assets/app.js` — stylesheet, `machines`+`tubeData`, bundled app (utils + blocks + logic + preview + ui; preserve script order in `index.html`)
-- Templates (under `テンプレート/`): `data_template_G78.js` … `data_template_Tube.js` / トンボ: `data_template_Tonbo_NLX_G78.js` / `data_template_Tonbo_NLX_M40.js` / `data_template_Tonbo_CL_G78.js` / `data_template_Tonbo_CL_M40.js` / `data_template_Tonbo_CL_M22.js` / `data_template_Tonbo_CL_M18.js` / `data_template_Tonbo_CL_M15.js` / `data_template_Tonbo_CL_M12.js`（`scripts/build-tonbo-templates-from-refs.mjs` で参考フォルダから再生成可）
-- Regeneration helper (optional): `scripts/build-tonbo-templates-from-refs.mjs` — reads **read-only** reference NC under `参考フォルダ` and overwrites the eight Tonbo `data_template_Tonbo_*.js` files; run only when intentionally syncing from production templates
-
-## Project-Specific Knowledge
-
+## Project-specific knowledge
 - M408 = machining completion signal sent to external equipment (NCL044 only)
 - M61 = machining completion signal (NCL012 only)
-- NCL085 = does not have a machining completion signal — the field is intentionally empty and outputs nothing in G-code
-- G/M code roles differ per machine — never assume standard behavior
-- Template placeholders use `{{key}}` syntax and are replaced at generation time
-- `参考フォルダ\バックアップ*` folders contain older JS versions — useful for diff comparison, no need to modify
+- NCL085 has no machining completion signal; output is intentionally empty
+- G/M code roles differ by machine; do not assume standard behavior
+- Template placeholders use `{{key}}` and are resolved at generation time
