@@ -1709,10 +1709,58 @@ function setupLiveUpdate() {
 }
 
 /**
- * FANUC 系想定: X=直径、Z=長さ、I・K は始点から円弧中心への増分（X は半径方向）。
- * 不正（半径不一致・AI生成の崩れ等）のときは null → 直線フォールバック。
+ * 円弧の角度範囲チェック。phi が [phi0→phi1] の範囲内（CW/CCW 考慮）かを返す。
+ * phi0→phi1 はすでに方向を含む（buildArcMeta が phi1 = phi0 + dPhi として格納）。
  */
-function buildArcPathSegmentsZX(curX, curZ, nextX, nextZ, I, K, isCw, lineIdx, originalText, tool, arcMode, nComment) {
+function isAngleInArcRange(phi, phi0, phi1, isCw) {
+    const TAU = 2 * Math.PI;
+    const norm = a => ((a % TAU) + TAU) % TAU;
+    if (isCw) {
+        // CW: phi0 から減少方向(dPhi<0)で phi1 へ
+        const total   = norm(phi0 - phi1);
+        const portion = norm(phi0 - phi);
+        return portion <= total + 1e-9;
+    } else {
+        // CCW: phi0 から増加方向(dPhi>0)で phi1 へ
+        const total   = norm(phi1 - phi0);
+        const portion = norm(phi  - phi0);
+        return portion <= total + 1e-9;
+    }
+}
+
+/**
+ * 円弧の解析的バウンディングボックス（world 空間: x=直径, z）を返す。
+ * カーディナル角（0,±π/2,π）が円弧範囲内にあれば端点として追加する。
+ */
+function arcWorldBounds(zc, rc, R, phi0, phi1, isCw) {
+    const cardinals = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+    const pts = [phi0, phi1];
+    for (const c of cardinals) {
+        if (isAngleInArcRange(c, phi0, phi1, isCw)) pts.push(c);
+    }
+    let minZ = Infinity, maxZ = -Infinity, minR = Infinity, maxR = -Infinity;
+    for (const phi of pts) {
+        const z = zc + R * Math.cos(phi);
+        const r = rc + R * Math.sin(phi);
+        minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
+        minR = Math.min(minR, r); maxR = Math.max(maxR, r);
+    }
+    return { minX: minR * 2, maxX: maxR * 2, minZ, maxZ };
+}
+
+/**
+ * G2/G3 の円弧メタデータを 1 セグメントとして返す（旧: 多数チョードに分割）。
+ * arcMeta: { zc, rc, R, phi0, phi1, isCw }
+ *   zc / rc : 円弧中心（Z / 半径方向）
+ *   phi0/phi1: (z-zc, r-rc) 平面での開始・終了角（方向込み: phi1 = phi0 + dPhi）
+ * 不正（半径不一致・I/K 崩れ等）のときは null → 直線フォールバック。
+ *
+ * ずれ防止:
+ *  ・角度は (z,r) 世界座標で計算し、スクリーン変換は renderCanvas 側で行う。
+ *  ・スクリーン角度 = -phi（y 軸反転補正）、anticlockwise = !isCw（同理由）。
+ *  ・両端点 x1/z1, x2/z2 は G1 と同形式で格納し、当たり判定やバウンズ計算に共用。
+ */
+function buildArcMeta(curX, curZ, nextX, nextZ, I, K, isCw, lineIdx, originalText, tool, arcMode, nComment) {
     const r0 = curX / 2, z0 = curZ;
     const r1 = nextX / 2, z1 = nextZ;
     const zc = z0 + K;
@@ -1722,36 +1770,65 @@ function buildArcPathSegmentsZX(curX, curZ, nextX, nextZ, I, K, isCw, lineIdx, o
     if (d0 < 1e-5 || d1 < 1e-5) return null;
     if (Math.abs(d0 - d1) > 0.05 * Math.max(d0, d1, 1)) return null;
     const R = (d0 + d1) / 2;
-    let phi0 = Math.atan2(r0 - rc, z0 - zc);
-    let phi1 = Math.atan2(r1 - rc, z1 - zc);
-    let dPhi = phi1 - phi0;
-    while (dPhi > Math.PI) dPhi -= 2 * Math.PI;
+    const phi0 = Math.atan2(r0 - rc, z0 - zc);
+    let dPhi = Math.atan2(r1 - rc, z1 - zc) - phi0;
+    while (dPhi > Math.PI)  dPhi -= 2 * Math.PI;
     while (dPhi < -Math.PI) dPhi += 2 * Math.PI;
-    if (isCw) {
-        if (dPhi > 0) dPhi -= 2 * Math.PI;
-    } else {
-        if (dPhi < 0) dPhi += 2 * Math.PI;
+    if (isCw)  { if (dPhi > 0) dPhi -= 2 * Math.PI; }
+    else        { if (dPhi < 0) dPhi += 2 * Math.PI; }
+    const phi1 = phi0 + dPhi;
+    return {
+        lineIdx, originalText, mode: arcMode, tool, nComment,
+        x1: curX, z1: curZ, x2: nextX, z2: nextZ,
+        arcMeta: { zc, rc, R, phi0, phi1, isCw }
+    };
+}
+
+/**
+ * G2/G3 の R 指定（I/K なし）円弧メタデータ。
+ * FANUC: R>0 = 短弧(|dPhi|≤π)、R<0 = 長弧(|dPhi|>π)。
+ * 弦の垂線上に存在する 2 候補中心から isCw + R 符号に合致するものを選択。
+ *
+ * ずれ防止: 両端点・半径の整合性を検証し、数値誤差（d≈R のとき h≈0）を
+ * Math.max(0, ...) でクランプして NaN を防ぐ。
+ */
+function buildArcMetaFromR(curX, curZ, nextX, nextZ, Rval, isCw, lineIdx, originalText, tool, arcMode, nComment) {
+    const r0 = curX / 2, z0 = curZ;
+    const r1 = nextX / 2, z1 = nextZ;
+    const dz = z1 - z0, dr = r1 - r0;
+    const chord = Math.hypot(dz, dr);
+    if (chord < 1e-9) return null;
+    const absR = Math.abs(Rval);
+    // 弦長が直径を超える場合は不正
+    if (chord > 2 * absR * (1 + 0.01) + 1e-3) return null;
+    const h = Math.sqrt(Math.max(0, absR * absR - (chord / 2) * (chord / 2)));
+    const zm = (z0 + z1) / 2, rm = (r0 + r1) / 2;
+    // 弦方向に対して垂直な単位ベクトル（90°CCW 回転）
+    const pz = -dr / chord, pr = dz / chord;
+
+    const candidates = [
+        { zc: zm + h * pz, rc: rm + h * pr },
+        { zc: zm - h * pz, rc: rm - h * pr }
+    ];
+
+    for (const { zc, rc } of candidates) {
+        const phi0 = Math.atan2(r0 - rc, z0 - zc);
+        let dPhi = Math.atan2(r1 - rc, z1 - zc) - phi0;
+        while (dPhi > Math.PI)  dPhi -= 2 * Math.PI;
+        while (dPhi < -Math.PI) dPhi += 2 * Math.PI;
+        if (isCw)  { if (dPhi > 0) dPhi -= 2 * Math.PI; }
+        else        { if (dPhi < 0) dPhi += 2 * Math.PI; }
+        // R>0 → 短弧(|dPhi|≤π)、R<0 → 長弧(|dPhi|>π)
+        const isShort = Math.abs(dPhi) <= Math.PI + 1e-9;
+        if ((Rval > 0) === isShort) {
+            return {
+                lineIdx, originalText, mode: arcMode, tool, nComment,
+                x1: curX, z1: curZ, x2: nextX, z2: nextZ,
+                arcMeta: { zc, rc, R: absR, phi0, phi1: phi0 + dPhi, isCw }
+            };
+        }
     }
-    const N = Math.max(8, Math.min(56, Math.ceil(Math.abs(dPhi) * R / 1.5)));
-    const out = [];
-    let px = curX, pz = curZ;
-    for (let i = 1; i <= N; i++) {
-        const phi = phi0 + (dPhi * i) / N;
-        const zz = zc + R * Math.cos(phi);
-        const rr = rc + R * Math.sin(phi);
-        const nx = rr * 2;
-        const nz = zz;
-        out.push({
-            lineIdx: lineIdx,
-            originalText: originalText,
-            mode: arcMode,
-            tool: tool,
-            nComment: nComment,
-            x1: px, z1: pz, x2: nx, z2: nz
-        });
-        px = nx; pz = nz;
-    }
-    return out;
+    return null;
 }
 
 function parseGCode(code) {
@@ -1764,11 +1841,17 @@ function parseGCode(code) {
     const regexX = /X([-0-9.]+)/, regexZ = /Z([-0-9.]+)/;
     const regexU = /U([-0-9.]+)/, regexW = /W([-0-9.]+)/;
     const regexI = /I([-0-9.]+)/, regexK = /K([-0-9.]+)/;
+    const regexR = /R([-0-9.]+)/;
     const regexT = /T([0-9]{2,4})/, regexG_Num = /G([0-9]+)/g;
 
     let currentMode = 'G0', currentTool = 'Unknown';
     /** 直近の Nブロック全体の文字列 例 N1(DR14.0)（次の移動に付与。N行のみのときは次行へ継承） */
     let lastNComment = '';
+    /**
+     * ハッチング対象サイクル種別: G71=71, G72=72, G73=73, G70/G28以降=null
+     * G70は仕上げ(再トレース)なのでハッチング不要。G28でブロック間リセット。
+     */
+    let pendingCycleType = null;
 
     function expandBounds(ax, az, bx, bz) {
         if (!hasData) {
@@ -1796,6 +1879,13 @@ function parseGCode(code) {
 
         let gNumbers = [], match;
         while ((match = regexG_Num.exec(cleanLine)) !== null) gNumbers.push(parseInt(match[1], 10));
+        // ハッチング用サイクル種別を skip 前に確定
+        if (gNumbers.some(n => [71, 72, 73].includes(n))) {
+            pendingCycleType = gNumbers.includes(71) ? 71 : gNumbers.includes(72) ? 72 : 73;
+        } else if (gNumbers.includes(70) || gNumbers.includes(28)) {
+            // G70: 仕上げ→ハッチ不要。G28: N ブロック間の帰還→リセット。
+            pendingCycleType = null;
+        }
         if (gNumbers.some(n => [4, 10, 28, 50, 65, 70, 71, 72, 73].includes(n))) return;
 
         if (gNumbers.includes(0)) currentMode = 'G0';
@@ -1817,19 +1907,39 @@ function parseGCode(code) {
             const isG2 = gNumbers.includes(2);
             const isG3 = gNumbers.includes(3);
             const mI = cleanLine.match(regexI), mK = cleanLine.match(regexK);
+            const mR = cleanLine.match(regexR);
             let arcPieces = null;
-            if (!skipSegmentForPreview && (isG2 || isG3) && mI && mK) {
-                const I = parseFloat(mI[1]), K = parseFloat(mK[1]);
-                arcPieces = buildArcPathSegmentsZX(
-                    curX, curZ, nextX, nextZ, I, K, isG2,
-                    index + 1, line.trim(), currentTool, isG2 ? 'G2' : 'G3',
-                    lastNComment
-                );
+            if (!skipSegmentForPreview && (isG2 || isG3)) {
+                if (mI && mK) {
+                    // I/K 指定円弧
+                    const I = parseFloat(mI[1]), K = parseFloat(mK[1]);
+                    const arcSeg = buildArcMeta(
+                        curX, curZ, nextX, nextZ, I, K, isG2,
+                        index + 1, line.trim(), currentTool, isG2 ? 'G2' : 'G3',
+                        lastNComment
+                    );
+                    if (arcSeg) arcPieces = [arcSeg];
+                } else if (mR) {
+                    // R 指定円弧（R>0=短弧、R<0=長弧）
+                    const arcSeg = buildArcMetaFromR(
+                        curX, curZ, nextX, nextZ, parseFloat(mR[1]), isG2,
+                        index + 1, line.trim(), currentTool, isG2 ? 'G2' : 'G3',
+                        lastNComment
+                    );
+                    if (arcSeg) arcPieces = [arcSeg];
+                }
             }
             if (!skipSegmentForPreview && arcPieces && arcPieces.length) {
                 arcPieces.forEach(function (seg) {
+                    seg.cycleType = pendingCycleType;
                     g_paths.push(seg);
-                    expandBounds(seg.x1, seg.z1, seg.x2, seg.z2);
+                    if (seg.arcMeta) {
+                        const { zc, rc, R, phi0, phi1, isCw } = seg.arcMeta;
+                        const b = arcWorldBounds(zc, rc, R, phi0, phi1, isCw);
+                        expandBounds(b.minX, b.minZ, b.maxX, b.maxZ);
+                    } else {
+                        expandBounds(seg.x1, seg.z1, seg.x2, seg.z2);
+                    }
                 });
             } else if (!skipSegmentForPreview) {
                 const drawMode = (currentMode === 'G2' || currentMode === 'G3') && (!mI || !mK) ? 'G1' : currentMode;
@@ -1839,6 +1949,7 @@ function parseGCode(code) {
                     mode: drawMode,
                     tool: currentTool,
                     nComment: lastNComment,
+                    cycleType: pendingCycleType,
                     x1: curX, z1: curZ, x2: nextX, z2: nextZ
                 });
                 expandBounds(curX, curZ, nextX, nextZ);
@@ -1849,13 +1960,21 @@ function parseGCode(code) {
         }
     });
     // 初期仮想位置(100,50)が min/max に残ると表示が極端に小さくなるため、実軌跡の端点だけで範囲を取り直す
+    // 円弧は端点だけでなく解析的バウンズを使用（カーディナル点を含む）
     if (g_paths.length > 0) {
         minX = Infinity; maxX = -Infinity; minZ = Infinity; maxZ = -Infinity;
         g_paths.forEach(p => {
-            minX = Math.min(minX, p.x1, p.x2);
-            maxX = Math.max(maxX, p.x1, p.x2);
-            minZ = Math.min(minZ, p.z1, p.z2);
-            maxZ = Math.max(maxZ, p.z1, p.z2);
+            if (p.arcMeta) {
+                const { zc, rc, R, phi0, phi1, isCw } = p.arcMeta;
+                const b = arcWorldBounds(zc, rc, R, phi0, phi1, isCw);
+                minX = Math.min(minX, b.minX); maxX = Math.max(maxX, b.maxX);
+                minZ = Math.min(minZ, b.minZ); maxZ = Math.max(maxZ, b.maxZ);
+            } else {
+                minX = Math.min(minX, p.x1, p.x2);
+                maxX = Math.max(maxX, p.x1, p.x2);
+                minZ = Math.min(minZ, p.z1, p.z2);
+                maxZ = Math.max(maxZ, p.z1, p.z2);
+            }
         });
     }
     g_minX = minX; g_maxX = maxX; g_minZ = minZ; g_maxZ = maxZ;
@@ -1874,10 +1993,17 @@ function fitToScreen() {
             if (!toolPathPassesToolFilter(p)) return;
             if (p.mode === "G0" && !g_showG0) return;
             if (isCuttingMoveMode(p.mode) && !g_showG1) return;
-            fxMin = Math.min(fxMin, p.x1, p.x2);
-            fxMax = Math.max(fxMax, p.x1, p.x2);
-            fzMin = Math.min(fzMin, p.z1, p.z2);
-            fzMax = Math.max(fzMax, p.z1, p.z2);
+            if (p.arcMeta) {
+                const { zc, rc, R, phi0, phi1, isCw } = p.arcMeta;
+                const b = arcWorldBounds(zc, rc, R, phi0, phi1, isCw);
+                fxMin = Math.min(fxMin, b.minX); fxMax = Math.max(fxMax, b.maxX);
+                fzMin = Math.min(fzMin, b.minZ); fzMax = Math.max(fzMax, b.maxZ);
+            } else {
+                fxMin = Math.min(fxMin, p.x1, p.x2);
+                fxMax = Math.max(fxMax, p.x1, p.x2);
+                fzMin = Math.min(fzMin, p.z1, p.z2);
+                fzMax = Math.max(fzMax, p.z1, p.z2);
+            }
             hasVisible = true;
         });
         if (hasVisible) {
@@ -1955,6 +2081,93 @@ function isCuttingMoveMode(mode) {
     return mode === "G1" || mode === "G2" || mode === "G3";
 }
 
+/**
+ * 切削グループごとにアプローチ経路を含む閉多角形をクリップし、斜線ハッチングを描画する。
+ * ずれ防止: arc の clip path パラメータは renderCanvas の arc 描画と完全に同一の式を使用。
+ */
+function drawApproachHatching(ctx) {
+    if (!g_showG1) return;
+
+    // G0 → 切削(G1/G2/G3) のグループを収集
+    const groups = [];
+    let currentGroup = null;
+    let lastG0 = null;
+    g_paths.forEach(p => {
+        if (!toolPathPassesToolFilter(p)) return;
+        if (p.mode === "G0") {
+            currentGroup = null;
+            lastG0 = p;
+        } else if (isCuttingMoveMode(p.mode)) {
+            if (!currentGroup) {
+                // G71/G72/G73 サイクル配下のグループのみハッチング対象
+                // G70（仕上げ）・直接 G1 パス（N4等）は cycleType=null → スキップ
+                if (!p.cycleType) return;
+                currentGroup = { approach: lastG0, segs: [] };
+                groups.push(currentGroup);
+            }
+            currentGroup.segs.push(p);
+        }
+    });
+
+    for (const { approach, segs } of groups) {
+        if (segs.length === 0) continue;
+        ctx.save();
+        ctx.beginPath();
+
+        // アプローチ G0 を polygon の起点に含める
+        if (approach) {
+            const aS = worldToScreen(approach.x1, approach.z1);
+            const aE = worldToScreen(approach.x2, approach.z2);
+            ctx.moveTo(aS.x, aS.y);
+            ctx.lineTo(aE.x, aE.y);
+        } else {
+            const sp = worldToScreen(segs[0].x1, segs[0].z1);
+            ctx.moveTo(sp.x, sp.y);
+        }
+
+        // 切削セグメントをパスに追加（arc も同一パラメータで clip path に含める）
+        for (const seg of segs) {
+            if (seg.arcMeta) {
+                const { zc, rc, R, phi0, phi1, isCw } = seg.arcMeta;
+                const sc = worldToScreen(rc * 2, zc);
+                const sR = R * g_scale;
+                ctx.arc(sc.x, sc.y, sR, -phi0, -phi1, !isCw);
+            } else {
+                const s2 = worldToScreen(seg.x2, seg.z2);
+                ctx.lineTo(s2.x, s2.y);
+            }
+        }
+
+        ctx.closePath();
+        ctx.clip();
+
+        // 45° 斜線ハッチング（canvas 全体に描いてクリップで切り抜く）
+        ctx.strokeStyle = 'rgba(80, 160, 255, 0.18)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+        const spacing = Math.max(6, Math.min(18, g_scale * 3));
+        const cW = g_canvas.width, cH = g_canvas.height;
+        for (let x = -cH; x < cW + cH; x += spacing) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x + cH, cH);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+}
+
+/**
+ * 円弧を canvas arc で描画するヘルパー。
+ * screen_angle = -phi (y軸反転補正)、anticlockwise = !isCw (同理由)。
+ */
+function drawArcSegment(ctx, seg) {
+    const { zc, rc, R, phi0, phi1, isCw } = seg.arcMeta;
+    const sc = worldToScreen(rc * 2, zc);
+    const sR = R * g_scale;
+    ctx.arc(sc.x, sc.y, sR, -phi0, -phi1, !isCw);
+}
+
 function renderCanvas() {
     if (!g_ctx || !g_canvas) return;
     const ctx = g_ctx;
@@ -1979,19 +2192,26 @@ function renderCanvas() {
     ctx.stroke();
     ctx.restore();
 
+    // ハッチング（パスの下に描画）
+    drawApproachHatching(ctx);
+
     g_paths.forEach(function(p, idx) {
         if (!toolPathPassesToolFilter(p)) return;
         if (p.mode === "G0" && !g_showG0) return;
         if (isCuttingMoveMode(p.mode) && !g_showG1) return;
-        const p1 = worldToScreen(p.x1, p.z1), p2 = worldToScreen(p.x2, p.z2);
         ctx.save();
         ctx.setLineDash([]);
         ctx.lineCap = "round";
         ctx.strokeStyle = strokeColorForToolpath(p, idx);
         ctx.lineWidth = (idx === g_highlightIdx) ? 5 : (p.mode === "G0" ? 1 : 3);
         ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
+        if (p.arcMeta) {
+            drawArcSegment(ctx, p);
+        } else {
+            const p1 = worldToScreen(p.x1, p.z1), p2 = worldToScreen(p.x2, p.z2);
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+        }
         ctx.stroke();
         ctx.restore();
     });
@@ -2259,30 +2479,46 @@ function initEventListeners(canvas) {
             return; 
         }
 
-        // --- 軌跡（線分）への当たり判定ロジック ---
+        // --- 軌跡（線分・円弧）への当たり判定ロジック ---
         let bestDist = 20, bestIdx = -1;
         g_paths.forEach((p, idx) => {
             if (!toolPathPassesToolFilter(p)) return;
             if (p.mode === "G0" && !g_showG0) return;
             if (isCuttingMoveMode(p.mode) && !g_showG1) return;
-            
-            const s1 = worldToScreen(p.x1, p.z1);
-            const s2 = worldToScreen(p.x2, p.z2);
-            const m = g_mousePos;
-            
-            const A = m.x - s1.x; const B = m.y - s1.y;
-            const C = s2.x - s1.x; const D = s2.y - s1.y;
-            const dot = A * C + B * D;
-            const lenSq = C * C + D * D;
-            let param = (lenSq !== 0) ? dot / lenSq : -1;
 
-            let dx, dy;
-            if (param < 0) { dx = m.x - s1.x; dy = m.y - s1.y; }
-            else if (param > 1) { dx = m.x - s2.x; dy = m.y - s2.y; }
-            else { dx = m.x - (s1.x + param * C); dy = m.y - (s1.y + param * D); }
-            
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < bestDist) { bestDist = dist; bestIdx = idx; }
+            const m = g_mousePos;
+            let dist;
+
+            if (p.arcMeta) {
+                // 円弧: 中心からの距離と円弧半径の差 + 角度範囲チェック
+                const { zc, rc, R, phi0, phi1, isCw } = p.arcMeta;
+                const sc = worldToScreen(rc * 2, zc);
+                const sR = R * g_scale;
+                const dx = m.x - sc.x, dy = m.y - sc.y;
+                const dCenter = Math.sqrt(dx * dx + dy * dy);
+                dist = Math.abs(dCenter - sR);
+                if (dist < bestDist) {
+                    // マウスの screen 角度 → world 角度（screen_angle = -phi）
+                    const worldAngle = -Math.atan2(dy, dx);
+                    if (!isAngleInArcRange(worldAngle, phi0, phi1, isCw)) return;
+                    bestDist = dist;
+                    bestIdx = idx;
+                }
+            } else {
+                const s1 = worldToScreen(p.x1, p.z1);
+                const s2 = worldToScreen(p.x2, p.z2);
+                const A = m.x - s1.x; const B = m.y - s1.y;
+                const C = s2.x - s1.x; const D = s2.y - s1.y;
+                const dot = A * C + B * D;
+                const lenSq = C * C + D * D;
+                let param = (lenSq !== 0) ? dot / lenSq : -1;
+                let dx, dy;
+                if (param < 0)      { dx = m.x - s1.x; dy = m.y - s1.y; }
+                else if (param > 1) { dx = m.x - s2.x; dy = m.y - s2.y; }
+                else                { dx = m.x - (s1.x + param * C); dy = m.y - (s1.y + param * D); }
+                dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < bestDist) { bestDist = dist; bestIdx = idx; }
+            }
         });
 
         if (bestIdx !== g_highlightIdx) {
