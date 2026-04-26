@@ -20,7 +20,10 @@ export default [
         ResizeObserver: 'readonly',
         requestAnimationFrame: 'readonly',
         setTimeout: 'readonly',
+        setInterval: 'readonly',
         clearTimeout: 'readonly',
+        clearInterval: 'readonly',
+        FileReader: 'readonly',
         machines: 'readonly',
         tubeData: 'readonly',
         template_M12BAITO: 'readonly',
@@ -31,15 +34,8 @@ export default [
         template_M22: 'readonly',
         template_M40: 'readonly',
         template_G78: 'readonly',
-        template_Tube: 'readonly',
-        template_Tonbo_NLX_G78: 'readonly',
-        template_Tonbo_NLX_M40: 'readonly',
-        template_Tonbo_CL_G78: 'readonly',
-        template_Tonbo_CL_M40: 'readonly',
-        template_Tonbo_CL_M22: 'readonly',
-        template_Tonbo_CL_M18: 'readonly',
-        template_Tonbo_CL_M15: 'readonly',
-        template_Tonbo_CL_M12: 'readonly'
+        template_G18_42: 'readonly',
+        template_Tube: 'readonly'
       }
     },
     rules: {

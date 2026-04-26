@@ -13,19 +13,25 @@ alwaysApply: true
 ## Change guardrails
 - Diff-first: present targeted edits, avoid full-file rewrites unless required.
 - Ask before changing proprietary calculation logic or G/M code definitions.
-- After each accepted change, include a short verification checklist:
-  - What to confirm in simulator or on machine
-  - Edge cases that could silently break output
+
+## User preference defaults
+- Prioritize implementation over explanation unless the user explicitly asks for details.
+- Prefer clear Japanese placeholder naming in templates and replace maps.
+- Follow "report only when needed": skip routine completion reports when the user says reporting is unnecessary.
+- Do not append post-implementation checklists unless explicitly requested.
+- Token management: if estimated consumption will be excessive (e.g., very long code or bulk file processing), stop and propose alternatives.
 
 ## Managed files
 - Shell: `index.html`
-- Assets: `assets/style.css`, `assets/data.js`, `assets/app.js`, `assets/i18n.js`
+- Assets: `assets/style.css`, `assets/data.js`, `assets/app.js`, `assets/i18n.js`, `assets/operator-hints.js`（オペレーター向け注意書きのみ編集可）
 - Templates under `テンプレート/`: `data_template_*.js`
-- Helper script: `scripts/build-tonbo-templates-from-refs.mjs`
 
 ## Project-specific knowledge
+- Tonbo (`workType === "Tonbo"`) templates and build tooling are discontinued; `generateGCode` rejects that work type with a clear message.
 - M408 = machining completion signal sent to external equipment (NCL044 only)
 - M61 = machining completion signal (NCL012 only)
 - NCL085 has no machining completion signal; output is intentionally empty
 - G/M code roles differ by machine; do not assume standard behavior
 - Template placeholders use `{{key}}` and are resolved at generation time
+- Internal style `Yose` outputs machining path/block, but `YoseRelay` is calculation-only for first-process ID depth
+- `YoseRelay` first-process ID depth formula: totalLength - secondProcessIDDepth - ((partnerDia/2 - machinedDia/2) / tan(taperAngle)) + 1
