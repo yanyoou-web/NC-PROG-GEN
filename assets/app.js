@@ -449,7 +449,7 @@ function combineTubeFlatBottomFinishLine(toolDia, exitLine) {
 // --- 定数・ワーク定義マップ ---
 
 // ワーク種別ごとの内径大径(D)定義マップ
-const WORK_ID_MAP = { "M40": 22.0, "M22": 10.0, "M18": 8.0, "M15": 6.0, "M12": 4.00, "G78": 16.0, "G18_42": 4.15 };
+const WORK_ID_MAP = { "M40": 22.0, "M22": 10.0, "M18": 8.0, "M15": 6.0, "M12": 4.00, "G78": 16.0, "G18_40": 4.0, "G18_42": 4.15, "G18_62": 6.2 };
 
 /** 平底で使う内径ダイヤの公称径（mm）。テンプレの {{内径ダイヤΦ*}} と対応 */
 const FLAT_BOTTOM_TOOL_DIA_MM = {
@@ -468,7 +468,9 @@ const DRILL_DIA_MAP = {
     "M18": 7.0,
     "M15": 3.3,
     "M12": 4.05,
+    "G18_40": 4.05,
     "G18_42": 4.15,
+    "G18_62": 5.0,
     "Tube": null
 };
 
@@ -933,7 +935,7 @@ function generateGCode(input, machineName) {
         } else {
             rearChamferEarly = getIchimonjiBlock(input.cpVal, machineConfig);
         }
-    } else if (input.workType === "G18_42" && style === "CrossSmall") {
+    } else if ((input.workType === "G18_40" || input.workType === "G18_42") && style === "CrossSmall") {
         const partnerD = parseFloat(input.valPartnerD);
         if (!isNaN(partnerD)) {
             rearChamferEarly = getOkuBiteBlockG18(input.cpVal, machineConfig);
@@ -1053,7 +1055,7 @@ function generateGCode(input, machineName) {
         "入力_内径深さ": wrapHCalc(ncFormat(finalFinishDepth)),
         
         "DRILL_BLOCK": getDrillBlock(finalDrillDepth, input.drillMode),
-        "DRILLSHIAGE_BLOCK": input.workType === "G18_42"
+        "DRILLSHIAGE_BLOCK": (input.workType === "G18_40" || input.workType === "G18_42")
             ? getDrillBlock(finalDrillDepth, "G1")
             : getDrillShiageBlock(finalDrillDepth),
         "奥バイト面取り": okuBiteMentoriBlock,
@@ -1148,7 +1150,9 @@ function generateGCode(input, machineName) {
                    : template_M12HGDR;
         if (typeof m12v !== "undefined") finalCode = m12v;
     }
+    else if (input.workType === "G18_40") { if (typeof template_G18_40 !== 'undefined') finalCode = template_G18_40; }
     else if (input.workType === "G18_42") { if (typeof template_G18_42 !== 'undefined') finalCode = template_G18_42; }
+    else if (input.workType === "G18_62") { if (typeof template_G18_62 !== 'undefined') finalCode = template_G18_62; }
     else { if (typeof template_G78 !== 'undefined') finalCode = template_G78; }
 
     if (!finalCode) {
@@ -2555,7 +2559,7 @@ function updateWorkTypeSettings() {
   if (type === 'M12') {
       idDepth.disabled = false;
       idDepth.placeholder = "22.0";
-  } else if (type === 'G18_42') {
+  } else if (type === 'G18_40' || type === 'G18_42') {
       idDepth.disabled = false;
       idDepth.placeholder = "22.0";
       if (drillMode) { drillMode.value = "G1"; drillMode.disabled = true; }
@@ -2758,12 +2762,20 @@ function restrictStyles(workType) {
     if(styleYoseRelay) { styleYoseRelay.style.pointerEvents = 'auto'; styleYoseRelay.style.opacity = '1'; }
     if(styleCrossBig) { styleCrossBig.style.pointerEvents = 'auto'; styleCrossBig.style.opacity = '1'; }
 
-    if (workType === 'G18_42') {
+    if (workType === 'G18_40' || workType === 'G18_42') {
         ['styleHirazoko', 'styleIchimonji', 'styleNormal', 'styleYose'].forEach(id => {
             const el = $id(id);
             if (el) { el.style.pointerEvents = 'none'; el.style.opacity = '0.3'; }
         });
         if (!['YoseRelay', 'CrossSmall'].includes(currentInternalStyle)) {
+            setInternalStyle('');
+        }
+    } else if (workType === 'G18_62') {
+        ['styleIchimonji', 'styleYose', 'styleCrossSmall'].forEach(id => {
+            const el = $id(id);
+            if (el) { el.style.pointerEvents = 'none'; el.style.opacity = '0.3'; }
+        });
+        if (!['Hirazoko', 'Normal', 'YoseRelay'].includes(currentInternalStyle)) {
             setInternalStyle('');
         }
     } else if (workType === 'M12') {
@@ -2992,7 +3004,7 @@ function updateInternalStyleUI() {
             drillDepthLabel.setAttribute("data-i18n", "drillZ");
             drillDepthInput.readOnly = true;
             drillDepthInput.classList.add("input--readonly-computed");
-        } else if (workType === "G18_42" && currentInternalStyle === "CrossSmall") {
+        } else if ((workType === "G18_40" || workType === "G18_42") && currentInternalStyle === "CrossSmall") {
             drillDepthLabel.setAttribute("data-i18n", "drillZ");
             drillDepthInput.readOnly = true;
             drillDepthInput.classList.add("input--readonly-computed");
@@ -3003,7 +3015,7 @@ function updateInternalStyleUI() {
         }
     }
 
-    if (workType === "M12" || workType === "G18_42") {
+    if (workType === "M12" || workType === "G18_40" || workType === "G18_42") {
         drillMode.value = "G1";
         drillMode.disabled = true;
     } else if (currentInternalStyle === "Ichimonji") {
@@ -3013,10 +3025,10 @@ function updateInternalStyleUI() {
         drillMode.disabled = false;
     }
 
-    // M12 / G18_42 ではドリルモードは自動決定するため UI は出さない
+    // M12 / G18_40 / G18_42 ではドリルモードは自動決定するため UI は出さない
     const drillModeRow = $id("drillModeRow");
     if (drillModeRow) {
-        const shouldHideDrillMode = workType === "M12" || workType === "G18_42" || !currentInternalStyle;
+        const shouldHideDrillMode = workType === "M12" || workType === "G18_40" || workType === "G18_42" || !currentInternalStyle;
         drillModeRow.style.display = shouldHideDrillMode ? "none" : "flex";
     }
 
@@ -3151,7 +3163,7 @@ function calcDrillDepth() {
         return;
     }
 
-    if ((workType === 'M12' || workType === 'G18_42') && style === 'CrossSmall') {
+    if ((workType === 'M12' || workType === 'G18_40' || workType === 'G18_42') && style === 'CrossSmall') {
         if (drillDepthInput) {
             drillDepthInput.readOnly = true;
             drillDepthInput.classList.add("input--readonly-computed");

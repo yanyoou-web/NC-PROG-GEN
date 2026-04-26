@@ -34,7 +34,9 @@ export default [
         template_M22: 'readonly',
         template_M40: 'readonly',
         template_G78: 'readonly',
+        template_G18_40: 'readonly',
         template_G18_42: 'readonly',
+        template_G18_62: 'readonly',
         template_Tube: 'readonly'
       }
     },
