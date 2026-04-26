@@ -1358,8 +1358,8 @@ let g_lastMouseX = 0, g_lastMouseY = 0;
 // フィルタ・表示設定
 /** 表示するNブロック＝N番号(コメント)（複数選択可）。空のときは全ブロックを表示 */
 let g_nBlockFilterSet = new Set();
-let g_showG0 = true; 
-let g_showG1 = true; 
+let g_showG0 = false; // デフォルト: G0(早送り)非表示
+let g_showG1 = true;
 let g_stickyPreview = false;
 /** 画面追従パネルを見出しからドラッグ移動中（キャンバス上のホバー判定と競合させない） */
 let g_stickyPanelDragging = false;
@@ -1369,7 +1369,11 @@ let g_stickyBoxPersistTimer = null;
 const LS_STICKY_BOX = "ncPreviewStickyBox";
 
 // インスペクタ用
-let g_highlightIdx = -1;
+let g_highlightIdx = -1;      // キャンバスホバーによる一時ハイライト (g_paths 配列インデックス)
+let g_flashLineIdx   = -1;    // Gコードdblclick → ツールパス黄色点滅 (lineIdx)
+let g_flashVisible   = true;  // 点滅の表示/非表示フラグ
+let g_flashTimer     = null;  // 5秒終了タイマー
+let g_flashBlink     = null;  // 点滅インターバル
 let g_mousePos = { x: 0, y: 0 };
 
 // キャンバス要素のキャッシュ
@@ -1681,6 +1685,7 @@ function drawPreview(forceFit = false) {
     if (!g_canvas.dataset.init) {
         initEventListeners(g_canvas);
         setupLiveUpdate();
+        setupGCodeHighlightSync();
         g_canvas.dataset.init = "true";
     }
 
@@ -1705,6 +1710,69 @@ function setupLiveUpdate() {
     resultArea.addEventListener('input', () => {
         if (g_debounceTimer) clearTimeout(g_debounceTimer);
         g_debounceTimer = setTimeout(() => drawPreview(false), 300);
+    });
+}
+
+/**
+ * Gコード行 → ツールパス逆ハイライトを適用する共通処理。
+ * lineEl: クリック/ホバーした .gc-line 要素（null でクリア）
+ * lineIdx: data-ln の数値（-1 でクリア）
+ * scrollToPreview: true のときプレビューエリアへ自動スクロール
+ */
+/**
+ * ツールパスを黄色で 5 秒間点滅させる（キャンバスホバーと同じ色）。
+ * 400ms 間隔の点滅を 5 秒後に自動解除。
+ */
+function startFlashHighlight(lineIdx) {
+    clearTimeout(g_flashTimer);
+    clearInterval(g_flashBlink);
+    g_flashLineIdx  = lineIdx;
+    g_flashVisible  = true;
+    if (typeof renderCanvas === 'function') renderCanvas();
+
+    g_flashBlink = setInterval(() => {
+        g_flashVisible = !g_flashVisible;
+        if (typeof renderCanvas === 'function') renderCanvas();
+    }, 400);
+
+    g_flashTimer = setTimeout(() => {
+        clearInterval(g_flashBlink);
+        g_flashBlink   = null;
+        g_flashLineIdx = -1;
+        g_flashVisible = true;
+        if (typeof renderCanvas === 'function') renderCanvas();
+    }, 5000);
+}
+
+/**
+ * Gコード行 逆ハイライト初期化。
+ * ダブルクリック → 対応ツールパスを黄色で 5 秒点滅 + プレビューへスクロール。
+ * resultArea 全体に委譲リスナーを 1 つだけ付ける（innerHTML 再生成後も追加不要）。
+ */
+function setupGCodeHighlightSync() {
+    const resultArea = document.getElementById('resultArea');
+    if (!resultArea || resultArea.dataset.gcHighlightBound) return;
+    resultArea.dataset.gcHighlightBound = "true";
+
+    resultArea.addEventListener('dblclick', e => {
+        const line = e.target.closest('.gc-line');
+        if (!line) return;
+        // contenteditable でのテキスト選択を抑止
+        e.preventDefault();
+        const sel = window.getSelection();
+        if (sel) sel.removeAllRanges();
+        const lineIdx = parseInt(line.dataset.ln, 10);
+        if (isNaN(lineIdx)) return;
+        // 対応パスが存在しない行は無視
+        if (!g_paths || !g_paths.some(p => p.lineIdx === lineIdx)) return;
+
+        startFlashHighlight(lineIdx);
+
+        // プレビューエリアへ自動スクロール
+        const preview = document.getElementById('previewContainer');
+        if (preview && preview.offsetParent !== null) {
+            preview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     });
 }
 
@@ -2071,6 +2139,7 @@ function toolPaletteIndex(tool) {
 
 function strokeColorForToolpath(p, idx) {
     if (idx === g_highlightIdx) return "#ffff00";
+    if (g_flashLineIdx !== -1 && p.lineIdx === g_flashLineIdx && g_flashVisible) return "#ffff00";
     const t = TOOL_PREVIEW_PALETTE[toolPaletteIndex(p.tool)];
     const hue = t[0], sat = t[1], lig = t[2];
     if (p.mode === "G0") return "hsla(" + hue + "," + sat + "%," + lig + "%,0.42)";
@@ -2203,7 +2272,13 @@ function renderCanvas() {
         ctx.setLineDash([]);
         ctx.lineCap = "round";
         ctx.strokeStyle = strokeColorForToolpath(p, idx);
-        ctx.lineWidth = (idx === g_highlightIdx) ? 5 : (p.mode === "G0" ? 1 : 3);
+        const isFlash = g_flashLineIdx !== -1 && p.lineIdx === g_flashLineIdx && g_flashVisible;
+        const isHover = idx === g_highlightIdx;
+        ctx.lineWidth = isFlash ? 22 : isHover ? 5 : (p.mode === "G0" ? 1 : 3);
+        if (isFlash) {
+            ctx.shadowColor = "#ffff00";
+            ctx.shadowBlur  = 28;
+        }
         ctx.beginPath();
         if (p.arcMeta) {
             drawArcSegment(ctx, p);
@@ -4269,6 +4344,12 @@ function runGeneration(fromUserButton = false) {
   if (isGenError && !fromUserButton) {
     return;
   }
+
+  // 新規生成時は逆ハイライトをリセット
+  clearTimeout(g_flashTimer);
+  clearInterval(g_flashBlink);
+  g_flashLineIdx = -1;
+  g_flashVisible = true;
 
   if (!isGenError) {
       // 各行を data-ln でラップしてツールパスからのジャンプを可能にする

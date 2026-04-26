@@ -889,6 +889,12 @@ button.main-btn.main-btn--compact {
 .gc-line-blink {
   animation: gc-line-flash 5s ease-out forwards;
 }
+/* 逆ハイライト: Gコード行クリック → ツールパス連動 */
+.gc-line-pinned {
+  background: rgba(0, 229, 255, 0.18);
+  outline: 1px solid rgba(0, 229, 255, 0.45);
+  border-radius: 2px;
+}
 
 .h-val { font-weight: 600; }
 .h-val--calc { color: #FFFF00; font-weight: 700; text-shadow: 0 0 2px rgba(255, 255, 0, 0.2); }
