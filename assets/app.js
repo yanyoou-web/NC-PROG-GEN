@@ -449,7 +449,12 @@ function combineTubeFlatBottomFinishLine(toolDia, exitLine) {
 // --- 定数・ワーク定義マップ ---
 
 // ワーク種別ごとの内径大径(D)定義マップ
-const WORK_ID_MAP = { "M40": 22.0, "M22": 10.0, "M18": 8.0, "M15": 6.0, "M12": 4.00, "G78": 16.0, "G18_40": 4.0, "G18_42": 4.15, "G18_62": 6.2 };
+const WORK_ID_MAP = { "M40": 22.0, "M22": 10.0, "M18": 8.0, "M15": 6.0, "M12": 4.00, "G78": 16.0, "G18_40": 4.0, "G18_42": 4.15, "G18_62": 6.2, "G18_655": 6.55, "G18_6175": 6.175 };
+
+/** G18 HGDR 系（φ6.2 / φ6.55 / φ6.175）：同一のスタイル制限・DRILLSHIAGE（G74 仕上げブロック） */
+function isG18HgdrSeriesWorkType(wt) {
+    return wt === "G18_62" || wt === "G18_655" || wt === "G18_6175";
+}
 
 /** 平底で使う内径ダイヤの公称径（mm）。テンプレの {{内径ダイヤΦ*}} と対応 */
 const FLAT_BOTTOM_TOOL_DIA_MM = {
@@ -457,7 +462,12 @@ const FLAT_BOTTOM_TOOL_DIA_MM = {
     M22: 8,
     M18: 8,
     M15: 6,
-    G78: 16
+    G78: 16,
+    // G18 HGDR 系: 加工径(6.x) とバイト径 4 が異なるため computeFlatBottomExitLine は X4.F.03 に分岐
+    G18_62: 4,
+    G18_655: 4,
+    G18_6175: 4
+    // G18_40 / G18_42: ドリル仕上げ中心のため本マップに載せない（toolDia 未定義 → defaultLine の U-.2）
 };
 
 // ドリル径データベース
@@ -470,7 +480,9 @@ const DRILL_DIA_MAP = {
     "M12": 4.05,
     "G18_40": 4.05,
     "G18_42": 4.15,
-    "G18_62": 5.0,
+    "G18_62": 4.15,
+    "G18_655": 4.15,
+    "G18_6175": 4.15,
     "Tube": null
 };
 
@@ -679,6 +691,18 @@ function generateGCode(input, machineName) {
     if (input.workType && input.workType !== 'Tube') {
         if (!input.internalStyle) {
             errors.push('[加工スタイル] が選択されていません。内径スタイルドロワーから加工スタイルを選択してください。');
+        }
+    }
+
+    // ── M99P100 / X50.U8.処理（チューブは対象外） ──
+    if (input.workType && input.workType !== 'Tube') {
+        const m99Mode = input.m99Mode;
+        if (m99Mode !== "on" && m99Mode !== "off") {
+            errors.push(
+                input.workType === "M40"
+                    ? '[X50.U8.処理] が未選択です。「使用しない」または「X50.U8.処理」をプルダウンから選んでください。'
+                    : '[M99P100] が未選択です。「使用しない」または「M99P100」をプルダウンから選んでください。'
+            );
         }
     }
 
@@ -1153,6 +1177,8 @@ function generateGCode(input, machineName) {
     else if (input.workType === "G18_40") { if (typeof template_G18_40 !== 'undefined') finalCode = template_G18_40; }
     else if (input.workType === "G18_42") { if (typeof template_G18_42 !== 'undefined') finalCode = template_G18_42; }
     else if (input.workType === "G18_62") { if (typeof template_G18_62 !== 'undefined') finalCode = template_G18_62; }
+    else if (input.workType === "G18_655") { if (typeof template_G18_655 !== 'undefined') finalCode = template_G18_655; }
+    else if (input.workType === "G18_6175") { if (typeof template_G18_6175 !== 'undefined') finalCode = template_G18_6175; }
     else { if (typeof template_G78 !== 'undefined') finalCode = template_G78; }
 
     if (!finalCode) {
@@ -2589,15 +2615,17 @@ function updateM40M99UI(type) {
         : ($id('workType') ? $id('workType').value : '');
     const label = $id('lblM99P100');
     const sel = $id('selM99P100');
-    if (!label || !sel) return;
+    if (!label || !sel || sel.options.length < 3) return;
     if (resolvedType === 'M40') {
         label.textContent = 'X50.U8.処理';
-        sel.options[0].textContent = '使用しない';
-        sel.options[1].textContent = 'X50.U8.処理';
+        sel.options[0].textContent = '未選択';
+        sel.options[1].textContent = '使用しない';
+        sel.options[2].textContent = 'X50.U8.処理';
     } else {
         label.textContent = 'M99P100';
-        sel.options[0].textContent = '使用しない';
-        sel.options[1].textContent = 'M99P100';
+        sel.options[0].textContent = '未選択';
+        sel.options[1].textContent = '使用しない';
+        sel.options[2].textContent = 'M99P100';
     }
 }
 window._ncUpdateM40M99UI = function () { updateM40M99UI(); };
@@ -2770,7 +2798,7 @@ function restrictStyles(workType) {
         if (!['YoseRelay', 'CrossSmall'].includes(currentInternalStyle)) {
             setInternalStyle('');
         }
-    } else if (workType === 'G18_62') {
+    } else if (isG18HgdrSeriesWorkType(workType)) {
         ['styleIchimonji', 'styleYose', 'styleCrossSmall'].forEach(id => {
             const el = $id(id);
             if (el) { el.style.pointerEvents = 'none'; el.style.opacity = '0.3'; }
@@ -3909,6 +3937,9 @@ function runGeneration(fromUserButton = false) {
         ? chkOkuBite.checked
         : false;
 
+  const m99SelEl = $id("selM99P100");
+  const m99Mode = m99SelEl ? m99SelEl.value : "";
+
   const inputData = {
     drawNumA: $id('v1a').value,   
     drawNumB: $id('v1b').value,   
@@ -3925,7 +3956,8 @@ function runGeneration(fromUserButton = false) {
     m12FinishType: m12Resolved.finishType,
     m12Profile: m12Resolved.profile,
     m12BaitoDrillMode: getM12BaitoDrillModeForInput(),
-    m99p100: (($id('selM99P100') && $id('selM99P100').value) || 'off') === 'on',
+    m99Mode: m99Mode,
+    m99p100: m99Mode === "on",
 
     internalStyle: currentInternalStyle,
     cpVal: $id('cpVal').value,
