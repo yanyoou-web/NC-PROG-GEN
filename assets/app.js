@@ -1072,6 +1072,13 @@ function generateGCode(input, machineName) {
             : rearChamferEarly;
 
     // --- 5. 置換マップ作成 ---
+    // 置換キーの符号ルール（テンプレート追加時の運用規約）
+    // 1) replaceMap は原則として「正値の意味値」を保持する（符号はテンプレート側で明示）。
+    //    例: Z-{{入力_内径深さ}} / X{{入力_外径}}
+    // 2) どうしても符号込みの計算値を渡す必要がある場合だけ、キー名で明示する。
+    //    - *_ABS : 正値（絶対値ベース）
+    //    - *_ZNEG: Zマイナス方向が確定した値（例: -31.0）
+    // 3) 既存の互換キー（L, L-R, L-0.5 など）は当面維持し、新規テンプレから本規約を適用する。
     const replaceMap = {
         "入力_図番": wrapHInput(fullDrawStr),
         "入力_工程No": wrapHInput(input.processNum),
@@ -1154,17 +1161,23 @@ function generateGCode(input, machineName) {
              let drillVal = 0;
              if(D_Drill_Str && D_Drill_Str.startsWith("DR")) drillVal = parseFloat(D_Drill_Str.replace("DR", ""));
              
-            replaceMap["OD+11"] = wrapHCalc(ncFormat((OD + 11.0).toFixed(3)));
-            replaceMap["L"] = wrapHCalc(ncFormat((-L).toFixed(3)));
-            replaceMap["OD+1"] = wrapHCalc(ncFormat((OD + 1.0).toFixed(3)));
+            replaceMap["L"] = wrapHCalc(ncFormat((L).toFixed(3)));
+            replaceMap["母材幅"] = wrapHCalc(ncFormat((OD / Math.SQRT2).toFixed(3)));
+            replaceMap["チューブ_外径荒加工径"] = wrapHCalc(ncFormat((OD + R + R + 2.6).toFixed(3)));
+            replaceMap["チューブ_端面始点"] = input.m99p100 ? "" : wrapHCalc(ncFormat((OD + R + R + 4.6).toFixed(3)));
+            const _mcNum = parseFloat(tSpec.MC);
+            replaceMap["MC丸"] = input.m99p100
+                ? (!isNaN(_mcNum) ? wrapHCalc(ncFormat((_mcNum + 2).toFixed(3))) : "テンプレート未設定")
+                : "";
             replaceMap["OD+0.1"] = wrapHCalc(ncFormat((OD + 0.1).toFixed(3)));
             replaceMap["Drill-1"] = wrapHCalc(ncFormat((drillVal - 1.0).toFixed(3)));
             replaceMap["ID+0.6"] = wrapHCalc(ncFormat((ID + 0.6).toFixed(3)));
             replaceMap["OD-0.6"] = wrapHCalc(ncFormat((OD - 0.6).toFixed(3)));
-            replaceMap["L-R"] = wrapHCalc(ncFormat((- (L - R)).toFixed(3)));
+            replaceMap["L-R"] = wrapHCalc(ncFormat((L - R).toFixed(3)));
+            replaceMap["L-0.3"] = wrapHCalc(ncFormat((L - 0.3).toFixed(3)));
+            replaceMap["L-0.5"] = wrapHCalc(ncFormat((L - 0.5).toFixed(3)));
             replaceMap["OD+2R"] = wrapHCalc(ncFormat((OD + R + R).toFixed(3)));
             replaceMap["OD+2R+0.1"] = wrapHCalc(ncFormat((OD + R + R + 0.1).toFixed(3)));
-            replaceMap["L-0.5"] = wrapHCalc(ncFormat((-L + 0.5).toFixed(3)));
         }
     } else if (input.workType === "M40") {
         if (typeof template_M40 !== 'undefined') finalCode = template_M40;
