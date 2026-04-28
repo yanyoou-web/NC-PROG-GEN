@@ -157,30 +157,30 @@ function getDrillBlock(depth, mode) {
     depth = Math.abs(depth);
 
     if (mode === 'G1') {
-        s += `G1Z-${d(depth)}F0.15\n`;
-        s += `G4U0.5\n`;
+        s += `G1Z-${d(depth)}F.15\n`;
+        s += `G4U.3\n`;
         s += `Z1.F2.5`;
     } else {
         if (depth <= 30) {
-             s += `G74R0.5\n`;
-             s += `G74Z-${d(depth)}Q3000F0.25`;
+             s += `G74R.5\n`;
+             s += `G74Z-${d(depth)}Q8000F.25`;
         } else {
-            s += `G74R0.5\n`;
-            s += `G74Z-30.Q3000F0.25\n`;
+            s += `G74R.5\n`;
+            s += `G74Z-30.Q3000F.25\n`;
             let currentZ = 30;
             while (currentZ < depth) {
                 let nextZ = currentZ + 10;
                 if (nextZ >= depth) {
                     s += `\nG1Z-${d1(currentZ - 0.1)}F2.5\n`;
-                    s += `Z-${d(depth)}F0.25\n`;
+                    s += `Z-${d(depth)}F.25\n`;
                     s += `Z30.F2.5\n\n`;
                     s += `G1Z-${d(depth - 0.1)}F2.5\n`;
-                    s += `G4U.5\n`;
+                    s += `G4U.3\n`;
                     s += `G1Z30.F2.5`;
                     break;
                 }
                 s += `\nG1Z-${d1(currentZ - 0.1)}F2.5\n`;
-                s += `Z-${d(nextZ)}F0.25\n`;
+                s += `Z-${d(nextZ)}F.25\n`;
                 s += `Z30.F2.5`;
                 currentZ = nextZ;
             }
@@ -200,7 +200,7 @@ function getDrillShiageBlock(depth) {
         const nextZ = currentZ + 10;
         if (nextZ >= depth) {
             s += `G1Z-${d(depth)}F.1\n`;
-            s += `G4U.5\n`;
+            s += `G4U.3\n`;
             s += `G1Z30.F2.5`;
             break;
         }
@@ -221,8 +221,8 @@ function getIchimonjiBlock(cpStr, machineConfig) {
 
     const tool = machineConfig["一文字ドリル"];
     if (!tool) return "(ERROR: 機械定義に '一文字ドリル' が設定されていません)";
-    const mOn  = machineConfig["集塵機オン"] || "";
-    const mOff = machineConfig["集塵機オフ"] || "";
+    const mOn  = machineConfig["M51"] || "";
+    const mOff = machineConfig["M59"] || "";
     const H = (v) => wrapH(v); 
 
     let s = "\n";
@@ -246,8 +246,8 @@ function getIchimonjiHirazokoBlock(drawDepth, machineConfig) {
     const zFinish   = (zDraw + 0.2).toFixed(3);
     const tool = machineConfig["一文字ドリル"];
     if (!tool) return "(ERROR: 機械定義に '一文字ドリル' が設定されていません)";
-    const mOn  = machineConfig["集塵機オン"] || "";
-    const mOff = machineConfig["集塵機オフ"] || "";
+    const mOn  = machineConfig["M51"] || "";
+    const mOff = machineConfig["M59"] || "";
     const H = (v) => wrapH(v);
     let s = "\n";
     s += `N102(4.0DR-ICHIMONJI-HIRAZOKO)\n`;
@@ -275,8 +275,8 @@ function getOkuBiteBlock(cpStr, machineConfig) {
 
     const tool = machineConfig["内径ダイヤΦ4"]; 
     if (!tool) return "(ERROR: 機械定義に '内径ダイヤΦ4' が設定されていません)";
-    const m51 = machineConfig["集塵機オン"] || "";
-    const m59 = machineConfig["集塵機オフ"] || "";
+    const m51 = machineConfig["M51"] || "";
+    const m59 = machineConfig["M59"] || "";
     
     let s = "";
     s += `(OKU-BAIT--MENTORI)(CP=${H(cp.toFixed(3))})\n`;
@@ -308,8 +308,8 @@ function getOkuBiteBlockG18(cpStr, machineConfig) {
 
     const tool = machineConfig["内径ダイヤΦ4"]; 
     if (!tool) return "(ERROR: 機械定義に '内径ダイヤΦ4' が設定されていません)";
-    const m51 = machineConfig["集塵機オン"] || "";
-    const m59 = machineConfig["集塵機オフ"] || "";
+    const m51 = machineConfig["M51"] || "";
+    const m59 = machineConfig["M59"] || "";
 
     let s = "";
     s += `(OKU-BAIT--MENTORI-G18)(CP=${H(cp.toFixed(3))})\n`;
@@ -359,8 +359,8 @@ function getYoseStrings(method, angle, d, machineConfig) {
         // 工具は暫定で T0707 (machineConfigから取得推奨)
         const tool = machineConfig["内径ダイヤΦ4"];
         if (!tool) return "(ERROR: 機械定義に '内径ダイヤΦ4' が設定されていません)";
-        const mOn  = machineConfig["集塵機オン"] || "";
-        const mOff = machineConfig["集塵機オフ"] || "";
+        const mOn  = machineConfig["M51"] || "";
+        const mOff = machineConfig["M59"] || "";
         
         let s = "\n";
         s += `N103(YOSE-BETSU-KOUTEI)\n`;
@@ -456,7 +456,7 @@ function isG18HgdrSeriesWorkType(wt) {
     return wt === "G18_62" || wt === "G18_655" || wt === "G18_6175";
 }
 
-/** 全G18: {{DRILLSHIAGE_BLOCK}} は G1 ドリル仕上げ（G74 ステップ仕上げなし）で統一 */
+/** 全G18: {{DRILL_BLOCK}} は G1 ドリル仕上げ（G74 ステップ仕上げなし）で統一 */
 function usesG18DrillShiageG1Block(wt) {
     return wt === "G18_40" || wt === "G18_42" || isG18HgdrSeriesWorkType(wt);
 }
@@ -1044,8 +1044,8 @@ function generateGCode(input, machineName) {
                     // ② バイト2本 (別工程)
                     const toolKey = "内径ダイヤΦ4";
                     const toolName = machineConfig[toolKey] ? wrapH(machineConfig[toolKey]) : "T0707";
-                    const m51 = machineConfig["集塵機オン"] ? wrapH(machineConfig["集塵機オン"]) : "";
-                    const m59 = machineConfig["集塵機オフ"] ? wrapH(machineConfig["集塵機オフ"]) : "";
+                    const m51 = machineConfig["M51"] ? wrapH(machineConfig["M51"]) : "";
+                    const m59 = machineConfig["M59"] ? wrapH(machineConfig["M59"]) : "";
                     
                     const startX = (bigD - 1.0).toFixed(0) + ".";
                     const approachZ = (effectiveDepth - 1.0).toFixed(0) + ".";
@@ -1085,23 +1085,23 @@ function generateGCode(input, machineName) {
         "入力_作成者": wrapHInput(input.workerName),
         "入力_アテ長さ": wrapHInput(ncFormat(input.ateLength)),
         "入力_日付": wrapHInput(today),
-        "計算_最大径1": wrapHCalc(ncFormat(calcMax1)),
-        "計算_最大径": wrapHCalc(ncFormat(calcMainMax)),
+        "最大径-5": wrapHCalc(ncFormat(calcMax1)),
         // 外径仕上ブロック（M12/M15/M18/M22/M40/G78/Tube 共通）: 通常・偏心は X…(--X--) の1行のみ（F.3 行は省略）。角ありは従来どおり2段。
-        "計算_最大径角": input.calcMode === "corner"
+        "最大径+角": input.calcMode === "corner"
             ? ("X" + wrapHCalc(ncFormat(calcCorner)))
             : ("X" + wrapHCalc(ncFormat(calcMax2)) + "(--X--)"),
-        "計算_最大径2": input.calcMode === "corner"
+        "最大径+3": input.calcMode === "corner"
             ? ("X" + wrapHCalc(ncFormat(calcMax2)) + "F.3\n")
             : "",
         "M99P100": wrapHInput(valM99),
         "最大径50": "",
         "入力_内径深さ": wrapHCalc(ncFormat(finalFinishDepth)),
         
-        "DRILL_BLOCK": getDrillBlock(finalDrillDepth, input.drillMode),
-        "DRILLSHIAGE_BLOCK": usesG18DrillShiageG1Block(input.workType)
+        "DRILL_BLOCK": usesG18DrillShiageG1Block(input.workType)
             ? getDrillBlock(finalDrillDepth, "G1")
-            : getDrillShiageBlock(finalDrillDepth),
+            : (input.workType === "M12" && (input.m12FinishType || "hss") === "hss")
+                ? getDrillShiageBlock(finalDrillDepth)
+                : getDrillBlock(finalDrillDepth, input.drillMode),
         "奥バイト面取り": okuBiteMentoriBlock,
 
         "BAITO_IN_S":         wrapHMachine("500"),
@@ -1184,9 +1184,9 @@ function generateGCode(input, machineName) {
         if (input.m99p100) {
             // X50.U8.処理: プレースホルダー代入前にテンプレート内の固定値を置換
             finalCode = finalCode.replace("G71U4.5R.5", "G71U8.0R.5");
-            finalCode = finalCode.replace("N22X{{計算_最大径1}}F.35", "N22X56.F.35");
-            // 残った {{計算_最大径1}} (line 20) を空にし、{{最大径50}} で "50." を出力
-            replaceMap["計算_最大径1"] = "";
+            finalCode = finalCode.replace("N22X{{最大径-5}}F.35", "N22X56.F.35");
+            // 残った {{最大径-5}} (line 20) を空にし、{{最大径50}} で "50." を出力
+            replaceMap["最大径-5"] = "";
             replaceMap["最大径50"] = wrapHCalc("50.");
         }
     }
