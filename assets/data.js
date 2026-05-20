@@ -37,7 +37,7 @@ T0200M0(--TORIKAE--)
 T0700M0`,
         "終了設定ブロック": `M19
 M99
-%`,},
+`,},
     "NCL015": {
         "機械名ヘッダー": "(CL-150)",
         "M51": "M51",
@@ -47,7 +47,7 @@ M99
         "M458": "M458",
         "M459": "M459",
         "主軸オリエンテーション": "M19",
-        "M53/M61/M408": "M408",
+        "M53/M61/M408": "",
         "ドリルT": "T1212",
         "ドリルHGDR": "T0606",
         "ドリルHSS": "T0606",
@@ -70,15 +70,16 @@ M99
         "一文字ドリル": "T1212",
         "初期設定ブロック": `G28U0W0
 G50S800
-T0200M0(--TORIKAE--)
-T0700M0`,
+M0(TORIKAE)
+M0T1100
+M51`,
         "終了設定ブロック": `T0500M19
 M3S1
 M5
 G28U0W0
 M59
 M99
-%`,},
+`,},
     "NCL085": {
         "機械名ヘッダー": "(NLX2500/700)",
         "M51": "M51",
@@ -119,7 +120,7 @@ M19
 M85
 N99
 M30
-%`,},
+`,},
     "NCL012": {
         "機械名ヘッダー": "(CL-20)",
         "M51": "M51",
@@ -153,7 +154,7 @@ M30
         "初期設定ブロック": `G28U0W0
 G50S800`,
         "終了設定ブロック": `M30
-%`,},
+`,},
      "CL-25-2": {
         "機械名ヘッダー": "(CL-25-2)",
         "M51": "M51",
@@ -192,7 +193,7 @@ M5
 G28U0W0
 N99
 M30
-%`,},
+`,},
 "CL-25-1": {
         "機械名ヘッダー": "(CL-25-1)",
         "M51": "M50",
@@ -229,24 +230,24 @@ T0700M0`,
 G28U0W0
 N99
 M30
-%`,},};
+`,},};
 
 
 // チューブ加工 規格データベース
 const tubeData = {
-    "4x3 (R0.5)":       { od: 4.0,   id: 3.0,   r: 0.5, drill: "DR2.3", MC: "25", lengths: [13],          toolKey: "内径ダイヤΦ3", toolDia: 3.0 },
-    "6x4 (R0.5)":       { od: 6.0,   id: 4.0,   r: 0.5, drill: "DR3.3", MC: "25", lengths: [17, 18],      toolKey: "内径ダイヤΦ4", toolDia: 4.0 },
-    "6.35x3.95 (R0.5)": { od: 6.35,  id: 3.95,  r: 0.5, drill: "DR3.3", MC: "25", lengths: [17, 18],      toolKey: "内径ダイヤΦ4", toolDia: null }, // 例外
-    "6.35x4.35 (R0.5)": { od: 6.35,  id: 4.35,  r: 0.5, drill: "DR3.3", MC: "25", lengths: [17],          toolKey: "内径ダイヤΦ4", toolDia: 4.0 },
-    "8x6 (R0.5)":       { od: 8.0,   id: 6.0,   r: 0.5, drill: "DR5.0", MC: "25", lengths: [17.5, 18],    toolKey: "内径ダイヤΦ6", toolDia: 6.0 },
-    "8x6 (R1.0)":       { od: 8.0,   id: 6.0,   r: 1.0, drill: "DR5.0", MC: "25", lengths: [17.5, 18],    toolKey: "内径ダイヤΦ6", toolDia: 6.0 },
-    "9.53x6.33 (R1)":   { od: 9.53,  id: 6.33,  r: 1.0, drill: "DR5.0", MC: "25", lengths: [20, 21, 22],  toolKey: "内径ダイヤΦ6", toolDia: 6.0 },
-    "10x8 (R1)":        { od: 10.0,  id: 8.0,   r: 1.0, drill: "DR7.0", MC: "25", lengths: [21],          toolKey: "内径ダイヤΦ8", toolDia: 8.0 },
-    "12x10 (R1)":       { od: 12.0,  id: 10.0,  r: 1.0, drill: "DR7.0", MC: "25", lengths: [24, 25],      toolKey: "内径ダイヤΦ8", toolDia: 8.0 },
-    "12.7x9.5 (R1)":    { od: 12.7,  id: 9.5,   r: 1.0, drill: "DR7.0", MC: "25", lengths: [25, 26],      toolKey: "内径ダイヤΦ8", toolDia: 8.0 },
-    "19x15.8 (R1)":     { od: 19.0,  id: 15.8,  r: 1.0, drill: "DR14.0", MC: "33.5", lengths: [31, 33, 34, 39], toolKey: "内径ダイヤΦ16", toolDia: null }, // 例外
-    "25x22 (R1)":       { od: 25.0,  id: 22.0,  r: 1.0, drill: "DR19.0", MC: "33.5", lengths: [38, 39],      toolKey: "内径ダイヤΦ16", toolDia: 16.0 },
-    "25.4x22.2 (R1)":   { od: 25.4,  id: 22.2,  r: 1.0, drill: "DR19.0", MC: "33.5", lengths: [38, 39, 61],  toolKey: "内径ダイヤΦ16", toolDia: 16.0 },
-    "31.8x28 (R1)":     { od: 31.8,  id: 28.0,  r: 1.0, drill: "DR23.0", MC: "", lengths: [54],          toolKey: "内径ダイヤΦ16", toolDia: 16.0 },
-    "38.1x33.7 (R1)":   { od: 38.1,  id: 33.7,  r: 1.0, drill: "DR29.0", MC: "", lengths: [58],          toolKey: "内径ダイヤΦ16", toolDia: 16.0 }
+    "4x3 (R0.5)":       { od: 4.0,   id: 3.0,   r: 0.5, drill: "DR2.3",  MC: "15", lengths: [13],             toolKey: "内径ダイヤΦ3", toolDia: 3.0 },
+    "6x4 (R0.5)":       { od: 6.0,   id: 4.0,   r: 0.5, drill: "DR3.3",  MC: "17", lengths: [17, 18],         toolKey: "内径ダイヤΦ4", toolDia: 4.0 },
+    "6.35x3.95 (R0.5)": { od: 6.35,  id: 3.95,  r: 0.5, drill: "DR3.3",  MC: "18", lengths: [17, 18],         toolKey: "内径ダイヤΦ4", toolDia: null }, // 例外
+    "6.35x4.35 (R0.5)": { od: 6.35,  id: 4.35,  r: 0.5, drill: "DR3.3",  MC: "18", lengths: [17],             toolKey: "内径ダイヤΦ4", toolDia: 4.0 },
+    "8x6 (R0.5)":       { od: 8.0,   id: 6.0,   r: 0.5, drill: "DR5.0",  MC: "19", lengths: [17.5, 18],       toolKey: "内径ダイヤΦ6", toolDia: 6.0 },
+    "8x6 (R1.0)":       { od: 8.0,   id: 6.0,   r: 1.0, drill: "DR5.0",  MC: "19", lengths: [17.5, 18],       toolKey: "内径ダイヤΦ6", toolDia: 6.0 },
+    "9.53x6.33 (R1)":   { od: 9.53,  id: 6.33,  r: 1.0, drill: "DR5.0",  MC: "21", lengths: [20, 21, 22],     toolKey: "内径ダイヤΦ6", toolDia: 6.0 },
+    "10x8 (R1)":        { od: 10.0,  id: 8.0,   r: 1.0, drill: "DR7.0",  MC: "21", lengths: [21],             toolKey: "内径ダイヤΦ8", toolDia: 8.0 },
+    "12x10 (R1)":       { od: 12.0,  id: 10.0,  r: 1.0, drill: "DR7.0",  MC: "23", lengths: [24, 25],         toolKey: "内径ダイヤΦ8", toolDia: 8.0 },
+    "12.7x9.5 (R1)":    { od: 12.7,  id: 9.5,   r: 1.0, drill: "DR7.0",  MC: "24", lengths: [25, 26],         toolKey: "内径ダイヤΦ8", toolDia: 8.0 },
+    "19x15.8 (R1)":     { od: 19.0,  id: 15.8,  r: 1.0, drill: "DR14.0", MC: "30", lengths: [31, 33, 34, 39], toolKey: "内径ダイヤΦ16", toolDia: null }, // 例外
+    "25x22 (R1)":       { od: 25.0,  id: 22.0,  r: 1.0, drill: "DR19.0", MC: "36", lengths: [38, 39],         toolKey: "内径ダイヤΦ16", toolDia: 16.0 },
+    "25.4x22.2 (R1)":   { od: 25.4,  id: 22.2,  r: 1.0, drill: "DR19.0", MC: "37", lengths: [38, 39, 61],     toolKey: "内径ダイヤΦ16", toolDia: 16.0 },
+    "31.8x28 (R1)":     { od: 31.8,  id: 28.0,  r: 1.0, drill: "DR23.0", MC: "54", lengths: [54],             toolKey: "内径ダイヤΦ16", toolDia: 16.0 },
+    "38.1x33.7 (R1)":   { od: 38.1,  id: 33.7,  r: 1.0, drill: "DR29.0", MC: "49", lengths: [58],             toolKey: "内径ダイヤΦ16", toolDia: 16.0 }
 };

@@ -1167,7 +1167,7 @@ function generateGCode(input, machineName) {
             replaceMap["チューブ_端面始点"] = input.m99p100 ? "" : wrapHCalc(ncFormat((OD + R + R + 4.6).toFixed(3)));
             const _mcNum = parseFloat(tSpec.MC);
             replaceMap["MC丸"] = input.m99p100
-                ? (!isNaN(_mcNum) ? wrapHCalc(ncFormat((_mcNum + 2).toFixed(3))) : "テンプレート未設定")
+                ? (!isNaN(_mcNum) ? wrapHCalc(ncFormat((_mcNum).toFixed(3))) : "テンプレート未設定")
                 : "";
             replaceMap["OD+0.1"] = wrapHCalc(ncFormat((OD + 0.1).toFixed(3)));
             replaceMap["Drill-1"] = wrapHCalc(ncFormat((drillVal - 1.0).toFixed(3)));
