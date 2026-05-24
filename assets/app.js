@@ -2777,135 +2777,6 @@ function setupHalfWidthInputGuards() {
     }, true);
 }
 
-const LS_NC_DEV_MODE = "ncDeveloperMode";
-
-function isDeveloperMode() {
-    try {
-        return localStorage.getItem(LS_NC_DEV_MODE) === "1";
-    } catch (e) {
-        return false;
-    }
-}
-
-function applyDeveloperModeUi() {
-    const sel = $id("workType");
-    const dev = isDeveloperMode();
-
-    const cpEl = $id("cpVal");
-    if (cpEl) {
-        if (dev) {
-            cpEl.readOnly = false;
-            cpEl.style.background = "";
-            cpEl.style.color = "";
-            cpEl.style.fontWeight = "";
-            cpEl.style.border = "";
-        } else {
-            cpEl.readOnly = true;
-            cpEl.style.background = "#333";
-            cpEl.style.color = "#aaa";
-            cpEl.style.fontWeight = "bold";
-            cpEl.style.border = "1px solid #555";
-        }
-    }
-
-    if (!sel) return;
-}
-
-function syncDeveloperModeToggleButton() {
-    const btn = $id("devModeToggleBtn");
-    if (!btn) return;
-    const dev = isDeveloperMode();
-    const t = (typeof window.NC_I18N !== "undefined" && window.NC_I18N.t)
-        ? window.NC_I18N.t.bind(window.NC_I18N)
-        : function (k) { return k; };
-    btn.setAttribute("aria-pressed", dev ? "true" : "false");
-    btn.textContent = dev ? t("devModeBtnOn") : t("devModeBtnOff");
-    btn.classList.toggle("help-easter-dev-btn--on", dev);
-}
-
-function setDeveloperMode(on) {
-    try {
-        localStorage.setItem(LS_NC_DEV_MODE, on ? "1" : "0");
-    } catch (e) {}
-    applyDeveloperModeUi();
-    syncDeveloperModeToggleButton();
-}
-
-window._ncApplyDeveloperModeUi = applyDeveloperModeUi;
-window._ncSyncDeveloperModeToggleButton = syncDeveloperModeToggleButton;
-
-// ========== dev easter eggs ==========
-
-/** ☀️ ライトモード: ダーク/ライト切替 */
-let _devLightModeOn = false;
-function devLightMode() {
-    _devLightModeOn = !_devLightModeOn;
-    document.body.classList.toggle("dev-light-mode", _devLightModeOn);
-}
-
-/** 🎲 作成者ランダム */
-function devRandomAuthor() {
-    const btns = document.querySelectorAll('.btns button[onclick^="setAuthor"]');
-    if (!btns.length) return;
-    const pick = btns[Math.floor(Math.random() * btns.length)];
-    pick.click();
-    pick.style.transition = "transform 0.15s";
-    pick.style.transform = "scale(1.35)";
-    setTimeout(() => { pick.style.transform = ""; }, 200);
-}
-
-/** 📊 Gコード統計 */
-function devShowStats() {
-    const plain = _ncLastPlainGCode;
-    const lines = plain ? plain.split("\n") : [];
-    const nBlocks = lines.filter(l => /^N\d+/.test(l.trim())).length;
-    const gCodes  = plain ? (plain.match(/G\d+/g) || []).length : 0;
-    const mCodes  = plain ? (plain.match(/M\d+/g) || []).length : 0;
-    const chars   = plain ? plain.length : 0;
-
-    const msg = plain
-        ? `📊 Gコード統計 ／ 総行数: ${lines.length} 行　Nブロック: ${nBlocks}　Gコード: ${gCodes}　Mコード: ${mCodes}　文字数: ${chars.toLocaleString()}`
-        : "📊 先にGコードを生成してください";
-
-    let toast = document.getElementById("devStatsToast");
-    if (!toast) {
-        toast = document.createElement("div");
-        toast.id = "devStatsToast";
-        toast.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99999;" +
-            "background:#1a2a1a;border:1px solid #4caf50;color:#a5d6a7;padding:10px 20px;" +
-            "border-radius:6px;font-family:monospace;font-size:13px;white-space:nowrap;" +
-            "box-shadow:0 4px 16px rgba(0,0,0,0.6);transition:opacity 0.4s;";
-        document.body.appendChild(toast);
-    }
-    toast.textContent = msg;
-    toast.style.opacity = "1";
-    clearTimeout(toast._hideTimer);
-    toast._hideTimer = setTimeout(() => { toast.style.opacity = "0"; }, 4000);
-}
-
-/** 🌈 レインボーモード: ハイライト値が虹色でアニメーション */
-let _devRainbowOn = false;
-let _devRainbowTimer = null;
-function devRainbow() {
-    _devRainbowOn = !_devRainbowOn;
-    if (_devRainbowOn) {
-        let hue = 0;
-        _devRainbowTimer = setInterval(() => {
-            hue = (hue + 3) % 360;
-            document.querySelectorAll(".h-val").forEach((el, i) => {
-                el.style.color = `hsl(${(hue + i * 22) % 360}, 100%, 65%)`;
-                el.style.textShadow = `0 0 6px hsl(${(hue + i * 22) % 360}, 100%, 65%)`;
-            });
-        }, 40);
-    } else {
-        clearInterval(_devRainbowTimer);
-        document.querySelectorAll(".h-val").forEach(el => {
-            el.style.color = "";
-            el.style.textShadow = "";
-        });
-    }
-}
-
 let currentInternalStyle = '';
 let currentCalcMode = 'normal';
 /** 外径ドロワー「入力」: dimensions=モード寸法 / ate=アテ長さ式 */
@@ -2935,13 +2806,6 @@ function updateWorkTypeSettings() {
       idDepth.placeholder = "22.0";
       if (drillMode) { drillMode.value = "G74"; drillMode.disabled = false; }
   }
-
-  // ワーク種別変更時: スタイルが変わらなくても加工寸法はワーク種別依存のためクリア
-  // （idDepth の有効範囲はワーク内径で決まり、前のワーク値をそのまま使うと誤ったGコードになる）
-  ['idDepth', 'drillDepth', 'cpVal', 'crossSmallFinishDepthVal', 'valPartnerD'].forEach(function(fieldId) {
-      const el = $id(fieldId);
-      if (el) el.value = '';
-  });
 
   restrictStyles(type);
   updateTubeVariantUI();
@@ -3095,8 +2959,8 @@ function restrictStyles(workType) {
         'styleHirazoko',
         'styleIchimonji',
         'styleNormal',
-        'styleYose',
         'styleYoseRelay',
+        'styleYose',
         'styleCrossSmall'
     ];
 
@@ -3216,8 +3080,8 @@ function getInternalStyleI18nKey(style) {
     Hirazoko: "style1",
     Ichimonji: "style2",
     Normal: "style3",
-    Yose: "style4",
-    YoseRelay: "style5Relay",
+    YoseRelay: "style4",
+    Yose: "style5Relay",
     CrossSmall: "style6",
     CrossBig: "style5",
   };
@@ -3256,15 +3120,9 @@ function setInternalStyle(style) {
     if (style !== currentInternalStyle) {
         closeYoseRelayNote();
         closeStyleNormalNote();
-        // スタイル切り替え時: 入力フィールドをクリア
-        ['idDepth', 'valPartnerD', 'yoseD', 'yoseTotalLength', 'yosePartnerDepth',
-         'cpVal', 'crossSmallFinishDepthVal'].forEach(function(id) {
-            const el = $id(id);
-            if (el) el.value = '';
-        });
     }
     currentInternalStyle = style;
-    const styles = ['Hirazoko', 'Ichimonji', 'Normal', 'Yose', 'YoseRelay', 'CrossSmall'];
+    const styles = ['Hirazoko', 'Ichimonji', 'Normal', 'YoseRelay', 'Yose', 'CrossSmall'];
     styles.forEach(s => {
         const card = $id('style' + s);
         if(card) {
@@ -3729,14 +3587,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     setupHelpEasterDropdown();
-
-    const devBtn = $id("devModeToggleBtn");
-    if (devBtn && !devBtn.dataset.ncBound) {
-        devBtn.dataset.ncBound = "1";
-        devBtn.addEventListener("click", function () {
-            setDeveloperMode(!isDeveloperMode());
-        });
-    }
 
     updateWorkTypeSettings();
     setCalcMode(currentCalcMode);

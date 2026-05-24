@@ -31,60 +31,11 @@
           <div class="help-easter-dev-row">
             <button
               type="button"
-              id="devModeToggleBtn"
-              class="help-easter-dev-btn"
-              aria-pressed="false"
-            ></button>
-            <div class="help-easter-todo" aria-label="開発者向け ToDo">
-              <div class="help-easter-todo__title">ToDo（開発）</div>
-              <p class="help-easter-todo__note">
-                <span class="help-easter-todo__note-label">用語メモ</span>
-                入力欄直下の説明 <code>machining-field-hint</code>
-              </p>
-              <ul class="help-easter-todo__list">
-                <li>G1/8 M42追加 注意書き追加</li>
-              </ul>
-            </div>
-            <button
-              type="button"
               id="debugPanelBtn"
               class="help-easter-dev-btn"
-              style="margin-top: 6px"
               onclick="openDebugPanel()"
             >
               🔍 デバッグパネル
-            </button>
-            <button
-              type="button"
-              class="help-easter-dev-btn"
-              style="margin-top: 6px"
-              onclick="devLightMode()"
-            >
-              ☀️ ライトモード切替
-            </button>
-            <button
-              type="button"
-              class="help-easter-dev-btn"
-              style="margin-top: 6px"
-              onclick="devRandomAuthor()"
-            >
-              🎲 作成者ランダム
-            </button>
-            <button
-              type="button"
-              class="help-easter-dev-btn"
-              style="margin-top: 6px"
-              onclick="devShowStats()"
-            >
-              📊 Gコード統計
-            </button>
-            <button
-              type="button"
-              class="help-easter-dev-btn"
-              style="margin-top: 6px"
-              onclick="devRainbow()"
-            >
-              🌈 レインボーモード
             </button>
           </div>
         </div>
@@ -794,18 +745,6 @@
                   </div>
                   <div
                     class="select-card"
-                    id="styleYose"
-                    onclick="setInternalStyle('Yose')"
-                  >
-                    <div class="card-icon">
-                      <div class="icon-convergence icon-convergence--yose">
-                        <div class="icon-convergence-lines"></div>
-                      </div>
-                    </div>
-                    <span class="card-label" data-i18n="style4">4. ヨセ</span>
-                  </div>
-                  <div
-                    class="select-card"
                     id="styleYoseRelay"
                     onclick="setInternalStyle('YoseRelay')"
                   >
@@ -814,7 +753,7 @@
                         <div class="icon-convergence-lines icon-convergence-lines--relay"></div>
                       </div>
                     </div>
-                    <span class="card-label" data-i18n="style5Relay">5. ヨセ中継</span>
+                    <span class="card-label" data-i18n="style4">4. ヨセ中継</span>
                     <button
                       type="button"
                       id="yoseRelayNoteBtn"
@@ -830,6 +769,18 @@
                         >ヨセ中継: 1工程目内径深さの計算専用です。</span
                       >
                     </div>
+                  </div>
+                  <div
+                    class="select-card"
+                    id="styleYose"
+                    onclick="setInternalStyle('Yose')"
+                  >
+                    <div class="card-icon">
+                      <div class="icon-convergence icon-convergence--yose">
+                        <div class="icon-convergence-lines"></div>
+                      </div>
+                    </div>
+                    <span class="card-label" data-i18n="style5Relay">5. ヨセ</span>
                   </div>
                   <div
                     class="select-card"

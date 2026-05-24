@@ -2,33 +2,6 @@
 body { font-family: sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 5px; }
 .container { max-width: 900px; margin: 0 auto; background: #1e1e1e; padding: 15px; border-radius: 8px; position: relative; }
 
-/* ☀️ デベロッパー ライトモード */
-body.dev-light-mode { background: #dce8f0; color: #1a2530; }
-body.dev-light-mode .container { background: #eef4f8; border: 1px solid #b0c8d8; }
-body.dev-light-mode h3 { color: #1a4060; }
-body.dev-light-mode label { color: #2a3a4a; }
-body.dev-light-mode input,
-body.dev-light-mode select { background: #fff; color: #1a2530; border-color: #90a8bc; }
-body.dev-light-mode .group { background: rgba(100,160,200,0.08); border-color: #b0c8d8; }
-body.dev-light-mode .qb { background: #c8dce8; color: #1a3050; border-color: #90afc0; }
-body.dev-light-mode .qb:hover { background: #a8c4d8; }
-body.dev-light-mode .main-btn { background: #3a7aaa; color: #fff; }
-body.dev-light-mode .main-btn:hover { background: #2a6090; }
-body.dev-light-mode #resultArea { background: #f4f8fc; color: #1a2530; border-color: #b0c8d8; }
-body.dev-light-mode .h-val--calc   { color: #b07a00; text-shadow: none; }
-body.dev-light-mode .h-val--input  { color: #006090; }
-body.dev-light-mode .h-val--machine { color: #7a00a0; }
-body.dev-light-mode .help-easter-trigger { color: #eef4f8; }
-body.dev-light-mode .form-layout-split__col--select { background: rgba(60,120,180,0.08); border-color: #a0b8cc; }
-body.dev-light-mode .form-layout-split__col--input  { background: rgba(255,255,255,0.6); border-color: #b0c0cc; }
-body.dev-light-mode .machining-panel,
-body.dev-light-mode .machining-card-section { background: rgba(200,220,235,0.4); border-color: #a8c0d0; }
-body.dev-light-mode .select-card { background: #ddeaf4; border-color: #90b0c8; color: #1a3050; }
-body.dev-light-mode .select-card.active,
-body.dev-light-mode .select-card:hover { background: #b8d4e8; border-color: #4a90c0; }
-body.dev-light-mode .highlight-filter-row { background: rgba(180,210,230,0.4); border-color: #a0c0d8; }
-body.dev-light-mode #previewContainer { background: #dce8f0; border-color: #a0c0d8; }
-
 /* 言語（ラベルなし・左寄せ・コンパクト） */
 .ui-lang-row {
   margin-bottom: 8px;
@@ -324,15 +297,6 @@ input.input--readonly-computed {
   border-width: 7px 8px 7px 0;
   border-style: solid;
   border-color: transparent #4a6a8a transparent transparent;
-}
-body.dev-light-mode .nc-input-focus-popover {
-  background: rgba(255, 255, 255, 0.98);
-  color: #1a3050;
-  border-color: #90a8bc;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
-}
-body.dev-light-mode .nc-input-focus-popover::before {
-  border-right-color: #90a8bc;
 }
 /* ドリル設定の label 幅をグローバルと統一 */
 .drill-item label {
@@ -793,50 +757,6 @@ button.main-btn.main-btn--compact {
 .help-easter-dev-row {
   margin: 0 0 10px 0;
 }
-.help-easter-todo {
-  margin-top: 6px;
-  margin-bottom: 8px;
-  padding: 8px 10px;
-  border: 1px solid #3f4a55;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.03);
-}
-.help-easter-todo__title {
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #9ecbff;
-  margin: 0 0 6px 0;
-}
-.help-easter-todo__note {
-  margin: 0 0 8px 0;
-  padding: 6px 8px;
-  border-left: 3px solid #b8860b;
-  background: rgba(184, 134, 11, 0.08);
-  color: #c9d3de;
-  font-size: 0.72rem;
-  line-height: 1.45;
-}
-.help-easter-todo__note-label {
-  display: inline-block;
-  margin-right: 6px;
-  padding: 0 5px;
-  border-radius: 3px;
-  background: rgba(184, 134, 11, 0.25);
-  color: #f0d78c;
-  font-size: 0.68rem;
-  font-weight: 700;
-}
-.help-easter-todo__note code {
-  font-size: 0.68rem;
-  color: #a8d4ff;
-}
-.help-easter-todo__list {
-  margin: 0;
-  padding-left: 16px;
-  color: #c9d3de;
-  font-size: 0.74rem;
-  line-height: 1.45;
-}
 .help-easter-dev-btn {
   width: 100%;
   box-sizing: border-box;
@@ -854,11 +774,6 @@ button.main-btn.main-btn--compact {
 .help-easter-dev-btn:hover {
   background: #484c52;
   color: #e8ecf0;
-}
-.help-easter-dev-btn.help-easter-dev-btn--on {
-  background: rgba(77, 166, 255, 0.22);
-  border-color: #4da6ff;
-  color: #9ecbff;
 }
 .help-easter-menu {
   display: flex;
@@ -1129,7 +1044,7 @@ button.main-btn.main-btn--compact {
     width: 18px; height: 2px; background: #ccc;
     transform: rotate(-60deg); transform-origin: right top;
   }
-/* --- 4. ヨセ / 5. ヨセ中継: 収束アイコン（枠・内側ラッパ共通） --- */
+/* --- 4. ヨセ中継 / 5. ヨセ: 収束アイコン（枠・内側ラッパ共通） --- */
 .icon-convergence {
   width: 32px;
   /* 内側2本の開きは top/bottom で調整するため、高さに余裕を持たせる */
@@ -1146,7 +1061,7 @@ button.main-btn.main-btn--compact {
   height: 100%;
 }
 
-/* 4. ヨセ: 右寄せの平行線 ＋ 左から収束する斜め（従来） */
+/* 5. ヨセ: 右寄せの平行線 ＋ 左から収束する斜め */
 .icon-convergence--yose::before,
 .icon-convergence--yose::after {
   content: '';
@@ -1184,7 +1099,7 @@ button.main-btn.main-btn--compact {
   transform-origin: right top;
 }
 
-/* 5. ヨセ中継: 左の平行線 ＋ 平行線右端から開く斜め（現状維持） */
+/* 4. ヨセ中継: 左の平行線 ＋ 平行線右端から開く斜め */
 .icon-convergence--yose-relay::before,
 .icon-convergence--yose-relay::after {
   content: '';

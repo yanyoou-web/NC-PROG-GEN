@@ -14,8 +14,6 @@
       machineSelect: "機械選択",
       machineLabel: "使用機械",
       workType: "ワーク種別",
-      devModeBtnOn: "デベロッパーモード: ON",
-      devModeBtnOff: "デベロッパーモード: OFF",
       workTypeTube: "チューブ",
       m12DrillTypeLabel: "ドリル種類",
       m12DrillTypeHss: "HSSドリル",
@@ -62,8 +60,8 @@
       style2: "2. 一文字DR平底",
       style3: "3. 通常バイト加工",
       styleNormalNote: "自動計算されないモードで任意深さに設定可能\n同内径プログラムなどに使用してください",
-      style4: "4. ヨセ",
-      style5Relay: "5. ヨセ中継",
+      style4: "4. ヨセ中継",
+      style5Relay: "5. ヨセ",
       yoseRelayNote: "ヨセ中継: 1工程目内径深さの計算専用です。",
       style5: "5. 交差穴\n加工径大",
       style6: "6. 横穴＆中バリ処理",
@@ -234,12 +232,6 @@
     var tubeSpec = document.getElementById("tubeSpecSelect");
     if (tubeSpec && tubeSpec.options.length) {
       tubeSpec.options[0].textContent = t("tubePick");
-    }
-    if (typeof window._ncApplyDeveloperModeUi === "function") {
-      window._ncApplyDeveloperModeUi();
-    }
-    if (typeof window._ncSyncDeveloperModeToggleButton === "function") {
-      window._ncSyncDeveloperModeToggleButton();
     }
     if (typeof window._ncUpdateInternalStyleDrawerLabel === "function") {
       window._ncUpdateInternalStyleDrawerLabel();
