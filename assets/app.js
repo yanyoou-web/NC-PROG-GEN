@@ -2066,7 +2066,7 @@ function calcDrillDepth() {
             drillDepthInput.readOnly = true;
             drillDepthInput.classList.add("input--readonly-computed");
             if (!isNaN(cpVal)) {
-                drillDepthInput.value = (cpVal + 1.2).toFixed(3);
+                drillDepthInput.value = (cpVal + 1.2 + 1).toFixed(3);
             } else {
                 drillDepthInput.value = "";
             }

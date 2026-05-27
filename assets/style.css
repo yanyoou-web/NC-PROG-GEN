@@ -120,7 +120,7 @@ input[type="checkbox"] { accent-color: #4da6ff; width: 18px; height: 18px; curso
 
 .w-short { width: 100px; } .w-mid { width: 150px; } .w-long { width: 250px; } .w-full { width: 100%; }
 
-/* M12・交差穴小: 半月ドリル深さ（CP+1.2 自動）など、読み取り専用の数値欄 */
+/* M12・交差穴小: 半月ドリル深さ（CP+1.2+1 自動）など、読み取り専用の数値欄 */
 input.input--readonly-computed {
   background: #2a2a2a;
   color: #aaa;
