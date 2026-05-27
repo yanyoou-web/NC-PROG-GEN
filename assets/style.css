@@ -780,6 +780,62 @@ button.main-btn.main-btn--compact {
   flex-direction: column;
   gap: 5px;
 }
+.debug-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 7px 10px;
+  background: #3a3d42;
+  border: 1px solid #555;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: background 0.15s, border-color 0.15s;
+}
+.debug-mode-toggle:hover {
+  background: #484c52;
+}
+.debug-mode-toggle input[type="checkbox"] {
+  display: none;
+}
+.debug-mode-toggle__track {
+  flex-shrink: 0;
+  display: inline-block;
+  width: 32px;
+  height: 17px;
+  background: #555;
+  border-radius: 9px;
+  position: relative;
+  transition: background 0.2s;
+}
+.debug-mode-toggle__track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  background: #aaa;
+  border-radius: 50%;
+  transition: left 0.2s, background 0.2s;
+}
+.debug-mode-toggle input:checked ~ .debug-mode-toggle__track {
+  background: #7a4e00;
+  border-color: #ffaa00;
+}
+.debug-mode-toggle input:checked ~ .debug-mode-toggle__track::after {
+  left: 17px;
+  background: #ffaa00;
+}
+.debug-mode-toggle__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #b8c0c8;
+}
+.debug-mode-toggle input:checked ~ .debug-mode-toggle__label {
+  color: #ffcc66;
+}
 #resultArea {
   width: 100%; min-height: 500px; height: auto;
   font-family: monospace; font-size: 13px; line-height: 1.4;
@@ -815,6 +871,7 @@ button.main-btn.main-btn--compact {
 .h-val--calc { color: #FFFF00; font-weight: 700; text-shadow: 0 0 2px rgba(255, 255, 0, 0.2); }
 .h-val--input { color: #00FFFF; }
 .h-val--machine { color: #FF00FF; }
+.h-val--unresolved { color: #ff1a1a; font-weight: 700; text-shadow: 0 0 4px rgba(255, 0, 0, 0.5); }
 #resultArea.h-off-calc .h-val--calc,
 #resultArea.h-off-input .h-val--input,
 #resultArea.h-off-machine .h-val--machine {

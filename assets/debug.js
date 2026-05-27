@@ -6,6 +6,11 @@ var _ncDebugLastReplaceMap = null;
 var _ncDebugLastTemplateKeys = null;
 var _ncDebugLastUnresolved = null;
 
+function isDebugModeOn() {
+    const el = document.getElementById("debugModeToggle");
+    return el ? el.checked : false;
+}
+
 function openDebugPanel() {
     const panel = document.getElementById("debugPanel");
     if (!panel) return;
