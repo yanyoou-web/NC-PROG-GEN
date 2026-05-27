@@ -1,3 +1,35 @@
+import { readdirSync, readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * テンプレートディレクトリの JS ファイルから `const template_XXXX` 宣言を
+ * すべて検出し、ESLint globals オブジェクトを自動生成する。
+ *
+ * - ファイル名ではなく内容を走査するため、1 ファイル複数変数・
+ *   ファイル名と変数名が異なるケース（例: data_template_G18_6.55.js →
+ *   template_G18_655）にも対応する。
+ * - テンプレートを追加しても eslint.config.mjs の手動更新は不要。
+ */
+function buildTemplateGlobals() {
+  const templateDir = join(__dirname, 'テンプレート');
+  const globals = {};
+  const files = readdirSync(templateDir).filter((f) => f.endsWith('.js'));
+  for (const file of files) {
+    const content = readFileSync(join(templateDir, file), 'utf8');
+    // BOM 付きファイル（UTF-8 BOM, \uFEFF）では ^ が行頭にマッチしないため
+    // \b を使って単語境界でマッチする
+    for (const [, varName] of content.matchAll(/\bconst\s+(template_\w+)/g)) {
+      globals[varName] = 'readonly';
+    }
+  }
+  return globals;
+}
+
+const templateGlobals = buildTemplateGlobals();
+
 export default [
   {
     ignores: ['参考フォルダ/**', 'node_modules/**']
@@ -8,6 +40,7 @@ export default [
       ecmaVersion: 'latest',
       sourceType: 'script',
       globals: {
+        // Browser built-ins
         window: 'readonly',
         document: 'readonly',
         console: 'readonly',
@@ -24,26 +57,11 @@ export default [
         clearTimeout: 'readonly',
         clearInterval: 'readonly',
         FileReader: 'readonly',
+        // data.js globals
         machines: 'readonly',
         tubeData: 'readonly',
-        template_M12BAITO: 'readonly',
-        template_M12HSS: 'readonly',
-        template_M12HGDR: 'readonly',
-        template_M15: 'readonly',
-        template_M18: 'readonly',
-        template_M22: 'readonly',
-        template_M40: 'readonly',
-        template_G78: 'readonly',
-        template_G18_40: 'readonly',
-        template_G18_42: 'readonly',
-        template_G18_62: 'readonly',
-        template_G18_655: 'readonly',
-        template_G18_6175: 'readonly',
-        template_M42X3_25175: 'readonly',
-        template_M42X3_25175_20: 'readonly',
-        template_M42X3_25175_22: 'readonly',
-        template_M42X3_25175_16: 'readonly',
-        template_Tube: 'readonly'
+        // テンプレートグローバル（テンプレートディレクトリから自動生成）
+        ...templateGlobals
       }
     },
     rules: {

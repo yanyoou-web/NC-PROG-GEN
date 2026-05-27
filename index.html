@@ -38,6 +38,13 @@
               🔍 デバッグパネル
             </button>
           </div>
+          <div class="help-easter-dev-row">
+            <label class="debug-mode-toggle" title="ONにすると未入力項目があっても強制的にプログラムを出力します">
+              <input type="checkbox" id="debugModeToggle">
+              <span class="debug-mode-toggle__track"></span>
+              <span class="debug-mode-toggle__label">🛠 デバッグモード（バリデーション無視）</span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -114,6 +121,12 @@
                 <option value="M22">M22</option>
                 <option value="G78">G78</option>
                 <option value="M40">M40</option>
+                <option value="M12_MH">M12-MH</option>
+                <option value="M15_MH">M15-MH</option>
+                <option value="M18_MH">M18-MH</option>
+                <option value="M22_MH">M22-MH</option>
+                <option value="G78_MH">G78-MH</option>
+                <option value="M40_MH">M40-MH</option>
                 <option value="M42X3_25175">M42X3 φ25.175(ST)</option>
                 <option value="M42X3_25175_16">M42X3 φ25.175→φ16</option>
                 <option value="M42X3_25175_20">M42X3 φ25.175→φ20</option>
@@ -123,7 +136,19 @@
                 <option value="G18_62">G18(φ6.2)</option>
                 <option value="G18_655">G18(φ6.55)</option>
                 <option value="G18_6175">G18(φ6.175)</option>
+                <option value="G18_40_MH">G18(φ4.0)-MH</option>
+                <option value="G18_42_MH">G18(φ4.2)-MH</option>
+                <option value="G18_62_MH">G18(φ6.2)-MH</option>
+                <option value="G18_655_MH">G18(φ6.55)-MH</option>
+                <option value="G18_6175_MH">G18(φ6.175)-MH</option>
                 <option value="Tube" data-i18n="workTypeTube">チューブ</option>
+              </select>
+            </div>
+            <div id="mhOdToolRow" class="row" style="display:none">
+              <label>外径バイト (MH)</label>
+              <select id="mhOdTool" class="w-long enter-target" onchange="runGeneration()">
+                <option value="外径荒">外径荒 (T0505系)</option>
+                <option value="外径溝">外径溝 (T1010系)</option>
               </select>
             </div>
           </div>
@@ -1137,6 +1162,14 @@
     <script src="テンプレート/data_template_M22.js"></script>
     <script src="テンプレート/data_template_M18.js"></script>
     <script src="テンプレート/data_template_M15.js"></script>
+    <script src="テンプレート/data_template_G78_MH.js"></script>
+    <script src="テンプレート/data_template_M40_MH.js"></script>
+    <script src="テンプレート/data_template_M22_MH.js"></script>
+    <script src="テンプレート/data_template_M18_MH.js"></script>
+    <script src="テンプレート/data_template_M15_MH.js"></script>
+    <script src="テンプレート/data_template_M12HGDR_MH.js"></script>
+    <script src="テンプレート/data_template_M12HSS_MH.js"></script>
+    <script src="テンプレート/data_template_M12BAITO_MH.js"></script>
     <script src="テンプレート/data_template_M12HGDR.js"></script>
     <script src="テンプレート/data_template_M12HSS.js"></script>
     <script src="テンプレート/data_template_M12BAITO.js"></script>
@@ -1145,8 +1178,13 @@
     <script src="テンプレート/data_template_G18_40.js"></script>
     <script src="テンプレート/data_template_G18_42.js"></script>
     <script src="テンプレート/data_template_G18_62.js"></script>
-    <script src="テンプレート/data_template_G18_6.55.js"></script>
+    <script src="テンプレート/data_template_G18_655.js"></script>
     <script src="テンプレート/data_template_G18_6175.js"></script>
+    <script src="テンプレート/data_template_G18_40-MH.js"></script>
+    <script src="テンプレート/data_template_G18_42-MH.js"></script>
+    <script src="テンプレート/data_template_G18_62-MH.js"></script>
+    <script src="テンプレート/data_template_G18_655-MH.js"></script>
+    <script src="テンプレート/data_template_G18_6175-MH.js"></script>
     <script src="assets/app.js"></script>
     <script src="assets/preview.js"></script>
     <script src="assets/debug.js"></script>

@@ -13,7 +13,7 @@
  *
  * Do not reorder sections; dependencies follow this order. */
 /* global _ncDebugLastInput, _ncDebugLastReplaceMap, _ncDebugLastTemplateKeys, _ncDebugLastUnresolved */
-/* global renderDebugPanel, drawPreview, updatePreviewSticky, refreshPreviewUiI18n */
+/* global renderDebugPanel, drawPreview, updatePreviewSticky, refreshPreviewUiI18n, isDebugModeOn */
 /* global g_flashTimer, g_flashBlink, g_flashLineIdx, g_flashVisible */
 // ========== utils ==========
 /**
@@ -455,16 +455,18 @@ function combineTubeFlatBottomFinishLine(toolDia, exitLine) {
 // --- 定数・ワーク定義マップ ---
 
 // ワーク種別ごとの内径大径(D)定義マップ
-const WORK_ID_MAP = { "M40": 22.0, "M22": 10.0, "M18": 8.0, "M15": 6.0, "M12": 4.00, "G78": 16.0, "G18_40": 4.0, "G18_42": 4.15, "G18_62": 6.2, "G18_655": 6.55, "G18_6175": 6.175, "M42X3_25175": 25.175, "M42X3_25175_20": 20.0, "M42X3_25175_22": 22.0, "M42X3_25175_16": 16.0 };
+const WORK_ID_MAP = { "M40": 22.0, "M22": 10.0, "M18": 8.0, "M15": 6.0, "M12": 4.00, "G78": 16.0, "G18_40": 4.0, "G18_42": 4.15, "G18_62": 6.2, "G18_655": 6.55, "G18_6175": 6.175, "G18_40_MH": 4.0, "G18_42_MH": 4.15, "G18_62_MH": 6.2, "G18_655_MH": 6.55, "G18_6175_MH": 6.175, "M42X3_25175": 25.175, "M42X3_25175_20": 20.0, "M42X3_25175_22": 22.0, "M42X3_25175_16": 16.0 };
 
 /** G18 HGDR 系（φ6.2 / φ6.55 / φ6.175）：同一のスタイル制限・DRILLSHIAGE（G74 仕上げブロック） */
 function isG18HgdrSeriesWorkType(wt) {
-    return wt === "G18_62" || wt === "G18_655" || wt === "G18_6175";
+    return wt === "G18_62" || wt === "G18_655" || wt === "G18_6175"
+        || wt === "G18_62_MH" || wt === "G18_655_MH" || wt === "G18_6175_MH";
 }
 
 /** 全G18: {{DRILL_BLOCK}} は G1 ドリル仕上げ（G74 ステップ仕上げなし）で統一 */
 function usesG18DrillShiageG1Block(wt) {
-    return wt === "G18_40" || wt === "G18_42" || isG18HgdrSeriesWorkType(wt);
+    return wt === "G18_40" || wt === "G18_42" || wt === "G18_40_MH" || wt === "G18_42_MH"
+        || isG18HgdrSeriesWorkType(wt);
 }
 
 /** M42X3-ST-G-25.175 系（ストレート / φ20段付 / φ22段付 / φ16段付） */
@@ -483,7 +485,10 @@ const FLAT_BOTTOM_TOOL_DIA_MM = {
     G18_62: 4,
     G18_655: 4,
     G18_6175: 4,
-    // G18_40 / G18_42: ドリル仕上げ中心のため本マップに載せない（toolDia 未定義 → defaultLine の U-.2）
+    G18_62_MH: 4,
+    G18_655_MH: 4,
+    G18_6175_MH: 4,
+    // G18_40 / G18_42 / MH variants: ドリル仕上げ中心のため本マップに載せない（toolDia 未定義 → defaultLine の U-.2）
     // M42X3_25175 系: 内径ダイヤΦ16 使用。φ16段付のみ toolDia=idDia で U-.2、他は X16.F.03
     "M42X3_25175": 16, "M42X3_25175_20": 16, "M42X3_25175_22": 16, "M42X3_25175_16": 16
 };
@@ -501,6 +506,11 @@ const DRILL_DIA_MAP = {
     "G18_62": 4.15,
     "G18_655": 4.15,
     "G18_6175": 4.15,
+    "G18_40_MH": 4.05,
+    "G18_42_MH": 4.15,
+    "G18_62_MH": 4.15,
+    "G18_655_MH": 4.15,
+    "G18_6175_MH": 4.15,
     "M42X3_25175": 25.175, "M42X3_25175_20": 20.0, "M42X3_25175_22": 22.0, "M42X3_25175_16": 16.0,
     "Tube": null
 };
@@ -581,7 +591,7 @@ function calcYoseRelayMetrics(input) {
     const angleDeg = parseFloat(input.yoseAngle);
     // YoseRelay では、M12のみ実加工の前提径(φ3.3)で先端長を計算する
     // それ以外のワーク種別は従来どおり DRILL_DIA_MAP を使う
-    const drillDia = input.workType === "M12" ? 3.3 : resolveDrillDia(input);
+    const drillDia = (input.workType === "M12" || input.workType === "M12_MH") ? 3.3 : resolveDrillDia(input);
     if ([totalLength, partnerDepth, partnerDia, machinedDia, angleDeg].some(function (n) { return isNaN(n) || !isFinite(n); })) {
         return null;
     }
@@ -827,7 +837,7 @@ function generateGCode(input, machineName) {
     // 交差穴・一文字DR(面取り)の場合の必須チェック
     // M12 Ichimonji (一文字DR平底) はドリル深さベースのため CP 不要
     const needsCp = style === 'CrossBig' || style === 'CrossSmall' ||
-                    (style === 'Ichimonji' && input.workType !== 'M12');
+                    (style === 'Ichimonji' && input.workType !== 'M12' && input.workType !== 'M12_MH');
     if (needsCp) {
         if (isNaN(parseFloat(input.cpVal))) errors.push("[CP (交差穴位置)] が計算されていません。");
     }
@@ -876,19 +886,24 @@ function generateGCode(input, machineName) {
         }
     }
 
+    const _isDbgMode = (typeof isDebugModeOn === 'function') && isDebugModeOn();
+    let _debugValidationWarning = "";
     if (errors.length > 0) {
-        // ▼ styleに column-span: all; を追加して、2段組みを貫通させる
-        return {
-            displayHtml: `
-            <div style="background:#330000; border:2px solid #ff4444; padding:15px; color:#ffcccc; border-radius:6px; column-span: all;">
-                <h3 style="margin-top:0; color:#ff4444;">⚠ 生成エラー (入力値を確認してください)</h3>
-                <ul style="padding-left:20px; line-height:1.6;">
-                    ${errors.map(msg => `<li>${msg}</li>`).join('')}
-                </ul>
-            </div>
-        `,
-            plainText: null
-        };
+        if (!_isDbgMode) {
+            // ▼ styleに column-span: all; を追加して、2段組みを貫通させる
+            return {
+                displayHtml: `
+                <div style="background:#330000; border:2px solid #ff4444; padding:15px; color:#ffcccc; border-radius:6px; column-span: all;">
+                    <h3 style="margin-top:0; color:#ff4444;">⚠ 生成エラー (入力値を確認してください)</h3>
+                    <ul style="padding-left:20px; line-height:1.6;">
+                        ${errors.map(msg => `<li>${msg}</li>`).join('')}
+                    </ul>
+                </div>
+            `,
+                plainText: null
+            };
+        }
+        _debugValidationWarning = `<div style="background:#332200; border:2px solid #ffaa00; padding:10px; color:#ffeecc; border-radius:6px; margin-bottom:6px; column-span:all; font-size:0.85em;"><strong>🛠 デバッグモード: 未入力項目あり（強制出力）</strong><ul style="padding-left:18px; margin:4px 0 0 0; line-height:1.5;">${errors.map(msg => `<li>${escapeHtml(msg)}</li>`).join('')}</ul></div>`;
     }
     // ▲▲▲ バリデーションここまで ▲▲▲
 
@@ -972,19 +987,19 @@ function generateGCode(input, machineName) {
     let rearChamferEarly = "";
     let okuBiteMentoriLateBlock = "";
     if (style === "Ichimonji") {
-        if (input.workType === "M12") {
+        if (input.workType === "M12" || input.workType === "M12_MH") {
             // M12: 一文字DR平底 → 半月/HSS ドリルで平底仕上げ
             rearChamferEarly = getIchimonjiHirazokoBlock(baseIDDepth, machineConfig);
         } else {
             rearChamferEarly = getIchimonjiBlock(input.cpVal, machineConfig);
         }
-    } else if ((input.workType === "G18_40" || input.workType === "G18_42") && style === "CrossSmall") {
+    } else if ((input.workType === "G18_40" || input.workType === "G18_42" || input.workType === "G18_40_MH" || input.workType === "G18_42_MH") && style === "CrossSmall") {
         const partnerD = parseFloat(input.valPartnerD);
         if (!isNaN(partnerD)) {
             rearChamferEarly = getOkuBiteBlockG18(input.cpVal, machineConfig);
         }
     } else if (
-        input.workType === "M12" &&
+        (input.workType === "M12" || input.workType === "M12_MH") &&
         (style === "CrossSmall" || style === "CrossBig")
     ) {
         if (input.m12Profile === "drill_ichi_men") {
@@ -1073,7 +1088,7 @@ function generateGCode(input, machineName) {
     }
 
     const okuBiteMentoriBlock =
-        input.workType === "M12" && (input.m12FinishType || "hss") === "baito"
+        (input.workType === "M12" || input.workType === "M12_MH") && (input.m12FinishType || "hss") === "baito"
             ? okuBiteMentoriLateBlock
             : rearChamferEarly;
 
@@ -1105,7 +1120,7 @@ function generateGCode(input, machineName) {
         
         "DRILL_BLOCK": usesG18DrillShiageG1Block(input.workType)
             ? getDrillBlock(finalDrillDepth, "G1")
-            : (input.workType === "M12" && (input.m12FinishType || "hss") === "hss")
+            : ((input.workType === "M12" || input.workType === "M12_MH") && (input.m12FinishType || "hss") === "hss")
                 ? getDrillShiageBlock(finalDrillDepth)
                 : getDrillBlock(finalDrillDepth, input.drillMode),
         "奥バイト面取り": okuBiteMentoriBlock,
@@ -1127,6 +1142,15 @@ function generateGCode(input, machineName) {
     // 機械変数のマッピング
     for (let key in machineConfig) {
         replaceMap[key] = machineConfig[key] ? wrapHMachine(machineConfig[key]) : "";
+    }
+
+    // MH外径荒: MH系テンプレートで外径荒/外径溝を切り替えるプレースホルダー
+    {
+        const _isMH = input.workType && input.workType.endsWith("_MH");
+        const _mhToolKey = (input.mhOdTool && _isMH) ? input.mhOdTool : "外径荒";
+        replaceMap["MH外径荒"] = _isMH
+            ? (machineConfig[_mhToolKey] ? wrapHMachine(machineConfig[_mhToolKey]) : "")
+            : "";
     }
 
     // --- 6. テンプレート選択・生成 ---
@@ -1199,6 +1223,18 @@ function generateGCode(input, machineName) {
     else if (input.workType === "M22") { if (typeof template_M22 !== 'undefined') finalCode = template_M22; }
     else if (input.workType === "M18") { if (typeof template_M18 !== 'undefined') finalCode = template_M18; }
     else if (input.workType === "M15") { if (typeof template_M15 !== 'undefined') finalCode = template_M15; }
+    else if (input.workType === "M40_MH") { if (typeof template_M40_MH !== 'undefined') finalCode = template_M40_MH; }
+    else if (input.workType === "M22_MH") { if (typeof template_M22_MH !== 'undefined') finalCode = template_M22_MH; }
+    else if (input.workType === "M18_MH") { if (typeof template_M18_MH !== 'undefined') finalCode = template_M18_MH; }
+    else if (input.workType === "M15_MH") { if (typeof template_M15_MH !== 'undefined') finalCode = template_M15_MH; }
+    else if (input.workType === "M12_MH") {
+        const ft = input.m12FinishType || "hss";
+        const m12mhv = ft === "baito" ? template_M12BAITO_MH
+                     : ft === "hss"   ? template_M12HSS_MH
+                     : template_M12HGDR_MH;
+        if (typeof m12mhv !== "undefined") finalCode = m12mhv;
+    }
+    else if (input.workType === "G78_MH") { if (typeof template_G78_MH !== 'undefined') finalCode = template_G78_MH; }
     else if (input.workType === "M12") {
         const ft = input.m12FinishType || "hss";
         const m12v = ft === "baito" ? template_M12BAITO
@@ -1211,6 +1247,11 @@ function generateGCode(input, machineName) {
     else if (input.workType === "G18_62") { if (typeof template_G18_62 !== 'undefined') finalCode = template_G18_62; }
     else if (input.workType === "G18_655") { if (typeof template_G18_655 !== 'undefined') finalCode = template_G18_655; }
     else if (input.workType === "G18_6175") { if (typeof template_G18_6175 !== 'undefined') finalCode = template_G18_6175; }
+    else if (input.workType === "G18_40_MH") { if (typeof template_G18_40_MH !== 'undefined') finalCode = template_G18_40_MH; }
+    else if (input.workType === "G18_42_MH") { if (typeof template_G18_42_MH !== 'undefined') finalCode = template_G18_42_MH; }
+    else if (input.workType === "G18_62_MH") { if (typeof template_G18_62_MH !== 'undefined') finalCode = template_G18_62_MH; }
+    else if (input.workType === "G18_655_MH") { if (typeof template_G18_655_MH !== 'undefined') finalCode = template_G18_655_MH; }
+    else if (input.workType === "G18_6175_MH") { if (typeof template_G18_6175_MH !== 'undefined') finalCode = template_G18_6175_MH; }
     else if (input.workType === "M42X3_25175")    { if (typeof template_M42X3_25175    !== 'undefined') finalCode = template_M42X3_25175; }
     else if (input.workType === "M42X3_25175_20") { if (typeof template_M42X3_25175_20 !== 'undefined') finalCode = template_M42X3_25175_20; }
     else if (input.workType === "M42X3_25175_22") { if (typeof template_M42X3_25175_22 !== 'undefined') finalCode = template_M42X3_25175_22; }
@@ -1226,13 +1267,37 @@ function generateGCode(input, machineName) {
     { const _m = finalCode.matchAll(/\{\{([^}]+)\}\}/g); for (const x of _m) _templateKeysRaw.push(x[1]); }
     const _templateKeySet = new Set(_templateKeysRaw);
 
+    // デバッグモード時にプレースホルダーとして残す対象: ユーザー数値入力から導出されるキーのみ
+    // 設計上の空値（{{扉閉じ}}・{{ヨセパス}}・{{最大径+3}} 等）はスキップしない
+    const _debugUserInputKeys = new Set([
+        "最大径-5", "最大径+角",
+        "入力_内径深さ", "入力_図番", "入力_工程No", "入力_作成者", "入力_アテ長さ",
+        // Tube 系
+        "入力_外径", "入力_内径", "入力_長さ", "入力_R",
+        "L", "L-R", "L-0.3", "L-0.5",
+        "OD+2R", "OD+2R+0.1", "OD+0.1", "OD-0.6", "ID+0.6", "Drill-1", "母材幅", "MC丸",
+    ]);
+
     Object.keys(replaceMap).forEach(key => {
-        finalCode = finalCode.split("{{" + key + "}}").join(replaceMap[key]);
+        const val = replaceMap[key];
+        // デバッグモード時: ユーザー入力由来のキーに限り、空値への置換をスキップして {{key}} を残す
+        if (_isDbgMode && _debugUserInputKeys.has(key)) {
+            const plain = gcodeDisplayHtmlToPlainText(String(val == null ? "" : val)).trim();
+            if (plain === "") return;
+        }
+        finalCode = finalCode.split("{{" + key + "}}").join(val);
     });
 
     // 置換後に残った未解決キーを抽出
     const _unresolvedKeys = [];
     { const _m = finalCode.matchAll(/\{\{([^}]+)\}\}/g); for (const x of _m) _unresolvedKeys.push(x[1]); }
+
+    // 未解決プレースホルダーを赤太字で強調
+    if (_unresolvedKeys.length > 0) {
+        finalCode = finalCode.replace(/\{\{([^}]+)\}\}/g,
+            (_, k) => `<span class="h-val h-val--unresolved">{{${escapeHtml(k)}}}</span>`
+        );
+    }
 
     // デバッグ用: 最後の入力・解決結果を保持
     _ncDebugLastInput = input;
@@ -1241,7 +1306,7 @@ function generateGCode(input, machineName) {
     _ncDebugLastUnresolved = new Set(_unresolvedKeys);
 
     return {
-        displayHtml: finalCode,
+        displayHtml: _debugValidationWarning + finalCode,
         plainText: gcodeDisplayHtmlToPlainText(finalCode)
     };
 }
@@ -1383,7 +1448,7 @@ function updateWorkTypeSettings() {
 
   if (normalArea) normalArea.style.display = 'block';
 
-  if (type === 'M12') {
+  if (type === 'M12' || type === 'M12_MH') {
       idDepth.disabled = false;
       idDepth.placeholder = "22.0";
   } else if (usesG18DrillShiageG1Block(type)) {
@@ -1401,7 +1466,16 @@ function updateWorkTypeSettings() {
   updateInternalStyleUI();
   calcDrillDepth();
   updateM40M99UI(type);
+  updateMHOdToolUI(type);
 }
+
+function updateMHOdToolUI(type) {
+  const row = $id('mhOdToolRow');
+  if (!row) return;
+  const isMH = type && type.endsWith('_MH');
+  row.style.display = isMH ? '' : 'none';
+}
+window._ncUpdateMHOdToolUI = function () { updateMHOdToolUI($id('workType') ? $id('workType').value : ''); };
 
 function updateM40M99UI(type) {
     const resolvedType = type !== undefined
@@ -1456,7 +1530,7 @@ function resolveM12FinishAndProfile() {
 /** M12 サブパネルをスタイル選択に応じて表示切替 */
 function updateM12SubPanels() {
   const wt = $id("workType") ? $id("workType").value : "";
-  const isM12 = wt === "M12";
+  const isM12 = wt === "M12" || wt === "M12_MH";
   const ichiPanel  = $id("m12IchiPanel");
   const crossPanel = $id("m12CrossPanel");
   const showIchi  = isM12 && currentInternalStyle === "Ichimonji";
@@ -1584,7 +1658,7 @@ function restrictStyles(workType) {
     if(styleYoseRelay) { styleYoseRelay.style.pointerEvents = 'auto'; styleYoseRelay.style.opacity = '1'; }
     if(styleCrossBig) { styleCrossBig.style.pointerEvents = 'auto'; styleCrossBig.style.opacity = '1'; }
 
-    if (workType === 'G18_40' || workType === 'G18_42') {
+    if (workType === 'G18_40' || workType === 'G18_42' || workType === 'G18_40_MH' || workType === 'G18_42_MH') {
         ['styleHirazoko', 'styleIchimonji', 'styleNormal', 'styleYose'].forEach(id => {
             const el = $id(id);
             if (el) { el.style.pointerEvents = 'none'; el.style.opacity = '0.3'; }
@@ -1608,7 +1682,7 @@ function restrictStyles(workType) {
         if (!['Hirazoko', 'Normal', 'Yose', 'YoseRelay'].includes(currentInternalStyle)) {
             setInternalStyle('');
         }
-    } else if (workType === 'M12') {
+    } else if (workType === 'M12' || workType === 'M12_MH') {
         if(styleHirazoko) {
             styleHirazoko.style.pointerEvents = 'none';
             styleHirazoko.style.opacity = '0.3';
@@ -1818,17 +1892,17 @@ function updateInternalStyleUI() {
             : "45.0";
     }
 
-    const m12Resolved = workType === "M12" ? resolveM12FinishAndProfile() : { finishType: "", profile: "" };
+    const m12Resolved = (workType === "M12" || workType === "M12_MH") ? resolveM12FinishAndProfile() : { finishType: "", profile: "" };
     if (drillDepthInput && drillDepthLabel) {
-        if (workType === "M12" && m12Resolved.finishType === "halfmoon" && currentInternalStyle === "CrossSmall") {
+        if ((workType === "M12" || workType === "M12_MH") && m12Resolved.finishType === "halfmoon" && currentInternalStyle === "CrossSmall") {
             drillDepthLabel.setAttribute("data-i18n", "drillDepthHangetsu");
             drillDepthInput.readOnly = true;
             drillDepthInput.classList.add("input--readonly-computed");
-        } else if (workType === "M12" && currentInternalStyle === "CrossSmall") {
+        } else if ((workType === "M12" || workType === "M12_MH") && currentInternalStyle === "CrossSmall") {
             drillDepthLabel.setAttribute("data-i18n", "drillZ");
             drillDepthInput.readOnly = true;
             drillDepthInput.classList.add("input--readonly-computed");
-        } else if ((workType === "G18_40" || workType === "G18_42") && currentInternalStyle === "CrossSmall") {
+        } else if ((workType === "G18_40" || workType === "G18_42" || workType === "G18_40_MH" || workType === "G18_42_MH") && currentInternalStyle === "CrossSmall") {
             drillDepthLabel.setAttribute("data-i18n", "drillZ");
             drillDepthInput.readOnly = true;
             drillDepthInput.classList.add("input--readonly-computed");
@@ -1839,7 +1913,7 @@ function updateInternalStyleUI() {
         }
     }
 
-    if (workType === "M12" || usesG18DrillShiageG1Block(workType)) {
+    if (workType === "M12" || workType === "M12_MH" || usesG18DrillShiageG1Block(workType)) {
         drillMode.value = "G1";
         drillMode.disabled = true;
     } else if (currentInternalStyle === "Ichimonji") {
@@ -1852,7 +1926,7 @@ function updateInternalStyleUI() {
     // M12 / 全G18 ではドリルモードは自動決定するため UI は出さない
     const drillModeRow = $id("drillModeRow");
     if (drillModeRow) {
-        const shouldHideDrillMode = workType === "M12" || usesG18DrillShiageG1Block(workType) || !currentInternalStyle;
+        const shouldHideDrillMode = workType === "M12" || workType === "M12_MH" || usesG18DrillShiageG1Block(workType) || !currentInternalStyle;
         drillModeRow.style.display = shouldHideDrillMode ? "none" : "flex";
     }
 
@@ -1904,7 +1978,7 @@ function updateInternalStyleUI() {
     // 交差穴・一文字DR(面取り): CP 入力
     // M12 Ichimonji (一文字DR平底) はドリル深さベースのため CP 不要
     const showCpArea = currentInternalStyle === 'CrossBig' || currentInternalStyle === 'CrossSmall' ||
-                       (currentInternalStyle === 'Ichimonji' && workType !== 'M12');
+                       (currentInternalStyle === 'Ichimonji' && workType !== 'M12' && workType !== 'M12_MH');
     cpArea.style.display = showCpArea ? "block" : "none";
 
     // 奥バイト面取りの有無は M12 の加工プロファイルで決める（チェック欄は使わない）
@@ -1987,7 +2061,7 @@ function calcDrillDepth() {
         return;
     }
 
-    if ((workType === 'M12' || workType === 'G18_40' || workType === 'G18_42') && style === 'CrossSmall') {
+    if ((workType === 'M12' || workType === 'M12_MH' || workType === 'G18_40' || workType === 'G18_42' || workType === 'G18_40_MH' || workType === 'G18_42_MH') && style === 'CrossSmall') {
         if (drillDepthInput) {
             drillDepthInput.readOnly = true;
             drillDepthInput.classList.add("input--readonly-computed");
@@ -2717,9 +2791,9 @@ function runGeneration(fromUserButton = false) {
   const workTypeVal = workTypeEl ? workTypeEl.value : 'G78';
   
   const chkOkuBite = $id('chkOkuBite');
-  const m12Resolved = workTypeVal === 'M12' ? resolveM12FinishAndProfile() : { finishType: 'hss', profile: 'drill_ichi_hira' };
+  const m12Resolved = (workTypeVal === 'M12' || workTypeVal === 'M12_MH') ? resolveM12FinishAndProfile() : { finishType: 'hss', profile: 'drill_ichi_hira' };
   const isOkuBiteEnabled =
-    workTypeVal === 'M12'
+    (workTypeVal === 'M12' || workTypeVal === 'M12_MH')
       ? m12ProfileImpliesOku(m12Resolved.profile)
       : chkOkuBite
         ? chkOkuBite.checked
@@ -2764,7 +2838,9 @@ function runGeneration(fromUserButton = false) {
 
     calcMode: currentCalcMode,
     valCornW: $id('valCornW').value,
-    valCornH: $id('valCornH').value
+    valCornH: $id('valCornH').value,
+
+    mhOdTool: ($id('mhOdTool') ? $id('mhOdTool').value : "外径荒")
   };
 
   if (isYoseMachiningStyle(currentInternalStyle) || isYoseRelayStyle(currentInternalStyle)) {
