@@ -869,6 +869,28 @@
                 </select>
               </div>
             </div>
+            <!-- G18_40/42: 6.交差穴加工径小 選択時 → 加工方法 -->
+            <div
+              id="g18CrossPanel"
+              class="machining-input-block m12-cascade m12-cascade--inline"
+              style="display: none"
+              aria-hidden="true"
+            >
+              <div class="row m12-cascade__primary">
+                <label for="g18CrossMethod">加工方法</label>
+                <select
+                  id="g18CrossMethod"
+                  class="w-long enter-target"
+                  onchange="onG18CrossMethodChange()"
+                >
+                  <option value="hss_oku">HSSドリル + 奥バイト面取り</option>
+                  <option value="hgdr_oku" selected>HGDRドリル + 奥バイト面取り</option>
+                  <option value="hss_men">HSSドリル + 一文字面取り</option>
+                  <option value="hgdr_men">HGDRドリル + 一文字面取り</option>
+                  <option value="baito_oku">バイト + 奥バイト面取り</option>
+                </select>
+              </div>
+            </div>
             <div id="crossSmallFinishDepthRow" class="machining-input-block" style="display: none">
               <div class="row">
                 <label class="machining-input-label" data-i18n="crossSmallFinishDepth"

@@ -996,7 +996,13 @@ function generateGCode(input, machineName) {
     } else if ((input.workType === "G18_40" || input.workType === "G18_42" || input.workType === "G18_40_MH" || input.workType === "G18_42_MH") && style === "CrossSmall") {
         const partnerD = parseFloat(input.valPartnerD);
         if (!isNaN(partnerD)) {
-            rearChamferEarly = getOkuBiteBlockG18(input.cpVal, machineConfig);
+            if (input.g18Profile === "drill_ichi_men") {
+                // 一文字面取り → 一文字バリ取りブロック
+                rearChamferEarly = getIchimonjiBlock(input.cpVal, machineConfig);
+            } else {
+                // hss_oku / hgdr_oku / baito_oku → 奥バイトブロック（前置き）
+                rearChamferEarly = getOkuBiteBlockG18(input.cpVal, machineConfig);
+            }
         }
     } else if (
         (input.workType === "M12" || input.workType === "M12_MH") &&
@@ -1151,6 +1157,19 @@ function generateGCode(input, machineName) {
         replaceMap["MH外径荒"] = _isMH
             ? (machineConfig[_mhToolKey] ? wrapHMachine(machineConfig[_mhToolKey]) : "")
             : "";
+    }
+
+    // G18N1ドリル: G18_40/42 の N1 ドリル工具を加工方法に応じて動的解決
+    {
+        const _isG18Small = input.workType === "G18_40" || input.workType === "G18_42"
+                         || input.workType === "G18_40_MH" || input.workType === "G18_42_MH";
+        if (_isG18Small) {
+            const _g18DrillKey = input.g18FinishType === "hss"   ? "ドリルHSS"
+                                : input.g18FinishType === "baito" ? "ドリルT"
+                                : "ドリルHGDR";
+            replaceMap["G18N1ドリル"] = machineConfig[_g18DrillKey]
+                ? wrapHMachine(machineConfig[_g18DrillKey]) : "";
+        }
     }
 
     // --- 6. テンプレート選択・生成 ---
@@ -1549,6 +1568,31 @@ function updateM12SubPanels() {
 function updateM12CascadeUI() { updateM12SubPanels(); }
 window.updateM12CascadeUI = updateM12CascadeUI;
 
+/** G18_40/G18_42 CrossSmall: 加工方法セレクトから finishType/profile を解決する */
+function resolveG18CrossFinishAndProfile() {
+  const cm = ($id("g18CrossMethod") && $id("g18CrossMethod").value) || "hgdr_oku";
+  const map = {
+    "hss_oku":   { finishType: "hss",      profile: "cross_oku" },
+    "hgdr_oku":  { finishType: "halfmoon", profile: "cross_oku" },
+    "hss_men":   { finishType: "hss",      profile: "drill_ichi_men" },
+    "hgdr_men":  { finishType: "halfmoon", profile: "drill_ichi_men" },
+    "baito_oku": { finishType: "baito",    profile: "baito_oku" },
+  };
+  return map[cm] || { finishType: "halfmoon", profile: "cross_oku" };
+}
+
+/** G18_40/G18_42 サブパネルをスタイル選択に応じて表示切替 */
+function updateG18SubPanels() {
+  const wt = $id("workType") ? $id("workType").value : "";
+  const isG18Small = wt === "G18_40" || wt === "G18_42" || wt === "G18_40_MH" || wt === "G18_42_MH";
+  const crossPanel = $id("g18CrossPanel");
+  const showCross = isG18Small && currentInternalStyle === "CrossSmall";
+  if (crossPanel) {
+    crossPanel.style.display = showCross ? "" : "none";
+    crossPanel.setAttribute("aria-hidden", showCross ? "false" : "true");
+  }
+}
+
 /** M12: ドリル種類ドロップダウン変更 */
 function onM12DrillTypeChange() {
   updateInternalStyleUI();
@@ -1558,6 +1602,13 @@ function onM12DrillTypeChange() {
 
 /** M12: 交差穴加工方法ドロップダウン変更 */
 function onM12CrossMethodChange() {
+  updateInternalStyleUI();
+  calcDrillDepth();
+  runGeneration();
+}
+
+/** G18_40/42: 交差穴加工方法ドロップダウン変更 */
+function onG18CrossMethodChange() {
   updateInternalStyleUI();
   calcDrillDepth();
   runGeneration();
@@ -1931,6 +1982,7 @@ function updateInternalStyleUI() {
     }
 
     updateM12SubPanels();
+    updateG18SubPanels();
 
     // ヨセ設定（ヨセ / ヨセ中継）
     if (isYoseMachiningStyle(currentInternalStyle) || isYoseRelayStyle(currentInternalStyle)) {
@@ -2714,6 +2766,7 @@ var ENTER_NAV_ORDER = [
   "tubeLengthSelect", //         長さ
   "m12DrillType",     // M12: ドリル種別
   "m12CrossMethod",   //      交差穴方法
+  "g18CrossMethod",   // G18_40/42: 交差穴方法
 ];
 
 function isEnterNavVisible(el) {
@@ -2792,6 +2845,8 @@ function runGeneration(fromUserButton = false) {
   
   const chkOkuBite = $id('chkOkuBite');
   const m12Resolved = (workTypeVal === 'M12' || workTypeVal === 'M12_MH') ? resolveM12FinishAndProfile() : { finishType: 'hss', profile: 'drill_ichi_hira' };
+  const _isG18Small = workTypeVal === 'G18_40' || workTypeVal === 'G18_42' || workTypeVal === 'G18_40_MH' || workTypeVal === 'G18_42_MH';
+  const g18Resolved = _isG18Small ? resolveG18CrossFinishAndProfile() : { finishType: 'halfmoon', profile: 'cross_oku' };
   const isOkuBiteEnabled =
     (workTypeVal === 'M12' || workTypeVal === 'M12_MH')
       ? m12ProfileImpliesOku(m12Resolved.profile)
@@ -2818,6 +2873,8 @@ function runGeneration(fromUserButton = false) {
     m12FinishType: m12Resolved.finishType,
     m12Profile: m12Resolved.profile,
     m12BaitoDrillMode: getM12BaitoDrillModeForInput(),
+    g18FinishType: g18Resolved.finishType,
+    g18Profile: g18Resolved.profile,
     m99Mode: m99Mode,
     m99p100: m99Mode === "on",
 
@@ -2939,6 +2996,7 @@ const NC_EXPORT_FIELDS = [
     { id: "tubeLengthSelect", t: "val" },
     { id: "m12DrillType",     t: "val" },
     { id: "m12CrossMethod",   t: "val" },
+    { id: "g18CrossMethod",   t: "val" },
     { id: "chkOkuBite",       t: "chk" },
 ];
 
@@ -3066,6 +3124,7 @@ function downloadFile() {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+  exportInputJson();
 }
 
 function setCalcMode(mode) {
