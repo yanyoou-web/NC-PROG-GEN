@@ -231,8 +231,7 @@ function getIchimonjiBlock(cpStr, machineConfig) {
     const mOff = machineConfig["M59"] || "";
     const H = (v) => wrapH(v); 
 
-    let s = "\n";
-    s += `N102(4.0DR-ICHIMONJI-MENTORI)\n`;
+    let s = `N102(4.0DR-ICHIMONJI-MENTORI)\n`;
     s += `G0G97${H(tool)}S500M3\n`;
     s += `X0.Z30.${H(mOn)}\n`;
     s += `Z3.\n`;
@@ -255,8 +254,7 @@ function getIchimonjiHirazokoBlock(drawDepth, machineConfig) {
     const mOn  = machineConfig["M51"] || "";
     const mOff = machineConfig["M59"] || "";
     const H = (v) => wrapH(v);
-    let s = "\n";
-    s += `N102(4.0DR-ICHIMONJI-HIRAZOKO)\n`;
+    let s = `N102(4.0DR-ICHIMONJI-HIRAZOKO)\n`;
     s += `G0G97${H(tool)}S500M3\n`;
     s += `X0.Z30.${H(mOn)}\n`;
     s += `Z3.\n`;
@@ -285,7 +283,7 @@ function getOkuBiteBlock(cpStr, machineConfig) {
     const m59 = machineConfig["M59"] || "";
     
     let s = "";
-    s += `(OKU-BAIT--MENTORI)(CP=${H(cp.toFixed(3))})\n`;
+    s += `N102(OKU-BAIT--MENTORI)(CP=${H(cp.toFixed(3))})\n`;
     s += `G0G97S300${H(tool)}M3\n`;
     s += `X3.7Z30.${wrapH(m51)}\n`;
     s += `Z2.\n`;
@@ -318,7 +316,7 @@ function getOkuBiteBlockG18(cpStr, machineConfig) {
     const m59 = machineConfig["M59"] || "";
 
     let s = "";
-    s += `(OKU-BAIT--MENTORI-G18)(CP=${H(cp.toFixed(3))})\n`;
+    s += `N102(OKU-BAIT--MENTORI-G18)(CP=${H(cp.toFixed(3))})\n`;
     s += `G0G97S300${H(tool)}M3\n`;
     s += `X3.7Z30.${wrapH(m51)}\n`;
     s += `Z2.\n`;
@@ -369,7 +367,7 @@ function getYoseStrings(method, angle, d, machineConfig) {
         const mOff = machineConfig["M59"] || "";
         
         let s = "\n";
-        s += `N103(YOSE-BETSU-KOUTEI)\n`;
+        s += `N102(YOSE-BETSU-KOUTEI)\n`;
         s += `G0G97${wrapH(tool)}S500M3\n`;
         s += `X${H(rawD)}Z30.${wrapH(mOn)}\n`;
         s += `Z1.\n`;
@@ -1106,43 +1104,57 @@ function generateGCode(input, machineName) {
     //    - *_ABS : 正値（絶対値ベース）
     //    - *_ZNEG: Zマイナス方向が確定した値（例: -31.0）
     // 3) 既存の互換キー（L, L-R, L-0.5 など）は当面維持し、新規テンプレから本規約を適用する。
+    // ── 外径仕上ブロック（M12/M15/M18/M22/M40/G78/Tube 共通）
+    //    通常・偏心 : X…(--X--) の1行のみ（F.3 行は省略）
+    //    角あり     : 従来どおり2段
+    const isCorner = input.calcMode === "corner";
+
+    const drillBlockValue =
+        usesG18DrillShiageG1Block(input.workType)
+            ? getDrillBlock(finalDrillDepth, "G1")
+        : (input.workType === "M12" || input.workType === "M12_MH") && (input.m12FinishType || "hss") === "hss"
+            ? getDrillShiageBlock(finalDrillDepth)
+            : getDrillBlock(finalDrillDepth, input.drillMode);
+
     const replaceMap = {
-        "入力_図番": wrapHInput(fullDrawStr),
-        "入力_工程No": wrapHInput(input.processNum),
-        "入力_作成者": wrapHInput(input.workerName),
+        // ── 入力ヘッダ情報
+        "入力_図番":     wrapHInput(fullDrawStr),
+        "入力_工程No":   wrapHInput(input.processNum),
+        "入力_作成者":   wrapHInput(input.workerName),
         "入力_アテ長さ": wrapHInput(ncFormat(input.ateLength)),
-        "入力_日付": wrapHInput(today),
-        "最大径-5": wrapHCalc(ncFormat(calcMax1)),
-        // 外径仕上ブロック（M12/M15/M18/M22/M40/G78/Tube 共通）: 通常・偏心は X…(--X--) の1行のみ（F.3 行は省略）。角ありは従来どおり2段。
-        "最大径+角": input.calcMode === "corner"
+        "入力_日付":     wrapHInput(today),
+
+        // ── 外径仕上
+        "最大径-5":  wrapHCalc(ncFormat(calcMax1)),
+        "最大径+角": isCorner
             ? ("X" + wrapHCalc(ncFormat(calcCorner)))
             : ("X" + wrapHCalc(ncFormat(calcMax2)) + "(--X--)"),
-        "最大径+3": input.calcMode === "corner"
+        "最大径+3":  isCorner
             ? ("X" + wrapHCalc(ncFormat(calcMax2)) + "F.3\n")
             : "",
-        "M99P100": wrapHInput(valM99),
-        "最大径50": "",
+        "最大径50":  "",
+
+        // ── 内径
         "入力_内径深さ": wrapHCalc(ncFormat(finalFinishDepth)),
-        
-        "DRILL_BLOCK": usesG18DrillShiageG1Block(input.workType)
-            ? getDrillBlock(finalDrillDepth, "G1")
-            : ((input.workType === "M12" || input.workType === "M12_MH") && (input.m12FinishType || "hss") === "hss")
-                ? getDrillShiageBlock(finalDrillDepth)
-                : getDrillBlock(finalDrillDepth, input.drillMode),
+        "DRILL_BLOCK":   drillBlockValue,
         "奥バイト面取り": okuBiteMentoriBlock,
 
+        // ── 内径バイト固定値
         "BAITO_IN_S":         wrapHMachine("500"),
         "BAITO_IN_APX":       wrapHMachine("5."),
         "BAITO_IN_X":         wrapHMachine("4."),
         "BAITO_IN_CHAMFER_Z": wrapHMachine("3."),
         "BAITO_IN_MID_Z":     wrapHMachine("7.5"),
 
+        // ── 平底
         "平底_内径仕上出口": flatBottomExitLine,
-        
-        // ヨセ変数
-        "ヨセパス": yosePath,
+
+        // ── その他
+        "M99P100": wrapHInput(valM99),
+
+        // ── ヨセ
+        "ヨセパス":    yosePath,
         "ヨセブロック": yoseBlock,
-        
     };
 
     // 機械変数のマッピング
