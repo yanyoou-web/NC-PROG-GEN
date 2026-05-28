@@ -1895,3 +1895,34 @@ input.input--halfwidth-reject {
 .dbg-cov-label--unused {
     color: #888;
 }
+
+/* ===== プログレッシブ・リビール ===== */
+.reveal-section {
+    transition:
+        opacity 0.28s ease,
+        transform 0.28s ease,
+        max-height 0.3s ease;
+    overflow: hidden;
+}
+.reveal-section--hidden {
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+}
+/* workType 行: アテ長さ入力前は非表示 */
+.row--step-worktype.reveal-section--hidden {
+    display: none;
+}
+/* 右カラム: workType 選択前は非表示 */
+.form-layout-split__col--input.reveal-section--hidden {
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+}
+.form-layout-split__col--input {
+    transition: opacity 0.28s ease, transform 0.28s ease;
+}

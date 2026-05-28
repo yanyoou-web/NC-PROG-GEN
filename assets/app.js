@@ -528,6 +528,12 @@ const WORK_ID_MAP = {
     M15: 6.0,
     M12: 4.0,
     G78: 16.0,
+    M40_MH: 22.0,
+    M22_MH: 10.0,
+    M18_MH: 8.0,
+    M15_MH: 6.0,
+    M12_MH: 4.0,
+    G78_MH: 16.0,
     G18_40: 4.0,
     G18_42: 4.15,
     G18_62: 6.2,
@@ -603,6 +609,12 @@ const DRILL_DIA_MAP = {
     M18: 7.0,
     M15: 3.3,
     M12: 4.05,
+    M40_MH: 14.0,
+    G78_MH: 14.0,
+    M22_MH: 7.0,
+    M18_MH: 7.0,
+    M15_MH: 3.3,
+    M12_MH: 4.05,
     G18_40: 4.05,
     G18_42: 4.15,
     G18_62: 4.15,
@@ -682,9 +694,9 @@ function calcSpecialDrillZ(style, drillDia, baseDepth) {
     if (style === "Yose" || style === "YoseRelay") {
         result = 0.3 * drillDia + baseDepth - 0.4;
     }
-    // 交差穴の計算式: (0.3 * D) + CP
+    // 交差穴の計算式: CP + 1 + (0.3 * D)
     else if (style === "CrossBig" || style === "CrossSmall") {
-        result = 0.3 * drillDia + baseDepth;
+        result = baseDepth + 1 + 0.3 * drillDia;
     }
 
     return result ? result.toFixed(2) : null;
@@ -966,9 +978,13 @@ function generateGCode(input, machineName) {
         if (isNaN(parseFloat(input.valPartnerD))) {
             errors.push("[相手径 (Φ)] が入力されていません。");
         }
-        const crossSmallDepth = calcCrossSmallFinishDepth(input);
-        if (isNaN(crossSmallDepth) || !isFinite(crossSmallDepth)) {
-            errors.push("[交差穴加工径小] 内径深さを計算できません。相手径/加工径/CP を確認してください。");
+        // M8 系（M8_21 / M8_31）は CrossSmall でも drill_ichi_men（面取りのみ）を使用するため
+        // calcCrossSmallFinishDepth を呼び出さず、内径深さ自動計算チェックをスキップする
+        if (!isM8WorkType(input.workType)) {
+            const crossSmallDepth = calcCrossSmallFinishDepth(input);
+            if (isNaN(crossSmallDepth) || !isFinite(crossSmallDepth)) {
+                errors.push("[交差穴加工径小] 内径深さを計算できません。相手径/加工径/CP を確認してください。");
+            }
         }
     }
 
@@ -2125,6 +2141,65 @@ function setInternalStyle(style) {
     }
 }
 
+// ========== プログレッシブ・リビール ==========
+/**
+ * フォームのプログレッシブ・リビール制御。
+ * 各入力ステップの充足状況に応じて、次のセクションを表示/非表示にする。
+ *
+ * Step 1 (常時)  : machineSelect, ateLength
+ * Step 2         : ateLength 入力後 → workType 行を表示
+ * Step 3         : workType 選択後 → 右カラム（ファイル情報 + 作成者）を表示
+ * Step 4         : v2 + workerName 入力後 → machiningSettingsGroup を表示
+ * Step 5         : maxOD + selM99P100 入力後 → internalStyleDrawer を表示
+ * Step 6 (既存)  : internalStyle 選択後 → style 固有フィールドを表示（updateInternalStyleUI 内で制御）
+ */
+function updateProgressiveReveal() {
+    const wtVal     = ($id("workType")    || {}).value || "";
+    const ateVal    = (($id("ateLength")  || {}).value || "").trim();
+    const ateFilled = ateVal !== "" && !isNaN(parseFloat(ateVal));
+    const wnFilled  = (($id("workerName") || {}).value || "").trim() !== "";
+    const maxODVal  = (($id("maxOD")      || {}).value || "").trim();
+    const maxODFilled = maxODVal !== "";
+    const m99Val    = ($id("selM99P100")  || {}).value || "";
+    const m99Filled = m99Val !== "";
+
+    // --- Step 2: workType 行はアテ長さ入力後に解禁 ---
+    const wtEl  = $id("workType");
+    const wtRow = wtEl && wtEl.closest(".row");
+    if (wtRow) {
+        wtRow.classList.toggle("reveal-section--hidden", !ateFilled);
+    }
+
+    // --- Step 3: 右カラム（ファイル情報 + 作成者）は workType 選択後 ---
+    const rightCol = document.querySelector(".form-layout-split__col--input");
+    if (rightCol) {
+        const showRight = !!wtVal;
+        rightCol.classList.toggle("reveal-section--hidden", !showRight);
+    }
+
+    // --- Step 4: 加工設定は workType + workerName 入力後（v2 は生成時バリデーションで担保） ---
+    const showMachining = !!(wtVal && wnFilled);
+    const machGrp = $id("machiningSettingsGroup");
+    const mainActionRow = $id("mainActionRow");
+    const hlFilterRow   = $id("highlightFilterRow");
+    if (machGrp)       machGrp.style.display       = showMachining ? ""     : "none";
+    if (mainActionRow) mainActionRow.style.display  = showMachining ? "flex" : "none";
+    if (hlFilterRow)   hlFilterRow.style.display    = showMachining ? "flex" : "none";
+
+    // --- Step 5: internalStyleDrawer は maxOD + selM99P100 入力後 ---
+    const showDrawer = !!(wtVal && maxODFilled && m99Filled);
+    const styleDrawer = $id("internalStyleDrawer");
+    if (styleDrawer) {
+        styleDrawer.style.display = showDrawer ? "block" : "none";
+        if (!showDrawer && typeof isInternalStyleDrawerOpen !== "undefined") {
+            isInternalStyleDrawerOpen = false;
+            if (typeof syncInternalStyleDrawerPanel === "function") {
+                syncInternalStyleDrawerPanel();
+            }
+        }
+    }
+}
+
 /**
  * 内径加工スタイル・ワーク種別に応じたブロック表示（Enterキーのナビとは独立）
  */
@@ -2144,34 +2219,12 @@ function updateInternalStyleUI() {
     const okuBiteArea = $id("okuBiteArea");
     const workType = $id("workType").value;
     const isTemplateSelected = !!workType;
-    const machiningSettingsGroup = $id("machiningSettingsGroup");
-    const mainActionRow = $id("mainActionRow");
-    const highlightFilterRow = $id("highlightFilterRow");
     const blockMaxDiameterMode = $id("blockMaxDiameterMode");
     const maxOdRow = $id("maxOdRow");
     const idDepthRow = $id("idDepthRow");
 
-    // 外径最大径と同様に、テンプレート未選択時は加工設定と生成ボタンを隠す
-    if (machiningSettingsGroup) {
-        machiningSettingsGroup.style.display = isTemplateSelected ? "" : "none";
-    }
-    if (mainActionRow) {
-        mainActionRow.style.display = isTemplateSelected ? "flex" : "none";
-    }
-    if (highlightFilterRow) {
-        highlightFilterRow.style.display = isTemplateSelected ? "flex" : "none";
-    }
-
-    const styleDrawer = $id("internalStyleDrawer");
-    if (styleDrawer) {
-        // M12 でも内径加工スタイル分岐を使うため、テンプレート選択時は常に表示
-        const showDrawer = isTemplateSelected;
-        styleDrawer.style.display = showDrawer ? "block" : "none";
-        if (!showDrawer) {
-            isInternalStyleDrawerOpen = false;
-        }
-        syncInternalStyleDrawerPanel();
-    }
+    // セクション単位の表示制御はプログレッシブ・リビールに委譲
+    updateProgressiveReveal();
 
     // チューブでも最大径計算モードを選べる（外径最大径はチューブ規格からは自動入力しない）
     if (blockMaxDiameterMode) {
@@ -2607,9 +2660,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setupHelpEasterDropdown();
 
+    // ---- プログレッシブ・リビール: 各入力フィールドの変更時に再評価 ----
+    [
+        { id: "ateLength",   events: ["input", "change"] },
+        { id: "workType",    events: ["change"] },
+        { id: "v2",          events: ["input", "change"] },
+        { id: "workerName",  events: ["input", "change"] },
+        { id: "maxOD",       events: ["input", "change"] },
+        { id: "selM99P100",  events: ["change"] },
+    ].forEach(function (cfg) {
+        const el = $id(cfg.id);
+        if (!el) return;
+        cfg.events.forEach(function (evtName) {
+            el.addEventListener(evtName, updateProgressiveReveal);
+        });
+    });
+
     updateWorkTypeSettings();
     setCalcMode(currentCalcMode);
     refreshAteLengthSourceState();
+    // 初期状態を評価（初期値が空の場合に次ステップを非表示にする）
+    updateProgressiveReveal();
 
     document.addEventListener("keydown", function (e) {
         if (e.key !== "Escape") return;
@@ -2682,18 +2753,22 @@ function setActiveBtn(btn) {
 function setAuthor(name, btn) {
     $id("workerName").value = name;
     setActiveBtn(btn);
+    // クイック選択ボタンはイベントを発火しないため直接呼ぶ
+    updateProgressiveReveal();
 }
 function setAteOnly(val) {
     const sel = $id("ateLength");
     if (sel) sel.value = String(val);
     ateLengthFromKaku = false;
     syncMaxOdAteModeUi();
+    updateProgressiveReveal();
 }
 function setAteCalc(val) {
     const sel = $id("ateLength");
     if (sel) sel.value = String(val);
     /** 上段 15角〜43角 クイック: 外径（アテ長さ）式に利用可 */
     refreshAteLengthSourceState();
+    updateProgressiveReveal();
 }
 
 function updateMaxOdFromAteButtonActive() {
@@ -3398,6 +3473,8 @@ function importInputJson() {
                     const tl = $id("tubeLengthSelect");
                     if (tl && data.tubeLengthSelect) tl.value = data.tubeLengthSelect;
                 }
+                // 全フィールド復元後にプログレッシブ・リビールを再評価（全セクション表示）
+                updateProgressiveReveal();
                 runGeneration(false);
                 _showImportToast(`✅ インポート完了: ${file.name}`);
             } catch (err) {
