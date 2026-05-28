@@ -16,7 +16,7 @@ G0X200.{{M459}}
 M1(TSUKAMIKAE)
 G28U0W0M1
 
-{{奥バイト面取り}}(MENTORI)
+{{内バリ処理}}(MENTORI)
 
 N2(OUT-11.9){{扉閉じ}}
 G0G40G97S750M3{{外径荒}}

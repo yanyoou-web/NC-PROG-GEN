@@ -1,4 +1,4 @@
-const template_M12BAITO_MH=`
+﻿const template_M12BAITO_MH=`
 %
 O{{入力_工程No}}(PM-{{入力_図番}}=No,{{入力_工程No}}=Q)
 (M12-BAITO-MH)
@@ -56,7 +56,7 @@ Z-{{入力_内径深さ}}F.05(-Z-)
 G0Z30.{{M59}}
 G28U0W0M1
 
-{{奥バイト面取り}}(MENTORI)
+{{内バリ処理}}(MENTORI)
 
 N3(IN-7.8)(G41-G42){{扉閉じ}}
 G0G40G97S750M3{{内径荒}}

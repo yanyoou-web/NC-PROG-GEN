@@ -33,7 +33,10 @@ function renderDebugPanel() {
 function renderDebugInputPane() {
     const el = document.getElementById("debugInputPane");
     if (!el) return;
-    if (!_ncDebugLastInput) { el.innerHTML = '<span class="dbg-empty">生成後に表示されます</span>'; return; }
+    if (!_ncDebugLastInput) {
+        el.innerHTML = '<span class="dbg-empty">生成後に表示されます</span>';
+        return;
+    }
     const rows = Object.entries(_ncDebugLastInput).map(([k, v]) => {
         const val = v === null || v === undefined ? "" : String(v);
         const empty = val === "" || val === "false";
@@ -56,33 +59,60 @@ function renderDebugCoveragePane() {
     const unresolved = _ncDebugLastUnresolved || new Set();
 
     // ❌ テンプレートにあるが replaceMap にない（未解決）
-    const missing = [...tKeys].filter(k => !rKeys.has(k));
+    const missing = [...tKeys].filter((k) => !rKeys.has(k));
     // ✅ テンプレートにあり replaceMap にも存在（解決済み）
-    const resolved = [...tKeys].filter(k => rKeys.has(k));
+    const resolved = [...tKeys].filter((k) => rKeys.has(k));
     // ⚠️ replaceMap にあるがテンプレートで未使用
-    const unused = [...rKeys].filter(k => !tKeys.has(k));
+    const unused = [...rKeys].filter((k) => !tKeys.has(k));
 
     const sections = [];
 
     if (missing.length) {
-        sections.push(`<div class="dbg-cov-section"><div class="dbg-cov-label dbg-cov-label--miss">❌ 未解決 (テンプレートにあるが replaceMap なし) ${missing.length}件</div>`
-            + missing.map(k => `<div class="dbg-row dbg-row--missing"><span class="dbg-key">{{${escapeHtml(k)}}}</span></div>`).join("")
-            + `</div>`);
+        sections.push(
+            `<div class="dbg-cov-section"><div class="dbg-cov-label dbg-cov-label--miss">❌ 未解決 (テンプレートにあるが replaceMap なし) ${missing.length}件</div>` +
+                missing
+                    .map(
+                        (k) =>
+                            `<div class="dbg-row dbg-row--missing"><span class="dbg-key">{{${escapeHtml(k)}}}</span></div>`
+                    )
+                    .join("") +
+                `</div>`
+        );
     }
 
     if (unresolved.size) {
-        sections.push(`<div class="dbg-cov-section"><div class="dbg-cov-label dbg-cov-label--miss">⚠️ 出力に残存 (置換後も {{}} が残った) ${unresolved.size}件</div>`
-            + [...unresolved].map(k => `<div class="dbg-row dbg-row--missing"><span class="dbg-key">{{${escapeHtml(k)}}}</span></div>`).join("")
-            + `</div>`);
+        sections.push(
+            `<div class="dbg-cov-section"><div class="dbg-cov-label dbg-cov-label--miss">⚠️ 出力に残存 (置換後も {{}} が残った) ${unresolved.size}件</div>` +
+                [...unresolved]
+                    .map(
+                        (k) =>
+                            `<div class="dbg-row dbg-row--missing"><span class="dbg-key">{{${escapeHtml(k)}}}</span></div>`
+                    )
+                    .join("") +
+                `</div>`
+        );
     }
 
-    sections.push(`<div class="dbg-cov-section"><div class="dbg-cov-label dbg-cov-label--ok">✅ 解決済み ${resolved.length}件</div>`
-        + resolved.map(k => `<div class="dbg-row"><span class="dbg-key" style="color:#6a9f6a;">{{${escapeHtml(k)}}}</span></div>`).join("")
-        + `</div>`);
+    sections.push(
+        `<div class="dbg-cov-section"><div class="dbg-cov-label dbg-cov-label--ok">✅ 解決済み ${resolved.length}件</div>` +
+            resolved
+                .map(
+                    (k) =>
+                        `<div class="dbg-row"><span class="dbg-key" style="color:#6a9f6a;">{{${escapeHtml(k)}}}</span></div>`
+                )
+                .join("") +
+            `</div>`
+    );
 
-    sections.push(`<div class="dbg-cov-section"><div class="dbg-cov-label dbg-cov-label--unused">💤 未使用 (replaceMap にあるがテンプレート外) ${unused.length}件</div>`
-        + unused.map(k => `<div class="dbg-row dbg-row--empty"><span class="dbg-key">{{${escapeHtml(k)}}}</span></div>`).join("")
-        + `</div>`);
+    sections.push(
+        `<div class="dbg-cov-section"><div class="dbg-cov-label dbg-cov-label--unused">💤 未使用 (replaceMap にあるがテンプレート外) ${unused.length}件</div>` +
+            unused
+                .map(
+                    (k) => `<div class="dbg-row dbg-row--empty"><span class="dbg-key">{{${escapeHtml(k)}}}</span></div>`
+                )
+                .join("") +
+            `</div>`
+    );
 
     el.innerHTML = sections.join("");
 }
@@ -90,7 +120,10 @@ function renderDebugCoveragePane() {
 function renderDebugReplacePane() {
     const el = document.getElementById("debugReplacePane");
     if (!el) return;
-    if (!_ncDebugLastReplaceMap) { el.innerHTML = '<span class="dbg-empty">生成後に表示されます</span>'; return; }
+    if (!_ncDebugLastReplaceMap) {
+        el.innerHTML = '<span class="dbg-empty">生成後に表示されます</span>';
+        return;
+    }
     const rows = Object.entries(_ncDebugLastReplaceMap).map(([k, v]) => {
         const plain = gcodeDisplayHtmlToPlainText(String(v == null ? "" : v));
         const isEmpty = plain.trim() === "";
@@ -98,9 +131,7 @@ function renderDebugReplacePane() {
         let kind = "machine";
         const m = String(v).match(/data-hl-attr="(calc|input|machine)"/);
         if (m) kind = m[1];
-        const cls = isEmpty
-            ? "dbg-row dbg-row--missing"
-            : `dbg-row dbg-row--${kind}`;
+        const cls = isEmpty ? "dbg-row dbg-row--missing" : `dbg-row dbg-row--${kind}`;
         const keyHtml = `<span class="dbg-key">{{${escapeHtml(k)}}}</span>`;
         const valHtml = isEmpty
             ? `<span class="dbg-val dbg-val--empty">(空)</span>`

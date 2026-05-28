@@ -1,4 +1,4 @@
-const template_M12HSS_MH=`
+﻿const template_M12HSS_MH=`
 %
 O{{入力_工程No}}(PM-{{入力_図番}}=No,{{入力_工程No}}=Q)
 (M12-HSS-MH)
@@ -16,7 +16,7 @@ G0X200.{{M459}}
 M1(TSUKAMIKAE)
 G28U0W0M1
 
-{{奥バイト面取り}}(MENTORI)
+{{内バリ処理}}(MENTORI)
 
 N2(OUT-11.9)(MH){{扉閉じ}}
 G0G40G97S750M3{{MH外径荒}}

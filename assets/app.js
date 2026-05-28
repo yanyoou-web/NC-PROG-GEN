@@ -36,10 +36,10 @@ function escapeHtml(str) {
 function ncFormat(val) {
     if (val === "" || val === null || val === undefined) return "";
     const num = parseFloat(val);
-    if (isNaN(num)) return ""; 
+    if (isNaN(num)) return "";
 
     let s = num.toString();
-    if (s.indexOf('.') === -1) {
+    if (s.indexOf(".") === -1) {
         return s + ".";
     }
     return s;
@@ -51,7 +51,9 @@ function normalizeHighlightAttr(attr) {
 }
 
 function isMCodeLike(val) {
-    const s = String(val == null ? "" : val).trim().toUpperCase();
+    const s = String(val == null ? "" : val)
+        .trim()
+        .toUpperCase();
     // 例: M3 / M19 / M458 / M99P100
     return /^M\d+(?:\.\d+)?(?:P\d+)?$/.test(s);
 }
@@ -62,9 +64,15 @@ function wrapH(val, attr) {
     const kind = normalizeHighlightAttr(attr);
     return `<span class="h-val h-val--${kind}" data-hl-attr="${kind}">${escapeHtml(val)}</span>`;
 }
-function wrapHCalc(val) { return wrapH(val, "calc"); }
-function wrapHInput(val) { return wrapH(val, "input"); }
-function wrapHMachine(val) { return wrapH(val, "machine"); }
+function wrapHCalc(val) {
+    return wrapH(val, "calc");
+}
+function wrapHInput(val) {
+    return wrapH(val, "input");
+}
+function wrapHMachine(val) {
+    return wrapH(val, "machine");
+}
 
 /**
  * 画面表示用HTML（ハイライトの span 等）から、機械送り・保存用のプレーンテキストへ。
@@ -94,7 +102,7 @@ function bindHighlightFilterControls() {
     const pairs = [
         ["calc", "hlCalcToggle"],
         ["input", "hlInputToggle"],
-        ["machine", "hlMachineToggle"]
+        ["machine", "hlMachineToggle"],
     ];
     pairs.forEach(function (pair) {
         const attr = pair[0];
@@ -118,10 +126,10 @@ function bindHighlightFilterControls() {
 function evaluateFormula(str) {
     if (!str) return "";
     // 半角数字、四則演算記号、ドット、カッコ以外を排除
-    const sanitized = str.replace(/[^0-9+\-*/.()]/g, '');
+    const sanitized = str.replace(/[^0-9+\-*/.()]/g, "");
     try {
         // 数式として評価
-        const result = new Function('return ' + sanitized)();
+        const result = new Function("return " + sanitized)();
         return isNaN(result) ? str : result;
     } catch (e) {
         return str; // 計算できない場合はそのまま返す
@@ -144,9 +152,8 @@ function parseSimpleNumberOrFormula(str) {
         return NaN;
     }
     const evaluated = evaluateFormula(raw);
-    return (typeof evaluated === "number" && isFinite(evaluated)) ? evaluated : NaN;
+    return typeof evaluated === "number" && isFinite(evaluated) ? evaluated : NaN;
 }
-
 
 // ========== Gコードブロック生成 ==========
 /**
@@ -154,22 +161,27 @@ function parseSimpleNumberOrFormula(str) {
  * Gコードブロック生成ロジック
  */
 
+/**
+ * 汎用ドリルブロック — M40 / M22 / M18 / M15 / G78 / G18系 / Tube など共通
+ *   mode="G74" : G74 ペックサイクル（深さ≦30: 一発, 深さ>30: 10mm ステップ）
+ *   mode="G1"  : G1 単動 1発（全G18 は G1 固定で呼ばれる）
+ */
 function getDrillBlock(depth, mode) {
     if (isNaN(depth)) return "";
     let s = "";
     const d = (val) => wrapH(ncFormat(val.toFixed(2)));
     const d1 = (val) => wrapH(ncFormat(val.toFixed(1)));
-    
+
     depth = Math.abs(depth);
 
-    if (mode === 'G1') {
+    if (mode === "G1") {
         s += `G1Z-${d(depth)}F.15\n`;
         s += `G4U.3\n`;
         s += `Z1.F2.5`;
     } else {
         if (depth <= 30) {
-             s += `G74R.5\n`;
-             s += `G74Z-${d(depth)}Q8000F.25`;
+            s += `G74R.5\n`;
+            s += `G74Z-${d(depth)}Q8000F.25`;
         } else {
             s += `G74R.5\n`;
             s += `G74Z-30.Q3000F.25\n`;
@@ -195,9 +207,14 @@ function getDrillBlock(depth, mode) {
     return s;
 }
 
+/**
+ * M12 HSS専用 ドリル仕上げブロック
+ *   G1単動 + 10mm刻みステップバック方式 (F.1 で送り、F2.5 で引き戻し)
+ *   使用条件: workType=M12 または M12_MH かつ m12FinishType="hss"
+ */
 function getDrillShiageBlock(depth) {
     if (isNaN(depth) || depth <= 0) return "";
-    const d  = (val) => wrapH(ncFormat(val.toFixed(2)));
+    const d = (val) => wrapH(ncFormat(val.toFixed(2)));
     const d1 = (val) => wrapH(ncFormat(val.toFixed(1)));
     depth = Math.abs(depth);
     let s = "";
@@ -218,18 +235,54 @@ function getDrillShiageBlock(depth) {
     return s;
 }
 
+/**
+ * M8 HSS専用 ドリル仕上げブロック
+ *   現在は M12HSS ロジックのコピー（F値・ステップ量は実機確認後に調整）
+ *   使用条件: workType=M8_21 または M8_31
+ */
+function getDrillShiageBlock_M8(depth) {
+    if (isNaN(depth) || depth <= 0) return "";
+    const d = (val) => wrapH(ncFormat(val.toFixed(2)));
+    const d1 = (val) => wrapH(ncFormat(val.toFixed(1)));
+    depth = Math.abs(depth);
+    let s = "";
+    let currentZ = 0;
+    while (currentZ < depth) {
+        const nextZ = currentZ + 10;
+        if (nextZ >= depth) {
+            s += `G1Z-${d(depth)}F.1\n`;
+            s += `G4U.3\n`;
+            s += `G1Z30.F2.5`;
+            break;
+        }
+        s += `G1Z-${d(nextZ)}F.1\n`;
+        s += `G1Z30.F2.5\n`;
+        s += `G1Z-${d1(nextZ - 1)}F2.5\n`;
+        currentZ = nextZ;
+    }
+    return s;
+}
+
+/**
+ * 一文字ドリル 面取り(バリ取り)ブロック — CP ± 2mm でZ軸貫通
+ *   使用条件:
+ *     - M12/M12_MH: style=CrossSmall/CrossBig かつ profile=drill_ichi_men（一文字面取り）
+ *     - G18_40/42系: style=CrossSmall かつ profile=drill_ichi_men
+ *     - 上記以外の全テンプレート: style=Ichimonji（2.一文字DR平底 以外の場合）
+ *   工具: 機械定義の "一文字ドリル"
+ */
 function getIchimonjiBlock(cpStr, machineConfig) {
     const cp = parseFloat(cpStr);
     if (isNaN(cp)) return "(Error: CP Invalid)";
 
     const zApproach = (cp - 2.0).toFixed(3);
-    const zFinish   = (cp + 2.0).toFixed(3);
+    const zFinish = (cp + 2.0).toFixed(3);
 
     const tool = machineConfig["一文字ドリル"];
     if (!tool) return "(ERROR: 機械定義に '一文字ドリル' が設定されていません)";
-    const mOn  = machineConfig["M51"] || "";
+    const mOn = machineConfig["M51"] || "";
     const mOff = machineConfig["M59"] || "";
-    const H = (v) => wrapH(v); 
+    const H = (v) => wrapH(v);
 
     let s = `N102(4.0DR-ICHIMONJI-MENTORI)\n`;
     s += `G0G97${H(tool)}S500M3\n`;
@@ -244,14 +297,19 @@ function getIchimonjiBlock(cpStr, machineConfig) {
     return s;
 }
 
+/**
+ * 一文字ドリル 平底仕上げブロック — 内径深さ基準で Z-(Depth+0.2) まで加工
+ *   使用条件: M12/M12_MH かつ style=Ichimonji（2.一文字DR平底）
+ *   工具: 機械定義の "一文字ドリル"
+ */
 function getIchimonjiHirazokoBlock(drawDepth, machineConfig) {
     const zDraw = Math.abs(parseFloat(drawDepth));
     if (isNaN(zDraw)) return "(Error: Depth Invalid)";
     const zApproach = (zDraw - 2.0).toFixed(3);
-    const zFinish   = (zDraw + 0.2).toFixed(3);
+    const zFinish = (zDraw + 0.2).toFixed(3);
     const tool = machineConfig["一文字ドリル"];
     if (!tool) return "(ERROR: 機械定義に '一文字ドリル' が設定されていません)";
-    const mOn  = machineConfig["M51"] || "";
+    const mOn = machineConfig["M51"] || "";
     const mOff = machineConfig["M59"] || "";
     const H = (v) => wrapH(v);
     let s = `N102(4.0DR-ICHIMONJI-HIRAZOKO)\n`;
@@ -267,21 +325,27 @@ function getIchimonjiHirazokoBlock(drawDepth, machineConfig) {
     return s;
 }
 
+/**
+ * 奥バイト面取りブロック — M12/M12_MH 専用
+ *   使用条件: M12/M12_MH かつ style=CrossSmall/CrossBig かつ
+ *             profile=cross_oku または baito_oku かつ 相手径 ≥ 6.0mm
+ *   工具: 機械定義の "内径ダイヤΦ4"
+ */
 function getOkuBiteBlock(cpStr, machineConfig) {
     let cp = parseFloat(cpStr);
     if (isNaN(cp)) return "(ERROR: CP_INVALID)";
-    
+
     const z1 = (cp - 0.3).toFixed(2);
     const z2 = (cp - 0.1).toFixed(2);
     const z3 = (cp + 1.0).toFixed(2);
     const z4 = (cp + 0.55).toFixed(2);
-    const H = (v) => wrapH(v); 
+    const H = (v) => wrapH(v);
 
-    const tool = machineConfig["内径ダイヤΦ4"]; 
+    const tool = machineConfig["内径ダイヤΦ4"];
     if (!tool) return "(ERROR: 機械定義に '内径ダイヤΦ4' が設定されていません)";
     const m51 = machineConfig["M51"] || "";
     const m59 = machineConfig["M59"] || "";
-    
+
     let s = "";
     s += `N102(OKU-BAIT--MENTORI)(CP=${H(cp.toFixed(3))})\n`;
     s += `G0G97S300${H(tool)}M3\n`;
@@ -300,6 +364,11 @@ function getOkuBiteBlock(cpStr, machineConfig) {
     return s;
 }
 
+/**
+ * 奥バイト面取りブロック — G18_40/42系 専用（X アプローチ径が M12 版と異なる）
+ *   使用条件: G18_40/G18_42/G18_40_MH/G18_42_MH かつ style=CrossSmall かつ profile=hgdr_oku
+ *   工具: 機械定義の "内径ダイヤΦ4"
+ */
 function getOkuBiteBlockG18(cpStr, machineConfig) {
     const cp = parseFloat(cpStr);
     if (isNaN(cp)) return "(ERROR: CP_INVALID)";
@@ -308,9 +377,9 @@ function getOkuBiteBlockG18(cpStr, machineConfig) {
     const z2 = (cp - 0.1).toFixed(2);
     const z3 = (cp + 1.0).toFixed(2);
     const z4 = (cp + 0.55).toFixed(2);
-    const H = (v) => wrapH(v); 
+    const H = (v) => wrapH(v);
 
-    const tool = machineConfig["内径ダイヤΦ4"]; 
+    const tool = machineConfig["内径ダイヤΦ4"];
     if (!tool) return "(ERROR: 機械定義に '内径ダイヤΦ4' が設定されていません)";
     const m51 = machineConfig["M51"] || "";
     const m59 = machineConfig["M59"] || "";
@@ -338,7 +407,7 @@ function getOkuBiteBlockG18(cpStr, machineConfig) {
 function getYoseStrings(method, angle, d, machineConfig) {
     // デフォルト戻り値
     let result = { path: "", block: "" };
-    
+
     const valD = parseFloat(d);
     // 相手径が無効なら何もしない、またはエラーを返す
     if (isNaN(valD)) return result;
@@ -354,18 +423,18 @@ function getYoseStrings(method, angle, d, machineConfig) {
         // 必要に応じて "A" + angle + "." 等を追加してください
         result.path = `\nX${H(rawD)}(YOSE-DOUJI A${angle})`;
         result.block = ""; // ヨセブロックは無し
-    } 
+    }
     // ② 別工程 (バイト2本) -> {{ヨセブロック}} に独立ブロック出力
     else if (method === "2") {
         result.path = ""; // パスには何も足さない
-        
+
         // 別工程用のブロック生成
         // 工具は暫定で T0707 (machineConfigから取得推奨)
         const tool = machineConfig["内径ダイヤΦ4"];
         if (!tool) return "(ERROR: 機械定義に '内径ダイヤΦ4' が設定されていません)";
-        const mOn  = machineConfig["M51"] || "";
+        const mOn = machineConfig["M51"] || "";
         const mOff = machineConfig["M59"] || "";
-        
+
         let s = "\n";
         s += `N102(YOSE-BETSU-KOUTEI)\n`;
         s += `G0G97${wrapH(tool)}S500M3\n`;
@@ -374,7 +443,7 @@ function getYoseStrings(method, angle, d, machineConfig) {
         s += `G1Z-...(YOSE-PROG-HERE)\n`; // 具体的な座標計算ロジックが必要ならここへ
         s += `G0Z30.${wrapH(mOff)}\n`;
         s += `G28U0W0M1\n`;
-        
+
         result.block = s;
     }
 
@@ -443,7 +512,6 @@ function combineTubeFlatBottomFinishLine(toolDia, exitLine) {
     return e;
 }
 
-
 // ========== 生成ロジック ==========
 /**
  * logic.js
@@ -453,23 +521,56 @@ function combineTubeFlatBottomFinishLine(toolDia, exitLine) {
 // --- 定数・ワーク定義マップ ---
 
 // ワーク種別ごとの内径大径(D)定義マップ
-const WORK_ID_MAP = { "M40": 22.0, "M22": 10.0, "M18": 8.0, "M15": 6.0, "M12": 4.00, "G78": 16.0, "G18_40": 4.0, "G18_42": 4.15, "G18_62": 6.2, "G18_655": 6.55, "G18_6175": 6.175, "G18_40_MH": 4.0, "G18_42_MH": 4.15, "G18_62_MH": 6.2, "G18_655_MH": 6.55, "G18_6175_MH": 6.175, "M42X3_25175": 25.175, "M42X3_25175_20": 20.0, "M42X3_25175_22": 22.0, "M42X3_25175_16": 16.0 };
+const WORK_ID_MAP = {
+    M40: 22.0,
+    M22: 10.0,
+    M18: 8.0,
+    M15: 6.0,
+    M12: 4.0,
+    G78: 16.0,
+    G18_40: 4.0,
+    G18_42: 4.15,
+    G18_62: 6.2,
+    G18_655: 6.55,
+    G18_6175: 6.175,
+    G18_40_MH: 4.0,
+    G18_42_MH: 4.15,
+    G18_62_MH: 6.2,
+    G18_655_MH: 6.55,
+    G18_6175_MH: 6.175,
+    M42X3_25175: 25.175,
+    M42X3_25175_20: 20.0,
+    M42X3_25175_22: 22.0,
+    M42X3_25175_16: 16.0,
+};
 
 /** G18 HGDR 系（φ6.2 / φ6.55 / φ6.175）：同一のスタイル制限・DRILLSHIAGE（G74 仕上げブロック） */
 function isG18HgdrSeriesWorkType(wt) {
-    return wt === "G18_62" || wt === "G18_655" || wt === "G18_6175"
-        || wt === "G18_62_MH" || wt === "G18_655_MH" || wt === "G18_6175_MH";
+    return (
+        wt === "G18_62" ||
+        wt === "G18_655" ||
+        wt === "G18_6175" ||
+        wt === "G18_62_MH" ||
+        wt === "G18_655_MH" ||
+        wt === "G18_6175_MH"
+    );
 }
 
 /** 全G18: {{DRILL_BLOCK}} は G1 ドリル仕上げ（G74 ステップ仕上げなし）で統一 */
 function usesG18DrillShiageG1Block(wt) {
-    return wt === "G18_40" || wt === "G18_42" || wt === "G18_40_MH" || wt === "G18_42_MH"
-        || isG18HgdrSeriesWorkType(wt);
+    return (
+        wt === "G18_40" || wt === "G18_42" || wt === "G18_40_MH" || wt === "G18_42_MH" || isG18HgdrSeriesWorkType(wt)
+    );
 }
 
 /** M42X3-ST-G-25.175 系（ストレート / φ20段付 / φ22段付 / φ16段付） */
 function isM42X3_25175WorkType(wt) {
     return wt === "M42X3_25175" || wt === "M42X3_25175_20" || wt === "M42X3_25175_22" || wt === "M42X3_25175_16";
+}
+
+/** M8 HSS 系（φ2.1 / φ3.1）: 固定テンプレート・内径スタイル不使用 */
+function isM8WorkType(wt) {
+    return wt === "M8_21" || wt === "M8_31";
 }
 
 /** 平底で使う内径ダイヤの公称径（mm）。テンプレの {{内径ダイヤΦ*}} と対応 */
@@ -488,29 +589,37 @@ const FLAT_BOTTOM_TOOL_DIA_MM = {
     G18_6175_MH: 4,
     // G18_40 / G18_42 / MH variants: ドリル仕上げ中心のため本マップに載せない（toolDia 未定義 → defaultLine の U-.2）
     // M42X3_25175 系: 内径ダイヤΦ16 使用。φ16段付のみ toolDia=idDia で U-.2、他は X16.F.03
-    "M42X3_25175": 16, "M42X3_25175_20": 16, "M42X3_25175_22": 16, "M42X3_25175_16": 16
+    M42X3_25175: 16,
+    M42X3_25175_20: 16,
+    M42X3_25175_22: 16,
+    M42X3_25175_16: 16,
 };
 
 // ドリル径データベース
 const DRILL_DIA_MAP = {
-    "M40": 14.0,
-    "G78": 14.0,
-    "M22": 7.0,
-    "M18": 7.0,
-    "M15": 3.3,
-    "M12": 4.05,
-    "G18_40": 4.05,
-    "G18_42": 4.15,
-    "G18_62": 4.15,
-    "G18_655": 4.15,
-    "G18_6175": 4.15,
-    "G18_40_MH": 4.05,
-    "G18_42_MH": 4.15,
-    "G18_62_MH": 4.15,
-    "G18_655_MH": 4.15,
-    "G18_6175_MH": 4.15,
-    "M42X3_25175": 25.175, "M42X3_25175_20": 20.0, "M42X3_25175_22": 22.0, "M42X3_25175_16": 16.0,
-    "Tube": null
+    M40: 14.0,
+    G78: 14.0,
+    M22: 7.0,
+    M18: 7.0,
+    M15: 3.3,
+    M12: 4.05,
+    G18_40: 4.05,
+    G18_42: 4.15,
+    G18_62: 4.15,
+    G18_655: 4.15,
+    G18_6175: 4.15,
+    G18_40_MH: 4.05,
+    G18_42_MH: 4.15,
+    G18_62_MH: 4.15,
+    G18_655_MH: 4.15,
+    G18_6175_MH: 4.15,
+    M42X3_25175: 25.175,
+    M42X3_25175_20: 20.0,
+    M42X3_25175_22: 22.0,
+    M42X3_25175_16: 16.0,
+    M8_21: 2.2,
+    M8_31: 3.2,
+    Tube: null,
 };
 
 // --- スタイル判定 ---
@@ -570,12 +679,12 @@ function calcSpecialDrillZ(style, drillDia, baseDepth) {
     let result = null;
 
     // ヨセ加工の計算式: (0.3 * D) + 内径深さ - 0.4
-    if (style === 'Yose' || style === 'YoseRelay') {
-        result = (0.3 * drillDia) + baseDepth - 0.4;
+    if (style === "Yose" || style === "YoseRelay") {
+        result = 0.3 * drillDia + baseDepth - 0.4;
     }
     // 交差穴の計算式: (0.3 * D) + CP
-    else if (style === 'CrossBig' || style === 'CrossSmall') {
-        result = (0.3 * drillDia) + baseDepth;
+    else if (style === "CrossBig" || style === "CrossSmall") {
+        result = 0.3 * drillDia + baseDepth;
     }
 
     return result ? result.toFixed(2) : null;
@@ -589,27 +698,31 @@ function calcYoseRelayMetrics(input) {
     const angleDeg = parseFloat(input.yoseAngle);
     // YoseRelay では、M12のみ実加工の前提径(φ3.3)で先端長を計算する
     // それ以外のワーク種別は従来どおり DRILL_DIA_MAP を使う
-    const drillDia = (input.workType === "M12" || input.workType === "M12_MH") ? 3.3 : resolveDrillDia(input);
-    if ([totalLength, partnerDepth, partnerDia, machinedDia, angleDeg].some(function (n) { return isNaN(n) || !isFinite(n); })) {
+    const drillDia = input.workType === "M12" || input.workType === "M12_MH" ? 3.3 : resolveDrillDia(input);
+    if (
+        [totalLength, partnerDepth, partnerDia, machinedDia, angleDeg].some(function (n) {
+            return isNaN(n) || !isFinite(n);
+        })
+    ) {
         return null;
     }
-    const rad = angleDeg * Math.PI / 180.0;
+    const rad = (angleDeg * Math.PI) / 180.0;
     const tanVal = Math.tan(rad);
     if (!isFinite(tanVal) || Math.abs(tanVal) < 1e-6) return null;
 
     const opposedDistance = totalLength - partnerDepth;
     // ヨセ長さ: (相手径/2 - 加工径/2) / tan(テーパ角度)
-    const yoseLength = ((partnerDia / 2.0) - (machinedDia / 2.0)) / tanVal;
+    const yoseLength = (partnerDia / 2.0 - machinedDia / 2.0) / tanVal;
     // 対ヨセ長さ: 対向口径距離 - ヨセ長さ
     const taiYoseLength = opposedDistance - yoseLength;
     const relayIdDepth = taiYoseLength + 1.0;
-    const relayDrillDepth = isNaN(drillDia) ? NaN : taiYoseLength + (0.3 * drillDia);
+    const relayDrillDepth = isNaN(drillDia) ? NaN : taiYoseLength + 0.3 * drillDia;
     return {
         opposedDistance: opposedDistance,
         yoseLength: yoseLength,
         taiYoseLength: taiYoseLength,
         relayIdDepth: relayIdDepth,
-        relayDrillDepth: relayDrillDepth
+        relayDrillDepth: relayDrillDepth,
     };
 }
 
@@ -623,12 +736,16 @@ function calcCrossSmallFinishDepth(input) {
     const cp = parseFloat(input.cpVal);
     const partnerDia = parseFloat(input.valPartnerD);
     const machinedDia = resolveWorkBigDiameter(input);
-    if ([cp, partnerDia, machinedDia].some(function (n) { return isNaN(n) || !isFinite(n); })) {
+    if (
+        [cp, partnerDia, machinedDia].some(function (n) {
+            return isNaN(n) || !isFinite(n);
+        })
+    ) {
         return NaN;
     }
     const rPartner = partnerDia / 2.0;
     const rMachined = machinedDia / 2.0;
-    const sq = (rPartner * rPartner) - (rMachined * rMachined);
+    const sq = rPartner * rPartner - rMachined * rMachined;
     if (!isFinite(sq) || sq < 0) return NaN;
     const A = Math.sqrt(sq);
     const B = rPartner - A;
@@ -651,7 +768,7 @@ function validateYoseDDiameter(input) {
                 ok: false,
                 partnerDia: partnerDia,
                 machinedDia: machinedDia,
-                msg: `相手径(Φd)はテンプレートの内径加工寸法(Φ${machinedDia.toFixed(3)})より大きい値にしてください。`
+                msg: `相手径(Φd)はテンプレートの内径加工寸法(Φ${machinedDia.toFixed(3)})より大きい値にしてください。`,
             };
         }
     } else if (isYoseMachiningStyle(style)) {
@@ -661,7 +778,7 @@ function validateYoseDDiameter(input) {
                 ok: false,
                 partnerDia: partnerDia,
                 machinedDia: machinedDia,
-                msg: `相手径(Φd)は 3 より大きく、かつ内径加工寸法(Φ${machinedDia.toFixed(3)})より小さい値にしてください。`
+                msg: `相手径(Φd)は 3 より大きく、かつ内径加工寸法(Φ${machinedDia.toFixed(3)})より小さい値にしてください。`,
             };
         }
     }
@@ -679,7 +796,7 @@ function validateYoseDField(showPopup) {
         yoseD: yoseEl.value,
         workType: ($id("workType") || {}).value || "",
         tubeSpec: ($id("tubeSpecSelect") || {}).value || "",
-        internalStyle: currentInternalStyle
+        internalStyle: currentInternalStyle,
     });
     yoseEl.setCustomValidity(result.ok ? "" : result.msg);
     if (!result.ok && showPopup) yoseEl.reportValidity();
@@ -694,7 +811,7 @@ function generateGCode(input, machineName) {
     if (!machineConfig) {
         return {
             displayHtml: `<span style="color:red; font-weight:bold;">エラー: 機械定義 "${machineName}" が見つかりません。</span>`,
-            plainText: null
+            plainText: null,
         };
     }
 
@@ -702,7 +819,7 @@ function generateGCode(input, machineName) {
         return {
             displayHtml:
                 '<span style="color:red; font-weight:bold;">トンボテンプレートは廃止されました（実装中止）。テンプレートを M12〜M40・G78・チューブから選んでください。</span>',
-            plainText: null
+            plainText: null,
         };
     }
 
@@ -711,54 +828,56 @@ function generateGCode(input, machineName) {
 
     // ── テンプレート（ワーク種別）未選択チェック ──
     if (!input.workType) {
-        errors.push('[テンプレート] が選択されていません。「テンプレート」欄からワーク種別を選択してください。');
+        errors.push("[テンプレート] が選択されていません。「テンプレート」欄からワーク種別を選択してください。");
     }
 
     // ── 加工スタイル未選択チェック（チューブは不要） ──
-    if (input.workType && input.workType !== 'Tube') {
+    if (input.workType && input.workType !== "Tube") {
         if (!input.internalStyle) {
-            errors.push('[加工スタイル] が選択されていません。内径スタイルドロワーから加工スタイルを選択してください。');
+            errors.push(
+                "[加工スタイル] が選択されていません。内径スタイルドロワーから加工スタイルを選択してください。"
+            );
         }
     }
 
     // ── M99P100 / X50.U8.処理（チューブは対象外） ──
-    if (input.workType && input.workType !== 'Tube') {
+    if (input.workType && input.workType !== "Tube") {
         const m99Mode = input.m99Mode;
         if (m99Mode !== "on" && m99Mode !== "off") {
             errors.push(
                 input.workType === "M40"
-                    ? '[X50.U8.処理] が未選択です。「使用しない」または「X50.U8.処理」をプルダウンから選んでください。'
-                    : '[M99P100] が未選択です。「使用しない」または「M99P100」をプルダウンから選んでください。'
+                    ? "[X50.U8.処理] が未選択です。「使用しない」または「X50.U8.処理」をプルダウンから選んでください。"
+                    : "[M99P100] が未選択です。「使用しない」または「M99P100」をプルダウンから選んでください。"
             );
         }
     }
 
     // ── 図番・作成者の必須チェック ──
-    if (!input.drawNumA || String(input.drawNumA).trim() === '') {
-        errors.push('[図番] が入力されていません。「PM-」の後の数字を入力してください。');
+    if (!input.drawNumA || String(input.drawNumA).trim() === "") {
+        errors.push("[図番] が入力されていません。「PM-」の後の数字を入力してください。");
     }
-    if (!input.workerName || String(input.workerName).trim() === '') {
-        errors.push('[作成者] が入力されていません。作成者名を入力してください。');
+    if (!input.workerName || String(input.workerName).trim() === "") {
+        errors.push("[作成者] が入力されていません。作成者名を入力してください。");
     }
 
     // チェック対象リスト: { キー名, 表示名, 必須かどうか(省略可ならfalse) }
     const checkList = [
-        { key: 'maxOD',      name: '外径最大径' },
-        { key: 'ateLength',  name: 'アテ長さ' },
-        { key: 'processNum', name: '工程No' }
+        { key: "maxOD", name: "外径最大径" },
+        { key: "ateLength", name: "アテ長さ" },
+        { key: "processNum", name: "工程No" },
     ];
 
     // 1. 共通項目のチェック（どの欄を直せばよいか明示）
-    checkList.forEach(item => {
+    checkList.forEach((item) => {
         const val = input[item.key];
         if (val === "" || val === undefined || val === null) {
             errors.push(`[${item.name}] が未入力です。画面上の「${item.name}」欄に半角数値を入力してください。`);
         } else {
-            const parsed = item.key === "maxOD"
-                ? parseSimpleNumberOrFormula(val)
-                : parseFloat(val);
+            const parsed = item.key === "maxOD" ? parseSimpleNumberOrFormula(val) : parseFloat(val);
             if (isNaN(parsed) || !isFinite(parsed)) {
-            errors.push(`[${item.name}] が数値として読めません。カンマや全角数字は使わず、例「30.1」のように半角で入力してください。`);
+                errors.push(
+                    `[${item.name}] が数値として読めません。カンマや全角数字は使わず、例「30.1」のように半角で入力してください。`
+                );
             }
         }
     });
@@ -767,7 +886,9 @@ function generateGCode(input, machineName) {
     if (input.workType !== "Tube") {
         const maxOdNum = parseSimpleNumberOrFormula(input.maxOD);
         if (!isNaN(maxOdNum) && maxOdNum <= 0) {
-            errors.push('[外径最大径] は 0 より大きい必要があります。アテ長さボタンで再計算するか、図面の値を確認してください。');
+            errors.push(
+                "[外径最大径] は 0 より大きい必要があります。アテ長さボタンで再計算するか、図面の値を確認してください。"
+            );
         }
     }
 
@@ -775,7 +896,7 @@ function generateGCode(input, machineName) {
     {
         const ateLenNum = parseFloat(input.ateLength);
         if (!isNaN(ateLenNum) && ateLenNum <= 0) {
-            errors.push('[アテ長さ] は 0 より大きい値を入力してください。');
+            errors.push("[アテ長さ] は 0 より大きい値を入力してください。");
         }
     }
 
@@ -786,14 +907,14 @@ function generateGCode(input, machineName) {
         const w = parseFloat(wStr);
         const h = parseFloat(hStr);
         if (wStr === "" || wStr === undefined || isNaN(w) || !isFinite(w)) {
-            errors.push('[角あり] 「母材 幅 (W)」に半角数値を入力してください。（未入力だと角の径が計算されません）');
+            errors.push("[角あり] 「母材 幅 (W)」に半角数値を入力してください。（未入力だと角の径が計算されません）");
         } else if (w <= 0) {
-            errors.push('[角あり] 「母材 幅 (W)」は 0 より大きい値を入力してください。');
+            errors.push("[角あり] 「母材 幅 (W)」は 0 より大きい値を入力してください。");
         }
         if (hStr === "" || hStr === undefined || isNaN(h) || !isFinite(h)) {
-            errors.push('[角あり] 「追加 高さ (H)」に半角数値を入力してください。（外径最大径の自動計算に必要です）');
+            errors.push("[角あり] 「追加 高さ (H)」に半角数値を入力してください。（外径最大径の自動計算に必要です）");
         } else if (h <= 0) {
-            errors.push('[角あり] 「追加 高さ (H)」は 0 より大きい値を入力してください。');
+            errors.push("[角あり] 「追加 高さ (H)」は 0 より大きい値を入力してください。");
         }
     }
 
@@ -810,7 +931,7 @@ function generateGCode(input, machineName) {
             errors.push(`[${styleLabel}: 相手径(Φd)] ${yoseDCheck.msg}`);
         }
         // YoseRelay は内径深さを自動計算するため手入力必須にしない
-        if (!isYoseRelayStyle(style) && input.workType !== 'Tube' && isNaN(parseFloat(input.idDepth))) {
+        if (!isYoseRelayStyle(style) && input.workType !== "Tube" && isNaN(parseFloat(input.idDepth))) {
             errors.push(`[内径深さ] が入力されていません（${styleLabel}計算に必要）。`);
         }
         if (isYoseRelayStyle(style)) {
@@ -822,7 +943,7 @@ function generateGCode(input, machineName) {
             const machinedDia = resolveWorkBigDiameter(input);
             if (isNaN(machinedDia)) errors.push("[加工径] が特定できません。ワーク種別と規格を確認してください。");
             const angle = parseFloat(input.yoseAngle);
-            if (!isNaN(angle) && Math.abs(Math.tan(angle * Math.PI / 180.0)) < 1e-6) {
+            if (!isNaN(angle) && Math.abs(Math.tan((angle * Math.PI) / 180.0)) < 1e-6) {
                 errors.push("[ヨセ: テーパ角度] が不正です（tanが0になる角度は使用不可）。");
             }
             const relayMetrics = calcYoseRelayMetrics(input);
@@ -834,8 +955,10 @@ function generateGCode(input, machineName) {
 
     // 交差穴・一文字DR(面取り)の場合の必須チェック
     // M12 Ichimonji (一文字DR平底) はドリル深さベースのため CP 不要
-    const needsCp = style === 'CrossBig' || style === 'CrossSmall' ||
-                    (style === 'Ichimonji' && input.workType !== 'M12' && input.workType !== 'M12_MH');
+    const needsCp =
+        style === "CrossBig" ||
+        style === "CrossSmall" ||
+        (style === "Ichimonji" && input.workType !== "M12" && input.workType !== "M12_MH" && !isM8WorkType(input.workType));
     if (needsCp) {
         if (isNaN(parseFloat(input.cpVal))) errors.push("[CP (交差穴位置)] が計算されていません。");
     }
@@ -851,8 +974,13 @@ function generateGCode(input, machineName) {
 
     // Normal / Hirazoko / Ichimonji / CrossBig スタイルでは内径深さ必須かつ 7 超
     // （YoseRelay は自動計算・CrossSmall は交差穴CP から自動計算・Tube はチューブ長さを使用）
-    if (style && !isYoseMachiningStyle(style) && !isYoseRelayStyle(style)
-            && style !== 'CrossSmall' && input.workType !== 'Tube') {
+    if (
+        style &&
+        !isYoseMachiningStyle(style) &&
+        !isYoseRelayStyle(style) &&
+        style !== "CrossSmall" &&
+        input.workType !== "Tube"
+    ) {
         const idDepthNum = parseFloat(input.idDepth);
         if (isNaN(idDepthNum)) {
             errors.push("[内径深さ] が入力されていません。");
@@ -861,7 +989,7 @@ function generateGCode(input, machineName) {
         }
     }
     // Yose スタイル（非 Tube）でも内径深さが入力されていれば 7 超チェックを適用
-    if (isYoseMachiningStyle(style) && input.workType !== 'Tube') {
+    if (isYoseMachiningStyle(style) && input.workType !== "Tube") {
         const idDepthNum = parseFloat(input.idDepth);
         if (!isNaN(idDepthNum) && idDepthNum <= 7) {
             errors.push("[内径深さ] は 7 より大きい値を入力してください。");
@@ -869,8 +997,8 @@ function generateGCode(input, machineName) {
     }
 
     // チューブ加工の場合の必須チェック（未選択／未定義データ／一覧に無い規格はここで止め、{{…}} 残りを防ぐ）
-    if (input.workType === 'Tube') {
-        const spec = (input.tubeSpec || '').trim();
+    if (input.workType === "Tube") {
+        const spec = (input.tubeSpec || "").trim();
         if (!spec) {
             errors.push("[チューブ規格] を選択してください。");
         } else if (typeof tubeData === "undefined") {
@@ -884,7 +1012,7 @@ function generateGCode(input, machineName) {
         }
     }
 
-    const _isDbgMode = (typeof isDebugModeOn === 'function') && isDebugModeOn();
+    const _isDbgMode = typeof isDebugModeOn === "function" && isDebugModeOn();
     let _debugValidationWarning = "";
     if (errors.length > 0) {
         if (!_isDbgMode) {
@@ -894,43 +1022,43 @@ function generateGCode(input, machineName) {
                 <div style="background:#330000; border:2px solid #ff4444; padding:15px; color:#ffcccc; border-radius:6px; column-span: all;">
                     <h3 style="margin-top:0; color:#ff4444;">⚠ 生成エラー (入力値を確認してください)</h3>
                     <ul style="padding-left:20px; line-height:1.6;">
-                        ${errors.map(msg => `<li>${msg}</li>`).join('')}
+                        ${errors.map((msg) => `<li>${msg}</li>`).join("")}
                     </ul>
                 </div>
             `,
-                plainText: null
+                plainText: null,
             };
         }
-        _debugValidationWarning = `<div style="background:#332200; border:2px solid #ffaa00; padding:10px; color:#ffeecc; border-radius:6px; margin-bottom:6px; column-span:all; font-size:0.85em;"><strong>🛠 デバッグモード: 未入力項目あり（強制出力）</strong><ul style="padding-left:18px; margin:4px 0 0 0; line-height:1.5;">${errors.map(msg => `<li>${escapeHtml(msg)}</li>`).join('')}</ul></div>`;
+        _debugValidationWarning = `<div style="background:#332200; border:2px solid #ffaa00; padding:10px; color:#ffeecc; border-radius:6px; margin-bottom:6px; column-span:all; font-size:0.85em;"><strong>🛠 デバッグモード: 未入力項目あり（強制出力）</strong><ul style="padding-left:18px; margin:4px 0 0 0; line-height:1.5;">${errors.map((msg) => `<li>${escapeHtml(msg)}</li>`).join("")}</ul></div>`;
     }
     // ▲▲▲ バリデーションここまで ▲▲▲
 
     // 2. 共通変数の準備
     const dt = new Date();
-    const today = `${dt.getFullYear()}/${(dt.getMonth()+1).toString().padStart(2,'0')}/${dt.getDate().toString().padStart(2,'0')}`;
-    
+    const today = `${dt.getFullYear()}/${(dt.getMonth() + 1).toString().padStart(2, "0")}/${dt.getDate().toString().padStart(2, "0")}`;
+
     // ハイライト表示用ヘルパー
     // (utils.jsのwrapH等を想定)
 
     // --- 1. 数値計算 (最大径など) ---
     const valMaxOD = parseSimpleNumberOrFormula(input.maxOD);
-    let calcMax1 = ""; 
-    let calcMax2 = ""; 
-    let calcCorner = ""; 
-    let calcMainMax = ""; 
-    
+    let calcMax1 = "";
+    let calcMax2 = "";
+    let calcCorner = "";
+    let calcMainMax = "";
+
     if (!isNaN(valMaxOD)) {
         calcMax1 = (valMaxOD - 5.0).toFixed(3);
         const rawMax2 = valMaxOD + 3.0;
         calcMax2 = rawMax2.toFixed(3);
-        
-        calcMainMax = valMaxOD.toFixed(3); 
-        calcCorner = calcMax2; 
 
-        if (input.calcMode === 'corner') {
+        calcMainMax = valMaxOD.toFixed(3);
+        calcCorner = calcMax2;
+
+        if (input.calcMode === "corner") {
             const W = parseFloat(input.valCornW);
             if (!isNaN(W)) {
-                const diag = W * Math.SQRT2; 
+                const diag = W * Math.SQRT2;
                 calcMainMax = diag.toFixed(3);
                 calcCorner = valMaxOD.toFixed(3);
                 calcMax2 = (diag + 3.0).toFixed(3);
@@ -938,31 +1066,31 @@ function generateGCode(input, machineName) {
             }
         }
     }
-    
+
     // 図番結合
     let fullDrawStr = input.drawNumA;
-    if(input.drawNumB) fullDrawStr += "-" + input.drawNumB;
-    if(input.drawRev && input.drawRev !== "NONE") fullDrawStr += input.drawRev;
+    if (input.drawNumB) fullDrawStr += "-" + input.drawNumB;
+    if (input.drawRev && input.drawRev !== "NONE") fullDrawStr += input.drawRev;
 
     // M99P100：M40 の X50.U8.処理 ON のときは本文に M99P100 を付けない（(M99P100) 行は空欄）
     let valM99 = input.m99p100 ? " M99P100" : "";
     if (input.workType === "M40" && input.m99p100) {
         valM99 = "";
     }
-    
+
     // --- 2. ドリル深さ決定ロジック ---
     // const style = input.internalStyle; // 上で定義済み
     const baseIDDepth = parseFloat(input.idDepth);
     let finalDrillDepth = parseFloat(input.drillDepth);
 
-    if ((style === 'Hirazoko' || style === 'Ichimonji') && !isNaN(baseIDDepth)) {
+    if ((style === "Hirazoko" || style === "Ichimonji") && !isNaN(baseIDDepth)) {
         finalDrillDepth = baseIDDepth + 0.1;
     } else if (isNaN(finalDrillDepth) && !isNaN(baseIDDepth)) {
         finalDrillDepth = baseIDDepth;
     }
 
     let finalFinishDepth = baseIDDepth;
-    if ((style === 'Hirazoko' || style === 'Ichimonji') && !isNaN(baseIDDepth)) {
+    if ((style === "Hirazoko" || style === "Ichimonji") && !isNaN(baseIDDepth)) {
         finalFinishDepth = baseIDDepth + 0.2;
     }
     if (style === "CrossSmall") {
@@ -985,20 +1113,26 @@ function generateGCode(input, machineName) {
     let rearChamferEarly = "";
     let okuBiteMentoriLateBlock = "";
     if (style === "Ichimonji") {
-        if (input.workType === "M12" || input.workType === "M12_MH") {
-            // M12: 一文字DR平底 → 半月/HSS ドリルで平底仕上げ
+        if (input.workType === "M12" || input.workType === "M12_MH" || isM8WorkType(input.workType)) {
+            // M12/M8: 一文字DR平底 → 内径深さ基準で平底仕上げ
             rearChamferEarly = getIchimonjiHirazokoBlock(baseIDDepth, machineConfig);
         } else {
             rearChamferEarly = getIchimonjiBlock(input.cpVal, machineConfig);
         }
-    } else if ((input.workType === "G18_40" || input.workType === "G18_42" || input.workType === "G18_40_MH" || input.workType === "G18_42_MH") && style === "CrossSmall") {
+    } else if (
+        (input.workType === "G18_40" ||
+            input.workType === "G18_42" ||
+            input.workType === "G18_40_MH" ||
+            input.workType === "G18_42_MH") &&
+        style === "CrossSmall"
+    ) {
         const partnerD = parseFloat(input.valPartnerD);
         if (!isNaN(partnerD)) {
             if (input.g18Profile === "drill_ichi_men") {
                 // 一文字面取り → 一文字バリ取りブロック
                 rearChamferEarly = getIchimonjiBlock(input.cpVal, machineConfig);
             } else {
-                // hss_oku / hgdr_oku / baito_oku → 奥バイトブロック（前置き）
+                // hgdr_oku → 奥バイトブロック（前置き）
                 rearChamferEarly = getOkuBiteBlockG18(input.cpVal, machineConfig);
             }
         }
@@ -1019,13 +1153,24 @@ function generateGCode(input, machineName) {
                 else rearChamferEarly = oku;
             }
         }
+    } else if (isM8WorkType(input.workType) && style === "CrossSmall") {
+        const partnerD = parseFloat(input.valPartnerD);
+        if (!isNaN(partnerD)) {
+            if (input.m8Profile === "drill_ichi_men") {
+                // 一文字面取り → 一文字バリ取りブロック
+                rearChamferEarly = getIchimonjiBlock(input.cpVal, machineConfig);
+            } else {
+                // hss_oku → 奥バイトブロック（M8専用版は後で追加）
+                rearChamferEarly = getOkuBiteBlock(input.cpVal, machineConfig);
+            }
+        }
     }
 
     const flatBottomExitLine = computeFlatBottomExitLine(input);
 
     // --- 4. ヨセ加工（テーパ）ロジック ---
-    let yosePath = "";   
-    let yoseBlock = ""; 
+    let yosePath = "";
+    let yoseBlock = "";
 
     if (isYoseMachiningStyle(style)) {
         // 大径(D)の決定
@@ -1046,17 +1191,17 @@ function generateGCode(input, machineName) {
                 // 計算ロジック
                 const xEnd = smallD - 0.4;
                 const rDiff = (bigD - xEnd) / 2.0;
-                const rad = angle * Math.PI / 180;
+                const rad = (angle * Math.PI) / 180;
                 const zAdd = rDiff / Math.tan(rad);
                 const zEnd = effectiveDepth + zAdd;
                 const zInter = zEnd - 0.4;
 
                 const Fmt = (n) => wrapH(ncFormat(n.toFixed(3)));
                 const yoseBaseDepth = effectiveDepth;
-                const H_depth = wrapH(ncFormat(yoseBaseDepth)); 
+                const H_depth = wrapH(ncFormat(yoseBaseDepth));
 
                 // 共通パス
-                const commonPath = 
+                const commonPath =
                     `X${Fmt(xEnd)}(d-0.4)Z-${Fmt(zInter)}F.08\n` +
                     `Z-${Fmt(zEnd)}F.2\n` +
                     `X${Fmt(bigD)}Z-${H_depth}S250F.03(STRAIGHT)\n` +
@@ -1071,11 +1216,11 @@ function generateGCode(input, machineName) {
                     const toolName = machineConfig[toolKey] ? wrapH(machineConfig[toolKey]) : "T0707";
                     const m51 = machineConfig["M51"] ? wrapH(machineConfig["M51"]) : "";
                     const m59 = machineConfig["M59"] ? wrapH(machineConfig["M59"]) : "";
-                    
+
                     const startX = (bigD - 1.0).toFixed(0) + ".";
                     const approachZ = (effectiveDepth - 1.0).toFixed(0) + ".";
 
-                    yoseBlock = 
+                    yoseBlock =
                         `\nN32(IN-OKU)\n` +
                         `G0G97${toolName}S350M3\n` +
                         `X${startX}Z30.\n` +
@@ -1109,52 +1254,49 @@ function generateGCode(input, machineName) {
     //    角あり     : 従来どおり2段
     const isCorner = input.calcMode === "corner";
 
-    const drillBlockValue =
-        usesG18DrillShiageG1Block(input.workType)
-            ? getDrillBlock(finalDrillDepth, "G1")
-        : (input.workType === "M12" || input.workType === "M12_MH") && (input.m12FinishType || "hss") === "hss"
+    const drillBlockValue = usesG18DrillShiageG1Block(input.workType)
+        ? getDrillBlock(finalDrillDepth, "G1")
+        : isM8WorkType(input.workType)
+          ? getDrillShiageBlock_M8(finalDrillDepth)
+          : (input.workType === "M12" || input.workType === "M12_MH") && (input.m12FinishType || "hss") === "hss"
             ? getDrillShiageBlock(finalDrillDepth)
             : getDrillBlock(finalDrillDepth, input.drillMode);
 
     const replaceMap = {
         // ── 入力ヘッダ情報
-        "入力_図番":     wrapHInput(fullDrawStr),
-        "入力_工程No":   wrapHInput(input.processNum),
-        "入力_作成者":   wrapHInput(input.workerName),
-        "入力_アテ長さ": wrapHInput(ncFormat(input.ateLength)),
-        "入力_日付":     wrapHInput(today),
+        入力_図番: wrapHInput(fullDrawStr),
+        入力_工程No: wrapHInput(input.processNum),
+        入力_作成者: wrapHInput(input.workerName),
+        入力_アテ長さ: wrapHInput(ncFormat(input.ateLength)),
+        入力_日付: wrapHInput(today),
 
         // ── 外径仕上
-        "最大径-5":  wrapHCalc(ncFormat(calcMax1)),
-        "最大径+角": isCorner
-            ? ("X" + wrapHCalc(ncFormat(calcCorner)))
-            : ("X" + wrapHCalc(ncFormat(calcMax2)) + "(--X--)"),
-        "最大径+3":  isCorner
-            ? ("X" + wrapHCalc(ncFormat(calcMax2)) + "F.3\n")
-            : "",
-        "最大径50":  "",
+        "最大径-5": wrapHCalc(ncFormat(calcMax1)),
+        "最大径+角": isCorner ? "X" + wrapHCalc(ncFormat(calcCorner)) : "X" + wrapHCalc(ncFormat(calcMax2)) + "(--X--)",
+        "最大径+3": isCorner ? "X" + wrapHCalc(ncFormat(calcMax2)) + "F.3\n" : "",
+        最大径50: "",
 
         // ── 内径
-        "入力_内径深さ": wrapHCalc(ncFormat(finalFinishDepth)),
-        "DRILL_BLOCK":   drillBlockValue,
-        "奥バイト面取り": okuBiteMentoriBlock,
+        入力_内径深さ: wrapHCalc(ncFormat(finalFinishDepth)),
+        DRILL_BLOCK: drillBlockValue,
+        内バリ処理: okuBiteMentoriBlock,
 
         // ── 内径バイト固定値
-        "BAITO_IN_S":         wrapHMachine("500"),
-        "BAITO_IN_APX":       wrapHMachine("5."),
-        "BAITO_IN_X":         wrapHMachine("4."),
-        "BAITO_IN_CHAMFER_Z": wrapHMachine("3."),
-        "BAITO_IN_MID_Z":     wrapHMachine("7.5"),
+        BAITO_IN_S: wrapHMachine("500"),
+        BAITO_IN_APX: wrapHMachine("5."),
+        BAITO_IN_X: wrapHMachine("4."),
+        BAITO_IN_CHAMFER_Z: wrapHMachine("3."),
+        BAITO_IN_MID_Z: wrapHMachine("7.5"),
 
         // ── 平底
-        "平底_内径仕上出口": flatBottomExitLine,
+        平底_内径仕上出口: flatBottomExitLine,
 
         // ── その他
-        "M99P100": wrapHInput(valM99),
+        M99P100: wrapHInput(valM99),
 
         // ── ヨセ
-        "ヨセパス":    yosePath,
-        "ヨセブロック": yoseBlock,
+        ヨセパス: yosePath,
+        ヨセブロック: yoseBlock,
     };
 
     // 機械変数のマッピング
@@ -1165,70 +1307,62 @@ function generateGCode(input, machineName) {
     // MH外径荒: MH系テンプレートで外径荒/外径溝を切り替えるプレースホルダー
     {
         const _isMH = input.workType && input.workType.endsWith("_MH");
-        const _mhToolKey = (input.mhOdTool && _isMH) ? input.mhOdTool : "外径荒";
+        const _mhToolKey = input.mhOdTool && _isMH ? input.mhOdTool : "外径荒";
         replaceMap["MH外径荒"] = _isMH
-            ? (machineConfig[_mhToolKey] ? wrapHMachine(machineConfig[_mhToolKey]) : "")
+            ? machineConfig[_mhToolKey]
+                ? wrapHMachine(machineConfig[_mhToolKey])
+                : ""
             : "";
     }
 
-    // G18N1ドリル: G18_40/42 の N1 ドリル工具を加工方法に応じて動的解決
-    {
-        const _isG18Small = input.workType === "G18_40" || input.workType === "G18_42"
-                         || input.workType === "G18_40_MH" || input.workType === "G18_42_MH";
-        if (_isG18Small) {
-            const _g18DrillKey = input.g18FinishType === "hss"   ? "ドリルHSS"
-                                : input.g18FinishType === "baito" ? "ドリルT"
-                                : "ドリルHGDR";
-            replaceMap["G18N1ドリル"] = machineConfig[_g18DrillKey]
-                ? wrapHMachine(machineConfig[_g18DrillKey]) : "";
-        }
-    }
+
 
     // --- 6. テンプレート選択・生成 ---
     let finalCode = "";
 
     if (input.workType === "Tube") {
-        if (typeof template_Tube !== 'undefined') finalCode = template_Tube;
-        if(typeof tubeData !== 'undefined' && tubeData[input.tubeSpec]) {
-             const tSpec = tubeData[input.tubeSpec];
-             const L = parseFloat(input.tubeLength);
-             // 規格に toolKey がない場合は、標準的な "内径ダイヤΦ4" をデフォルトにします
-             const toolKey = tSpec.toolKey || "内径ダイヤΦ4";
-             const toolT = machineConfig[toolKey];
-             
-             if (!toolT) {
-                 return {
-                     displayHtml: `<span style="color:red; font-weight:bold;">エラー: 機械定義に Tube加工用の工具 "${toolKey}" が見つかりません。</span>`,
-                     plainText: null
-                 };
-             }
+        if (typeof template_Tube !== "undefined") finalCode = template_Tube;
+        if (typeof tubeData !== "undefined" && tubeData[input.tubeSpec]) {
+            const tSpec = tubeData[input.tubeSpec];
+            const L = parseFloat(input.tubeLength);
+            // 規格に toolKey がない場合は、標準的な "内径ダイヤΦ4" をデフォルトにします
+            const toolKey = tSpec.toolKey || "内径ダイヤΦ4";
+            const toolT = machineConfig[toolKey];
+
+            if (!toolT) {
+                return {
+                    displayHtml: `<span style="color:red; font-weight:bold;">エラー: 機械定義に Tube加工用の工具 "${toolKey}" が見つかりません。</span>`,
+                    plainText: null,
+                };
+            }
             replaceMap["チューブ内径バイト"] = wrapHMachine(toolT);
 
-
             replaceMap["チューブ_平底_仕上一行"] = wrapHCalc(
-                 combineTubeFlatBottomFinishLine(tSpec.toolDia, flatBottomExitLine)
-             );
-             
-             const OD = tSpec.od;
-             const ID = tSpec.id;
-             const R = tSpec.r;
-             const D_Drill_Str = tSpec.drill;
+                combineTubeFlatBottomFinishLine(tSpec.toolDia, flatBottomExitLine)
+            );
+
+            const OD = tSpec.od;
+            const ID = tSpec.id;
+            const R = tSpec.r;
+            const D_Drill_Str = tSpec.drill;
             replaceMap["入力_外径"] = wrapHInput(ncFormat(OD));
             replaceMap["入力_内径"] = wrapHInput(ncFormat(ID));
             replaceMap["入力_長さ"] = wrapHInput(ncFormat(L));
             replaceMap["入力_R"] = wrapHInput(ncFormat(R));
             replaceMap["ドリル"] = wrapHInput(D_Drill_Str);
-             
-             let drillVal = 0;
-             if(D_Drill_Str && D_Drill_Str.startsWith("DR")) drillVal = parseFloat(D_Drill_Str.replace("DR", ""));
-             
-            replaceMap["L"] = wrapHCalc(ncFormat((L).toFixed(3)));
+
+            let drillVal = 0;
+            if (D_Drill_Str && D_Drill_Str.startsWith("DR")) drillVal = parseFloat(D_Drill_Str.replace("DR", ""));
+
+            replaceMap["L"] = wrapHCalc(ncFormat(L.toFixed(3)));
             replaceMap["母材幅"] = wrapHCalc(ncFormat((OD / Math.SQRT2).toFixed(3)));
             replaceMap["チューブ_外径荒加工径"] = wrapHCalc(ncFormat((OD + R + R + 2.6).toFixed(3)));
             replaceMap["チューブ_端面始点"] = input.m99p100 ? "" : wrapHCalc(ncFormat((OD + R + R + 4.6).toFixed(3)));
             const _mcNum = parseFloat(tSpec.MC);
             replaceMap["MC丸"] = input.m99p100
-                ? (!isNaN(_mcNum) ? wrapHCalc(ncFormat((_mcNum).toFixed(3))) : "テンプレート未設定")
+                ? !isNaN(_mcNum)
+                    ? wrapHCalc(ncFormat(_mcNum.toFixed(3)))
+                    : "テンプレート未設定"
                 : "";
             replaceMap["OD+0.1"] = wrapHCalc(ncFormat((OD + 0.1).toFixed(3)));
             replaceMap["Drill-1"] = wrapHCalc(ncFormat((drillVal - 1.0).toFixed(3)));
@@ -1241,7 +1375,7 @@ function generateGCode(input, machineName) {
             replaceMap["OD+2R+0.1"] = wrapHCalc(ncFormat((OD + R + R + 0.1).toFixed(3)));
         }
     } else if (input.workType === "M40") {
-        if (typeof template_M40 !== 'undefined') finalCode = template_M40;
+        if (typeof template_M40 !== "undefined") finalCode = template_M40;
         if (input.m99p100) {
             // X50.U8.処理: プレースホルダー代入前にテンプレート内の固定値を置換
             finalCode = finalCode.replace("G71U4.5R.5", "G71U8.0R.5");
@@ -1250,44 +1384,65 @@ function generateGCode(input, machineName) {
             replaceMap["最大径-5"] = "";
             replaceMap["最大径50"] = wrapHCalc("50.");
         }
-    }
-    else if (input.workType === "M22") { if (typeof template_M22 !== 'undefined') finalCode = template_M22; }
-    else if (input.workType === "M18") { if (typeof template_M18 !== 'undefined') finalCode = template_M18; }
-    else if (input.workType === "M15") { if (typeof template_M15 !== 'undefined') finalCode = template_M15; }
-    else if (input.workType === "M40_MH") { if (typeof template_M40_MH !== 'undefined') finalCode = template_M40_MH; }
-    else if (input.workType === "M22_MH") { if (typeof template_M22_MH !== 'undefined') finalCode = template_M22_MH; }
-    else if (input.workType === "M18_MH") { if (typeof template_M18_MH !== 'undefined') finalCode = template_M18_MH; }
-    else if (input.workType === "M15_MH") { if (typeof template_M15_MH !== 'undefined') finalCode = template_M15_MH; }
-    else if (input.workType === "M12_MH") {
+    } else if (input.workType === "M22") {
+        if (typeof template_M22 !== "undefined") finalCode = template_M22;
+    } else if (input.workType === "M18") {
+        if (typeof template_M18 !== "undefined") finalCode = template_M18;
+    } else if (input.workType === "M15") {
+        if (typeof template_M15 !== "undefined") finalCode = template_M15;
+    } else if (input.workType === "M8_21") {
+        if (typeof template_M8_21 !== "undefined") finalCode = template_M8_21;
+    } else if (input.workType === "M8_31") {
+        if (typeof template_M8_31 !== "undefined") finalCode = template_M8_31;
+    } else if (input.workType === "M40_MH") {
+        if (typeof template_M40_MH !== "undefined") finalCode = template_M40_MH;
+    } else if (input.workType === "M22_MH") {
+        if (typeof template_M22_MH !== "undefined") finalCode = template_M22_MH;
+    } else if (input.workType === "M18_MH") {
+        if (typeof template_M18_MH !== "undefined") finalCode = template_M18_MH;
+    } else if (input.workType === "M15_MH") {
+        if (typeof template_M15_MH !== "undefined") finalCode = template_M15_MH;
+    } else if (input.workType === "M12_MH") {
         const ft = input.m12FinishType || "hss";
-        const m12mhv = ft === "baito" ? template_M12BAITO_MH
-                     : ft === "hss"   ? template_M12HSS_MH
-                     : template_M12HGDR_MH;
+        const m12mhv = ft === "baito" ? template_M12BAITO_MH : ft === "hss" ? template_M12HSS_MH : template_M12HGDR_MH;
         if (typeof m12mhv !== "undefined") finalCode = m12mhv;
-    }
-    else if (input.workType === "G78_MH") { if (typeof template_G78_MH !== 'undefined') finalCode = template_G78_MH; }
-    else if (input.workType === "M12") {
+    } else if (input.workType === "G78_MH") {
+        if (typeof template_G78_MH !== "undefined") finalCode = template_G78_MH;
+    } else if (input.workType === "M12") {
         const ft = input.m12FinishType || "hss";
-        const m12v = ft === "baito" ? template_M12BAITO
-                   : ft === "hss"   ? template_M12HSS
-                   : template_M12HGDR;
+        const m12v = ft === "baito" ? template_M12BAITO : ft === "hss" ? template_M12HSS : template_M12HGDR;
         if (typeof m12v !== "undefined") finalCode = m12v;
+    } else if (input.workType === "G18_40") {
+        if (typeof template_G18_40 !== "undefined") finalCode = template_G18_40;
+    } else if (input.workType === "G18_42") {
+        if (typeof template_G18_42 !== "undefined") finalCode = template_G18_42;
+    } else if (input.workType === "G18_62") {
+        if (typeof template_G18_62 !== "undefined") finalCode = template_G18_62;
+    } else if (input.workType === "G18_655") {
+        if (typeof template_G18_655 !== "undefined") finalCode = template_G18_655;
+    } else if (input.workType === "G18_6175") {
+        if (typeof template_G18_6175 !== "undefined") finalCode = template_G18_6175;
+    } else if (input.workType === "G18_40_MH") {
+        if (typeof template_G18_40_MH !== "undefined") finalCode = template_G18_40_MH;
+    } else if (input.workType === "G18_42_MH") {
+        if (typeof template_G18_42_MH !== "undefined") finalCode = template_G18_42_MH;
+    } else if (input.workType === "G18_62_MH") {
+        if (typeof template_G18_62_MH !== "undefined") finalCode = template_G18_62_MH;
+    } else if (input.workType === "G18_655_MH") {
+        if (typeof template_G18_655_MH !== "undefined") finalCode = template_G18_655_MH;
+    } else if (input.workType === "G18_6175_MH") {
+        if (typeof template_G18_6175_MH !== "undefined") finalCode = template_G18_6175_MH;
+    } else if (input.workType === "M42X3_25175") {
+        if (typeof template_M42X3_25175 !== "undefined") finalCode = template_M42X3_25175;
+    } else if (input.workType === "M42X3_25175_20") {
+        if (typeof template_M42X3_25175_20 !== "undefined") finalCode = template_M42X3_25175_20;
+    } else if (input.workType === "M42X3_25175_22") {
+        if (typeof template_M42X3_25175_22 !== "undefined") finalCode = template_M42X3_25175_22;
+    } else if (input.workType === "M42X3_25175_16") {
+        if (typeof template_M42X3_25175_16 !== "undefined") finalCode = template_M42X3_25175_16;
+    } else {
+        if (typeof template_G78 !== "undefined") finalCode = template_G78;
     }
-    else if (input.workType === "G18_40") { if (typeof template_G18_40 !== 'undefined') finalCode = template_G18_40; }
-    else if (input.workType === "G18_42") { if (typeof template_G18_42 !== 'undefined') finalCode = template_G18_42; }
-    else if (input.workType === "G18_62") { if (typeof template_G18_62 !== 'undefined') finalCode = template_G18_62; }
-    else if (input.workType === "G18_655") { if (typeof template_G18_655 !== 'undefined') finalCode = template_G18_655; }
-    else if (input.workType === "G18_6175") { if (typeof template_G18_6175 !== 'undefined') finalCode = template_G18_6175; }
-    else if (input.workType === "G18_40_MH") { if (typeof template_G18_40_MH !== 'undefined') finalCode = template_G18_40_MH; }
-    else if (input.workType === "G18_42_MH") { if (typeof template_G18_42_MH !== 'undefined') finalCode = template_G18_42_MH; }
-    else if (input.workType === "G18_62_MH") { if (typeof template_G18_62_MH !== 'undefined') finalCode = template_G18_62_MH; }
-    else if (input.workType === "G18_655_MH") { if (typeof template_G18_655_MH !== 'undefined') finalCode = template_G18_655_MH; }
-    else if (input.workType === "G18_6175_MH") { if (typeof template_G18_6175_MH !== 'undefined') finalCode = template_G18_6175_MH; }
-    else if (input.workType === "M42X3_25175")    { if (typeof template_M42X3_25175    !== 'undefined') finalCode = template_M42X3_25175; }
-    else if (input.workType === "M42X3_25175_20") { if (typeof template_M42X3_25175_20 !== 'undefined') finalCode = template_M42X3_25175_20; }
-    else if (input.workType === "M42X3_25175_22") { if (typeof template_M42X3_25175_22 !== 'undefined') finalCode = template_M42X3_25175_22; }
-    else if (input.workType === "M42X3_25175_16") { if (typeof template_M42X3_25175_16 !== 'undefined') finalCode = template_M42X3_25175_16; }
-    else { if (typeof template_G78 !== 'undefined') finalCode = template_G78; }
 
     if (!finalCode) {
         return { displayHtml: "エラー: テンプレートが見つかりません", plainText: null };
@@ -1295,21 +1450,42 @@ function generateGCode(input, machineName) {
 
     // カバレッジ用: 置換前のテンプレートキーを抽出
     const _templateKeysRaw = [];
-    { const _m = finalCode.matchAll(/\{\{([^}]+)\}\}/g); for (const x of _m) _templateKeysRaw.push(x[1]); }
+    {
+        const _m = finalCode.matchAll(/\{\{([^}]+)\}\}/g);
+        for (const x of _m) _templateKeysRaw.push(x[1]);
+    }
     const _templateKeySet = new Set(_templateKeysRaw);
 
     // デバッグモード時にプレースホルダーとして残す対象: ユーザー数値入力から導出されるキーのみ
     // 設計上の空値（{{扉閉じ}}・{{ヨセパス}}・{{最大径+3}} 等）はスキップしない
     const _debugUserInputKeys = new Set([
-        "最大径-5", "最大径+角",
-        "入力_内径深さ", "入力_図番", "入力_工程No", "入力_作成者", "入力_アテ長さ",
+        "最大径-5",
+        "最大径+角",
+        "入力_内径深さ",
+        "入力_図番",
+        "入力_工程No",
+        "入力_作成者",
+        "入力_アテ長さ",
         // Tube 系
-        "入力_外径", "入力_内径", "入力_長さ", "入力_R",
-        "L", "L-R", "L-0.3", "L-0.5",
-        "OD+2R", "OD+2R+0.1", "OD+0.1", "OD-0.6", "ID+0.6", "Drill-1", "母材幅", "MC丸",
+        "入力_外径",
+        "入力_内径",
+        "入力_長さ",
+        "入力_R",
+        "L",
+        "L-R",
+        "L-0.3",
+        "L-0.5",
+        "OD+2R",
+        "OD+2R+0.1",
+        "OD+0.1",
+        "OD-0.6",
+        "ID+0.6",
+        "Drill-1",
+        "母材幅",
+        "MC丸",
     ]);
 
-    Object.keys(replaceMap).forEach(key => {
+    Object.keys(replaceMap).forEach((key) => {
         const val = replaceMap[key];
         // デバッグモード時: ユーザー入力由来のキーに限り、空値への置換をスキップして {{key}} を残す
         if (_isDbgMode && _debugUserInputKeys.has(key)) {
@@ -1321,11 +1497,15 @@ function generateGCode(input, machineName) {
 
     // 置換後に残った未解決キーを抽出
     const _unresolvedKeys = [];
-    { const _m = finalCode.matchAll(/\{\{([^}]+)\}\}/g); for (const x of _m) _unresolvedKeys.push(x[1]); }
+    {
+        const _m = finalCode.matchAll(/\{\{([^}]+)\}\}/g);
+        for (const x of _m) _unresolvedKeys.push(x[1]);
+    }
 
     // 未解決プレースホルダーを赤太字で強調
     if (_unresolvedKeys.length > 0) {
-        finalCode = finalCode.replace(/\{\{([^}]+)\}\}/g,
+        finalCode = finalCode.replace(
+            /\{\{([^}]+)\}\}/g,
             (_, k) => `<span class="h-val h-val--unresolved">{{${escapeHtml(k)}}}</span>`
         );
     }
@@ -1338,7 +1518,7 @@ function generateGCode(input, machineName) {
 
     return {
         displayHtml: _debugValidationWarning + finalCode,
-        plainText: gcodeDisplayHtmlToPlainText(finalCode)
+        plainText: gcodeDisplayHtmlToPlainText(finalCode),
     };
 }
 
@@ -1346,7 +1526,7 @@ function generateGCode(input, machineName) {
 /* ui.js: 画面操作・イベント処理 */
 
 const $id = (id) => document.getElementById(id);
-const formatNum = (e) => e.value = e.value.replace(/[^0-9]/g,'');
+const formatNum = (e) => (e.value = e.value.replace(/[^0-9]/g, ""));
 
 // --- パネルノート開閉（HTML の onclick から呼ばれる UI ハンドラ）---
 
@@ -1413,9 +1593,9 @@ function containsFullWidthFormChars(s) {
 function toHankaku(str) {
     if (!str) return str;
     return str
-        .replace(/[Ａ-Ｚａ-ｚ０-９！-～]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
-        .replace(/　/g, ' ')
-        .replace(/[^\x20-\x7E\r\n\t]/g, '');
+        .replace(/[Ａ-Ｚａ-ｚ０-９！-～]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0))
+        .replace(/　/g, " ")
+        .replace(/[^\x20-\x7E\r\n\t]/g, "");
 }
 
 function isHalfWidthGuardInput(el) {
@@ -1441,29 +1621,41 @@ function setupHalfWidthInputGuards() {
         const ss = Math.min(el.selectionStart, len);
         const se = Math.min(el.selectionEnd, len);
         el.value = after;
-        try { el.setSelectionRange(ss, se); } catch (_) {}
+        try {
+            el.setSelectionRange(ss, se);
+        } catch (_) {}
         _converting = false;
     }
 
     // IME確定後（全OS共通）: compositionend の直後にブラウザが value を確定するので
     // setTimeout(0) で1フレーム遅らせてから変換・除去する
-    document.addEventListener("compositionend", function (ev) {
-        const t = ev.target;
-        if (!isHalfWidthGuardInput(t)) return;
-        setTimeout(function () { convertInPlace(t); }, 0);
-    }, true);
+    document.addEventListener(
+        "compositionend",
+        function (ev) {
+            const t = ev.target;
+            if (!isHalfWidthGuardInput(t)) return;
+            setTimeout(function () {
+                convertInPlace(t);
+            }, 0);
+        },
+        true
+    );
 
     // ペースト・直接入力: IME変換中 (isComposing=true) はスキップ
-    document.addEventListener("input", function (ev) {
-        const t = ev.target;
-        if (!isHalfWidthGuardInput(t)) return;
-        if (ev.isComposing) return;
-        convertInPlace(t);
-    }, true);
+    document.addEventListener(
+        "input",
+        function (ev) {
+            const t = ev.target;
+            if (!isHalfWidthGuardInput(t)) return;
+            if (ev.isComposing) return;
+            convertInPlace(t);
+        },
+        true
+    );
 }
 
-let currentInternalStyle = '';
-let currentCalcMode = 'normal';
+let currentInternalStyle = "";
+let currentCalcMode = "normal";
 /** 外径ドロワー「入力」: dimensions=モード寸法 / ate=アテ長さ式 */
 let maxOdApplySource = "dimensions";
 /** 最大径（アテ長さ）式: 上段 15角〜43角 クイック直後に限り true。下段数値・手入力では false。 */
@@ -1472,62 +1664,70 @@ let ateLengthFromKaku = false;
 const ATE_LENGTH_KAKU_VALUES = new Set(["42.5", "41", "39.5", "37.5", "33.25", "28.5"]);
 
 function updateWorkTypeSettings() {
-  const type = $id('workType').value;
-  const normalArea = $id('normalProcessArea');
-  const drillMode = $id('drillMode');
-  const idDepth = $id('idDepth');
+    const type = $id("workType").value;
+    const normalArea = $id("normalProcessArea");
+    const drillMode = $id("drillMode");
+    const idDepth = $id("idDepth");
 
-  if (normalArea) normalArea.style.display = 'block';
+    if (normalArea) normalArea.style.display = "block";
 
-  if (type === 'M12' || type === 'M12_MH') {
-      idDepth.disabled = false;
-      idDepth.placeholder = "22.0";
-  } else if (usesG18DrillShiageG1Block(type)) {
-      idDepth.disabled = false;
-      idDepth.placeholder = "22.0";
-      if (drillMode) { drillMode.value = "G1"; drillMode.disabled = true; }
-  } else {
-      idDepth.disabled = false;
-      idDepth.placeholder = "22.0";
-      if (drillMode) { drillMode.value = "G74"; drillMode.disabled = false; }
-  }
+    if (type === "M12" || type === "M12_MH") {
+        idDepth.disabled = false;
+        idDepth.placeholder = "22.0";
+    } else if (usesG18DrillShiageG1Block(type)) {
+        idDepth.disabled = false;
+        idDepth.placeholder = "22.0";
+        if (drillMode) {
+            drillMode.value = "G1";
+            drillMode.disabled = true;
+        }
+    } else {
+        idDepth.disabled = false;
+        idDepth.placeholder = "22.0";
+        if (drillMode) {
+            drillMode.value = "G74";
+            drillMode.disabled = false;
+        }
+    }
 
-  restrictStyles(type);
-  updateTubeVariantUI();
-  updateInternalStyleUI();
-  calcDrillDepth();
-  updateM40M99UI(type);
-  updateMHOdToolUI(type);
+    restrictStyles(type);
+    updateTubeVariantUI();
+    updateInternalStyleUI();
+    calcDrillDepth();
+    updateM40M99UI(type);
+    updateMHOdToolUI(type);
 }
 
 function updateMHOdToolUI(type) {
-  const row = $id('mhOdToolRow');
-  if (!row) return;
-  const isMH = type && type.endsWith('_MH');
-  row.style.display = isMH ? '' : 'none';
+    const row = $id("mhOdToolRow");
+    if (!row) return;
+    const isMH = type && type.endsWith("_MH");
+    row.style.display = isMH ? "" : "none";
 }
-window._ncUpdateMHOdToolUI = function () { updateMHOdToolUI($id('workType') ? $id('workType').value : ''); };
+window._ncUpdateMHOdToolUI = function () {
+    updateMHOdToolUI($id("workType") ? $id("workType").value : "");
+};
 
 function updateM40M99UI(type) {
-    const resolvedType = type !== undefined
-        ? type
-        : ($id('workType') ? $id('workType').value : '');
-    const label = $id('lblM99P100');
-    const sel = $id('selM99P100');
+    const resolvedType = type !== undefined ? type : $id("workType") ? $id("workType").value : "";
+    const label = $id("lblM99P100");
+    const sel = $id("selM99P100");
     if (!label || !sel || sel.options.length < 3) return;
-    if (resolvedType === 'M40') {
-        label.textContent = 'X50.U8.処理';
-        sel.options[0].textContent = '未選択';
-        sel.options[1].textContent = '使用しない';
-        sel.options[2].textContent = 'X50.U8.処理';
+    if (resolvedType === "M40") {
+        label.textContent = "X50.U8.処理";
+        sel.options[0].textContent = "未選択";
+        sel.options[1].textContent = "使用しない";
+        sel.options[2].textContent = "X50.U8.処理";
     } else {
-        label.textContent = 'M99P100';
-        sel.options[0].textContent = '未選択';
-        sel.options[1].textContent = '使用しない';
-        sel.options[2].textContent = 'M99P100';
+        label.textContent = "M99P100";
+        sel.options[0].textContent = "未選択";
+        sel.options[1].textContent = "使用しない";
+        sel.options[2].textContent = "M99P100";
     }
 }
-window._ncUpdateM40M99UI = function () { updateM40M99UI(); };
+window._ncUpdateM40M99UI = function () {
+    updateM40M99UI();
+};
 
 /**
  * M12: 内径加工スタイル + サブ選択から仕上げタイプ・加工プロファイルを解決する。
@@ -1536,158 +1736,183 @@ window._ncUpdateM40M99UI = function () { updateM40M99UI(); };
  *   CrossSmall→ m12CrossMethod 5択でマッピング
  */
 function resolveM12FinishAndProfile() {
-  const style = currentInternalStyle;
-  if (style === "Ichimonji") {
-    const dt = ($id("m12DrillType") && $id("m12DrillType").value) || "hss";
-    return { finishType: dt, profile: "drill_ichi_hira" };
-  }
-  if (style === "Normal") {
-    return { finishType: "baito", profile: "baito_no" };
-  }
-  if (style === "CrossSmall") {
-    const cm = ($id("m12CrossMethod") && $id("m12CrossMethod").value) || "hss_oku";
-    const map = {
-      "hss_oku":   { finishType: "hss",      profile: "cross_oku" },
-      "hgdr_oku":  { finishType: "halfmoon", profile: "cross_oku" },
-      "hss_men":   { finishType: "hss",      profile: "drill_ichi_men" },
-      "hgdr_men":  { finishType: "halfmoon", profile: "drill_ichi_men" },
-      "baito_oku": { finishType: "baito",    profile: "baito_oku" },
-    };
-    return map[cm] || { finishType: "hss", profile: "cross_oku" };
-  }
-  return { finishType: "hss", profile: "drill_ichi_hira" };
+    const style = currentInternalStyle;
+    if (style === "Ichimonji") {
+        const dt = ($id("m12DrillType") && $id("m12DrillType").value) || "hss";
+        return { finishType: dt, profile: "drill_ichi_hira" };
+    }
+    if (style === "Normal") {
+        return { finishType: "baito", profile: "baito_no" };
+    }
+    if (style === "CrossSmall") {
+        const cm = ($id("m12CrossMethod") && $id("m12CrossMethod").value) || "hss_oku";
+        const map = {
+            hss_oku: { finishType: "hss", profile: "cross_oku" },
+            hgdr_oku: { finishType: "halfmoon", profile: "cross_oku" },
+            hss_men: { finishType: "hss", profile: "drill_ichi_men" },
+            hgdr_men: { finishType: "halfmoon", profile: "drill_ichi_men" },
+            baito_oku: { finishType: "baito", profile: "baito_oku" },
+        };
+        return map[cm] || { finishType: "hss", profile: "cross_oku" };
+    }
+    return { finishType: "hss", profile: "drill_ichi_hira" };
 }
 
 /** M12 サブパネルをスタイル選択に応じて表示切替 */
 function updateM12SubPanels() {
-  const wt = $id("workType") ? $id("workType").value : "";
-  const isM12 = wt === "M12" || wt === "M12_MH";
-  const ichiPanel  = $id("m12IchiPanel");
-  const crossPanel = $id("m12CrossPanel");
-  const showIchi  = isM12 && currentInternalStyle === "Ichimonji";
-  const showCross = isM12 && currentInternalStyle === "CrossSmall";
-  if (ichiPanel) {
-    ichiPanel.style.display = showIchi ? "" : "none";
-    ichiPanel.setAttribute("aria-hidden", showIchi ? "false" : "true");
-  }
-  if (crossPanel) {
-    crossPanel.style.display = showCross ? "" : "none";
-    crossPanel.setAttribute("aria-hidden", showCross ? "false" : "true");
-  }
+    const wt = $id("workType") ? $id("workType").value : "";
+    const isM12 = wt === "M12" || wt === "M12_MH";
+    const ichiPanel = $id("m12IchiPanel");
+    const crossPanel = $id("m12CrossPanel");
+    const showIchi = isM12 && currentInternalStyle === "Ichimonji";
+    const showCross = isM12 && currentInternalStyle === "CrossSmall";
+    if (ichiPanel) {
+        ichiPanel.style.display = showIchi ? "" : "none";
+        ichiPanel.setAttribute("aria-hidden", showIchi ? "false" : "true");
+    }
+    if (crossPanel) {
+        crossPanel.style.display = showCross ? "" : "none";
+        crossPanel.setAttribute("aria-hidden", showCross ? "false" : "true");
+    }
 }
 
 /** i18n.js から呼ばれるため互換エイリアスとして残す */
-function updateM12CascadeUI() { updateM12SubPanels(); }
+function updateM12CascadeUI() {
+    updateM12SubPanels();
+}
 window.updateM12CascadeUI = updateM12CascadeUI;
 
 /** G18_40/G18_42 CrossSmall: 加工方法セレクトから finishType/profile を解決する */
 function resolveG18CrossFinishAndProfile() {
-  const cm = ($id("g18CrossMethod") && $id("g18CrossMethod").value) || "hgdr_oku";
-  const map = {
-    "hss_oku":   { finishType: "hss",      profile: "cross_oku" },
-    "hgdr_oku":  { finishType: "halfmoon", profile: "cross_oku" },
-    "hss_men":   { finishType: "hss",      profile: "drill_ichi_men" },
-    "hgdr_men":  { finishType: "halfmoon", profile: "drill_ichi_men" },
-    "baito_oku": { finishType: "baito",    profile: "baito_oku" },
-  };
-  return map[cm] || { finishType: "halfmoon", profile: "cross_oku" };
+    const cm = ($id("g18CrossMethod") && $id("g18CrossMethod").value) || "hgdr_oku";
+    const map = {
+        hgdr_oku: { finishType: "halfmoon", profile: "cross_oku" },
+        hgdr_men: { finishType: "halfmoon", profile: "drill_ichi_men" },
+    };
+    return map[cm] || { finishType: "halfmoon", profile: "cross_oku" };
 }
 
 /** G18_40/G18_42 サブパネルをスタイル選択に応じて表示切替 */
 function updateG18SubPanels() {
-  const wt = $id("workType") ? $id("workType").value : "";
-  const isG18Small = wt === "G18_40" || wt === "G18_42" || wt === "G18_40_MH" || wt === "G18_42_MH";
-  const crossPanel = $id("g18CrossPanel");
-  const showCross = isG18Small && currentInternalStyle === "CrossSmall";
-  if (crossPanel) {
-    crossPanel.style.display = showCross ? "" : "none";
-    crossPanel.setAttribute("aria-hidden", showCross ? "false" : "true");
-  }
+    const wt = $id("workType") ? $id("workType").value : "";
+    const isG18Small = wt === "G18_40" || wt === "G18_42" || wt === "G18_40_MH" || wt === "G18_42_MH";
+    const crossPanel = $id("g18CrossPanel");
+    const showCross = isG18Small && currentInternalStyle === "CrossSmall";
+    if (crossPanel) {
+        crossPanel.style.display = showCross ? "" : "none";
+        crossPanel.setAttribute("aria-hidden", showCross ? "false" : "true");
+    }
 }
 
 /** M12: ドリル種類ドロップダウン変更 */
 function onM12DrillTypeChange() {
-  updateInternalStyleUI();
-  calcDrillDepth();
-  runGeneration();
+    updateInternalStyleUI();
+    calcDrillDepth();
+    runGeneration();
 }
 
 /** M12: 交差穴加工方法ドロップダウン変更 */
 function onM12CrossMethodChange() {
-  updateInternalStyleUI();
-  calcDrillDepth();
-  runGeneration();
+    updateInternalStyleUI();
+    calcDrillDepth();
+    runGeneration();
 }
 
 /** G18_40/42: 交差穴加工方法ドロップダウン変更 */
 function onG18CrossMethodChange() {
-  updateInternalStyleUI();
-  calcDrillDepth();
-  runGeneration();
+    updateInternalStyleUI();
+    calcDrillDepth();
+    runGeneration();
+}
+
+/** M8: 6.横穴＆中バリ処理 選択時の加工方法 → {profile} を解決する */
+function resolveM8CrossFinishAndProfile() {
+    const cm = ($id("m8CrossMethod") && $id("m8CrossMethod").value) || "hss_men";
+    const map = {
+        hss_men: { profile: "drill_ichi_men" },
+        // hss_oku (奥バイト面取り) はM8では使用不可
+    };
+    return map[cm] || { profile: "drill_ichi_men" };
+}
+
+/** M8 サブパネルをスタイル選択に応じて表示切替 */
+function updateM8SubPanels() {
+    const wt = $id("workType") ? $id("workType").value : "";
+    const isM8 = isM8WorkType(wt);
+    const crossPanel = $id("m8CrossPanel");
+    const showCross = isM8 && currentInternalStyle === "CrossSmall";
+    if (crossPanel) {
+        crossPanel.style.display = showCross ? "" : "none";
+        crossPanel.setAttribute("aria-hidden", showCross ? "false" : "true");
+    }
+}
+
+/** M8: 横穴加工方法ドロップダウン変更 */
+function onM8CrossMethodChange() {
+    updateInternalStyleUI();
+    calcDrillDepth();
+    runGeneration();
 }
 
 /** M12: すべての場合で G1 を返す（G74 プロファイルは廃止） */
 function getM12BaitoDrillModeForInput() {
-  return "G1";
+    return "G1";
 }
 
 /** 奥バイト面取りを行うか（profile 文字列で判定） */
 function m12ProfileImpliesOku(profile) {
-  if (!profile) return false;
-  return (
-    profile === "cross_oku" ||
-    profile === "baito_oku" ||
-    profile === "baito_g1_oku" ||
-    profile === "baito_g74_oku"
-  );
+    if (!profile) return false;
+    return (
+        profile === "cross_oku" || profile === "baito_oku" || profile === "baito_g1_oku" || profile === "baito_g74_oku"
+    );
 }
 
 /**
  * ワーク種別がチューブのときのみ表示（左カラムの group レイアウト）。
  */
 function updateTubeVariantUI() {
-  const grp = $id('tubeVariantGroup');
-  const wt = $id('workType') && $id('workType').value;
-  if (!grp) return;
-  if (wt === 'Tube') {
-    grp.style.display = '';
-    initTubeSpecs();
-  } else {
-    grp.style.display = 'none';
-  }
+    const grp = $id("tubeVariantGroup");
+    const wt = $id("workType") && $id("workType").value;
+    if (!grp) return;
+    if (wt === "Tube") {
+        grp.style.display = "";
+        initTubeSpecs();
+    } else {
+        grp.style.display = "none";
+    }
 }
 
 function syncMachineSelectOptions() {
-  const machineSelect = $id("machineSelect");
-  if (!machineSelect || typeof machines !== "object" || !machines) return;
-  const machineNames = Object.keys(machines);
-  if (!machineNames.length) return;
+    const machineSelect = $id("machineSelect");
+    if (!machineSelect || typeof machines !== "object" || !machines) return;
+    const machineNames = Object.keys(machines);
+    if (!machineNames.length) return;
 
-  const prev = machineSelect.value;
-  machineSelect.innerHTML = "";
+    const prev = machineSelect.value;
+    machineSelect.innerHTML = "";
 
-  machineNames.forEach((machineName) => {
-    const op = document.createElement("option");
-    op.value = machineName;
-    op.textContent = machineName;
-    machineSelect.appendChild(op);
-  });
+    machineNames.forEach((machineName) => {
+        const op = document.createElement("option");
+        op.value = machineName;
+        op.textContent = machineName;
+        machineSelect.appendChild(op);
+    });
 
-  machineSelect.value = machineNames.includes(prev) ? prev : machineNames[0];
+    machineSelect.value = machineNames.includes(prev) ? prev : machineNames[0];
 }
 
 function onMachineSelectChange() {
-  runGeneration();
+    runGeneration();
 }
 
 function restrictStyles(workType) {
     const internalStyleCardIds = [
-        'styleHirazoko',
-        'styleIchimonji',
-        'styleNormal',
-        'styleYoseRelay',
-        'styleYose',
-        'styleCrossSmall'
+        "styleHirazoko",
+        "styleIchimonji",
+        "styleNormal",
+        "styleYoseRelay",
+        "styleYose",
+        "styleCrossSmall",
     ];
 
     function setInternalStyleCardsLocked(locked) {
@@ -1695,149 +1920,183 @@ function restrictStyles(workType) {
             const el = $id(id);
             if (!el) return;
             if (locked) {
-                el.style.pointerEvents = 'none';
-                el.style.opacity = id === 'styleNormal' ? '1' : '0.35';
-                el.setAttribute('aria-disabled', 'true');
+                el.style.pointerEvents = "none";
+                el.style.opacity = id === "styleNormal" ? "1" : "0.35";
+                el.setAttribute("aria-disabled", "true");
             } else {
-                el.style.pointerEvents = 'auto';
-                el.style.opacity = '1';
-                el.removeAttribute('aria-disabled');
+                el.style.pointerEvents = "auto";
+                el.style.opacity = "1";
+                el.removeAttribute("aria-disabled");
             }
         });
     }
 
     setInternalStyleCardsLocked(false);
 
-    const styleHirazoko = $id('styleHirazoko');
-    const styleIchimonji = $id('styleIchimonji');
-    const styleYose = $id('styleYose');
-    const styleYoseRelay = $id('styleYoseRelay');
-    const styleCrossBig = $id('styleCrossBig');
+    const styleHirazoko = $id("styleHirazoko");
+    const styleIchimonji = $id("styleIchimonji");
+    const styleYose = $id("styleYose");
+    const styleYoseRelay = $id("styleYoseRelay");
+    const styleCrossBig = $id("styleCrossBig");
 
     // スタイルのリセットと有効化
-    if(styleHirazoko) { styleHirazoko.style.pointerEvents = 'auto'; styleHirazoko.style.opacity = '1'; }
-    if(styleIchimonji) { styleIchimonji.style.pointerEvents = 'auto'; styleIchimonji.style.opacity = '1'; }
-    if(styleYose) { styleYose.style.pointerEvents = 'auto'; styleYose.style.opacity = '1'; }
-    if(styleYoseRelay) { styleYoseRelay.style.pointerEvents = 'auto'; styleYoseRelay.style.opacity = '1'; }
-    if(styleCrossBig) { styleCrossBig.style.pointerEvents = 'auto'; styleCrossBig.style.opacity = '1'; }
+    if (styleHirazoko) {
+        styleHirazoko.style.pointerEvents = "auto";
+        styleHirazoko.style.opacity = "1";
+    }
+    if (styleIchimonji) {
+        styleIchimonji.style.pointerEvents = "auto";
+        styleIchimonji.style.opacity = "1";
+    }
+    if (styleYose) {
+        styleYose.style.pointerEvents = "auto";
+        styleYose.style.opacity = "1";
+    }
+    if (styleYoseRelay) {
+        styleYoseRelay.style.pointerEvents = "auto";
+        styleYoseRelay.style.opacity = "1";
+    }
+    if (styleCrossBig) {
+        styleCrossBig.style.pointerEvents = "auto";
+        styleCrossBig.style.opacity = "1";
+    }
 
-    if (workType === 'G18_40' || workType === 'G18_42' || workType === 'G18_40_MH' || workType === 'G18_42_MH') {
-        ['styleHirazoko', 'styleIchimonji', 'styleNormal', 'styleYose'].forEach(id => {
+    if (isM8WorkType(workType)) {
+        // 使用可能: 2.一文字DR平底 / 4.ヨセ中継 / 6.横穴＆中バリ処理
+        // 使用不可: 1.内径バイト平底 / 3.通常バイト加工 / 5.ヨセ
+        ["styleHirazoko", "styleNormal", "styleYose"].forEach((id) => {
             const el = $id(id);
-            if (el) { el.style.pointerEvents = 'none'; el.style.opacity = '0.3'; }
+            if (el) {
+                el.style.pointerEvents = "none";
+                el.style.opacity = "0.3";
+            }
         });
-        if (!['YoseRelay', 'CrossSmall'].includes(currentInternalStyle)) {
-            setInternalStyle('');
+        if (!["Ichimonji", "YoseRelay", "CrossSmall"].includes(currentInternalStyle)) {
+            setInternalStyle("");
+        }
+    } else if (workType === "G18_40" || workType === "G18_42" || workType === "G18_40_MH" || workType === "G18_42_MH") {
+        ["styleHirazoko", "styleIchimonji", "styleNormal", "styleYose"].forEach((id) => {
+            const el = $id(id);
+            if (el) {
+                el.style.pointerEvents = "none";
+                el.style.opacity = "0.3";
+            }
+        });
+        if (!["YoseRelay", "CrossSmall"].includes(currentInternalStyle)) {
+            setInternalStyle("");
         }
     } else if (isG18HgdrSeriesWorkType(workType)) {
-        ['styleIchimonji', 'styleYose', 'styleCrossSmall'].forEach(id => {
+        ["styleIchimonji", "styleYose", "styleCrossSmall"].forEach((id) => {
             const el = $id(id);
-            if (el) { el.style.pointerEvents = 'none'; el.style.opacity = '0.3'; }
+            if (el) {
+                el.style.pointerEvents = "none";
+                el.style.opacity = "0.3";
+            }
         });
-        if (!['Hirazoko', 'Normal', 'YoseRelay'].includes(currentInternalStyle)) {
-            setInternalStyle('');
+        if (!["Hirazoko", "Normal", "YoseRelay"].includes(currentInternalStyle)) {
+            setInternalStyle("");
         }
     } else if (isM42X3_25175WorkType(workType)) {
-        ['styleIchimonji', 'styleCrossSmall', 'styleCrossBig'].forEach(id => {
+        ["styleIchimonji", "styleCrossSmall", "styleCrossBig"].forEach((id) => {
             const el = $id(id);
-            if (el) { el.style.pointerEvents = 'none'; el.style.opacity = '0.3'; }
+            if (el) {
+                el.style.pointerEvents = "none";
+                el.style.opacity = "0.3";
+            }
         });
-        if (!['Hirazoko', 'Normal', 'Yose', 'YoseRelay'].includes(currentInternalStyle)) {
-            setInternalStyle('');
+        if (!["Hirazoko", "Normal", "Yose", "YoseRelay"].includes(currentInternalStyle)) {
+            setInternalStyle("");
         }
-    } else if (workType === 'M12' || workType === 'M12_MH') {
-        if(styleHirazoko) {
-            styleHirazoko.style.pointerEvents = 'none';
-            styleHirazoko.style.opacity = '0.3';
+    } else if (workType === "M12" || workType === "M12_MH") {
+        if (styleHirazoko) {
+            styleHirazoko.style.pointerEvents = "none";
+            styleHirazoko.style.opacity = "0.3";
         }
         if (styleYose) {
-            styleYose.style.pointerEvents = 'none';
-            styleYose.style.opacity = '0.3';
+            styleYose.style.pointerEvents = "none";
+            styleYose.style.opacity = "0.3";
         }
-        if (currentInternalStyle === 'Hirazoko') {
-            setInternalStyle('Ichimonji');
-        } else if (currentInternalStyle === 'Yose') {
-            setInternalStyle('Normal');
-        } else if (currentInternalStyle === 'CrossBig') {
-            setInternalStyle('CrossSmall');
+        if (currentInternalStyle === "Hirazoko") {
+            setInternalStyle("Ichimonji");
+        } else if (currentInternalStyle === "Yose") {
+            setInternalStyle("Normal");
+        } else if (currentInternalStyle === "CrossBig") {
+            setInternalStyle("CrossSmall");
         }
     } else {
-        if(styleIchimonji) {
-            styleIchimonji.style.pointerEvents = 'none';
-            styleIchimonji.style.opacity = '0.3';
+        if (styleIchimonji) {
+            styleIchimonji.style.pointerEvents = "none";
+            styleIchimonji.style.opacity = "0.3";
         }
-        if (currentInternalStyle === 'Ichimonji') {
-            setInternalStyle('Hirazoko');
+        if (currentInternalStyle === "Ichimonji") {
+            setInternalStyle("Hirazoko");
         }
     }
 }
 
 function initTubeSpecs() {
-  const sel = $id('tubeSpecSelect');
-  if (sel.options.length > 1) return; 
-  for (let key in tubeData) {
-      let op = document.createElement('option');
-      op.value = key;
-      op.text = key;
-      sel.appendChild(op);
-  }
+    const sel = $id("tubeSpecSelect");
+    if (sel.options.length > 1) return;
+    for (let key in tubeData) {
+        let op = document.createElement("option");
+        op.value = key;
+        op.text = key;
+        sel.appendChild(op);
+    }
 }
 
 function updateTubeLengths() {
-  const spec = $id('tubeSpecSelect').value;
-  const lenSel = $id('tubeLengthSelect');
-  lenSel.innerHTML = ""; 
-  
-  if (tubeData[spec]) {
-      tubeData[spec].lengths.forEach(len => {
-          let op = document.createElement('option');
-          op.value = len;
-          op.text = len + " mm";
-          lenSel.appendChild(op);
-      });
-  }
-  calcDrillDepth();
+    const spec = $id("tubeSpecSelect").value;
+    const lenSel = $id("tubeLengthSelect");
+    lenSel.innerHTML = "";
+
+    if (tubeData[spec]) {
+        tubeData[spec].lengths.forEach((len) => {
+            let op = document.createElement("option");
+            op.value = len;
+            op.text = len + " mm";
+            lenSel.appendChild(op);
+        });
+    }
+    calcDrillDepth();
 }
 
 let isInternalStyleDrawerOpen = false;
 
 function getInternalStyleI18nKey(style) {
-  const map = {
-    Hirazoko: "style1",
-    Ichimonji: "style2",
-    Normal: "style3",
-    YoseRelay: "style4",
-    Yose: "style5Relay",
-    CrossSmall: "style6",
-    CrossBig: "style5",
-  };
-  return map[style] || "style1";
+    const map = {
+        Hirazoko: "style1",
+        Ichimonji: "style2",
+        Normal: "style3",
+        YoseRelay: "style4",
+        Yose: "style5Relay",
+        CrossSmall: "style6",
+        CrossBig: "style5",
+    };
+    return map[style] || "style1";
 }
 
 function updateInternalStyleDrawerLabel() {
-  const out = $id("internalStyleCurrentMode");
-  if (!out) return;
-  const key = currentInternalStyle ? getInternalStyleI18nKey(currentInternalStyle) : "styleUnselected";
-  const txt =
-    window.NC_I18N && typeof window.NC_I18N.t === "function"
-      ? window.NC_I18N.t(key)
-      : key;
-  out.textContent = String(txt || "").replace(/\n/g, " ");
+    const out = $id("internalStyleCurrentMode");
+    if (!out) return;
+    const key = currentInternalStyle ? getInternalStyleI18nKey(currentInternalStyle) : "styleUnselected";
+    const txt = window.NC_I18N && typeof window.NC_I18N.t === "function" ? window.NC_I18N.t(key) : key;
+    out.textContent = String(txt || "").replace(/\n/g, " ");
 }
 
 function syncInternalStyleDrawerPanel() {
-  const panel = $id("internalStyleDrawerPanel");
-  const toggle = $id("internalStyleDrawerToggle");
-  if (!panel || !toggle) return;
-  panel.style.display = isInternalStyleDrawerOpen ? "block" : "none";
-  toggle.setAttribute("aria-expanded", isInternalStyleDrawerOpen ? "true" : "false");
+    const panel = $id("internalStyleDrawerPanel");
+    const toggle = $id("internalStyleDrawerToggle");
+    if (!panel || !toggle) return;
+    panel.style.display = isInternalStyleDrawerOpen ? "block" : "none";
+    toggle.setAttribute("aria-expanded", isInternalStyleDrawerOpen ? "true" : "false");
 }
 
 function toggleInternalStyleDrawer() {
-  const host = $id("internalStyleDrawer");
-  if (!host || host.style.display === "none") return;
-  isInternalStyleDrawerOpen = !isInternalStyleDrawerOpen;
-  syncInternalStyleDrawerPanel();
+    const host = $id("internalStyleDrawer");
+    if (!host || host.style.display === "none") return;
+    isInternalStyleDrawerOpen = !isInternalStyleDrawerOpen;
+    syncInternalStyleDrawerPanel();
 }
 window.toggleInternalStyleDrawer = toggleInternalStyleDrawer;
 window._ncUpdateInternalStyleDrawerLabel = updateInternalStyleDrawerLabel;
@@ -1848,12 +2107,12 @@ function setInternalStyle(style) {
         closeStyleNormalNote();
     }
     currentInternalStyle = style;
-    const styles = ['Hirazoko', 'Ichimonji', 'Normal', 'YoseRelay', 'Yose', 'CrossSmall'];
-    styles.forEach(s => {
-        const card = $id('style' + s);
-        if(card) {
-            if(s === style) card.classList.add('active');
-            else card.classList.remove('active');
+    const styles = ["Hirazoko", "Ichimonji", "Normal", "YoseRelay", "Yose", "CrossSmall"];
+    styles.forEach((s) => {
+        const card = $id("style" + s);
+        if (card) {
+            if (s === style) card.classList.add("active");
+            else card.classList.remove("active");
         }
     });
     updateInternalStyleDrawerLabel();
@@ -1870,27 +2129,27 @@ function setInternalStyle(style) {
  * 内径加工スタイル・ワーク種別に応じたブロック表示（Enterキーのナビとは独立）
  */
 function updateInternalStyleUI() {
-    const drillMode = $id('drillMode');
-    const cpArea = $id('cpCalcArea');
-    const yoseDiv = $id('yoseSettings');
-    const yoseMethodRow = $id('yoseMethodRow');
-    const yoseTotalLengthRow = $id('yoseTotalLengthRow');
-    const yosePartnerDepthRow = $id('yosePartnerDepthRow');
-    const yoseOpposedDistanceRow = $id('yoseOpposedDistanceRow');
-    const yoseLengthRow = $id('yoseLengthRow');
-    const yoseTaiLengthRow = $id('yoseTaiLengthRow');
-    const yoseOpposedDistanceInput = $id('yoseOpposedDistance');
-    const yoseLengthInput = $id('yoseLength');
-    const yoseTaiLengthInput = $id('yoseTaiLength');
-    const okuBiteArea = $id('okuBiteArea');
-    const workType = $id('workType').value;
+    const drillMode = $id("drillMode");
+    const cpArea = $id("cpCalcArea");
+    const yoseDiv = $id("yoseSettings");
+    const yoseMethodRow = $id("yoseMethodRow");
+    const yoseTotalLengthRow = $id("yoseTotalLengthRow");
+    const yosePartnerDepthRow = $id("yosePartnerDepthRow");
+    const yoseOpposedDistanceRow = $id("yoseOpposedDistanceRow");
+    const yoseLengthRow = $id("yoseLengthRow");
+    const yoseTaiLengthRow = $id("yoseTaiLengthRow");
+    const yoseOpposedDistanceInput = $id("yoseOpposedDistance");
+    const yoseLengthInput = $id("yoseLength");
+    const yoseTaiLengthInput = $id("yoseTaiLength");
+    const okuBiteArea = $id("okuBiteArea");
+    const workType = $id("workType").value;
     const isTemplateSelected = !!workType;
-    const machiningSettingsGroup = $id('machiningSettingsGroup');
-    const mainActionRow = $id('mainActionRow');
-    const highlightFilterRow = $id('highlightFilterRow');
-    const blockMaxDiameterMode = $id('blockMaxDiameterMode');
-    const maxOdRow = $id('maxOdRow');
-    const idDepthRow = $id('idDepthRow');
+    const machiningSettingsGroup = $id("machiningSettingsGroup");
+    const mainActionRow = $id("mainActionRow");
+    const highlightFilterRow = $id("highlightFilterRow");
+    const blockMaxDiameterMode = $id("blockMaxDiameterMode");
+    const maxOdRow = $id("maxOdRow");
+    const idDepthRow = $id("idDepthRow");
 
     // 外径最大径と同様に、テンプレート未選択時は加工設定と生成ボタンを隠す
     if (machiningSettingsGroup) {
@@ -1916,20 +2175,23 @@ function updateInternalStyleUI() {
 
     // チューブでも最大径計算モードを選べる（外径最大径はチューブ規格からは自動入力しない）
     if (blockMaxDiameterMode) {
-        blockMaxDiameterMode.style.display = '';
+        blockMaxDiameterMode.style.display = "";
     }
     if (maxOdRow) {
         maxOdRow.style.display = isTemplateSelected ? "flex" : "none";
     }
 
     // ドリル深さUI制御（平底・一文字は図面の内径深さから自動計算するため入力欄を隠す）
-    const drillDepthInput = $id('drillDepth');
-    const drillDepthLabel = $id('drillDepthLabel');
+    const drillDepthInput = $id("drillDepth");
+    const drillDepthLabel = $id("drillDepthLabel");
     const drillDepthContainer = drillDepthInput && drillDepthInput.parentElement;
-    if (!currentInternalStyle || currentInternalStyle === 'Hirazoko' || currentInternalStyle === 'Ichimonji') {
-        if(drillDepthContainer) drillDepthContainer.style.display = 'none';
+    if (isM8WorkType(workType)) {
+        // M8 固定テンプレート: スタイル選択なしでもドリル深さ入力を常時表示
+        if (drillDepthContainer) drillDepthContainer.style.display = "flex";
+    } else if (!currentInternalStyle || currentInternalStyle === "Hirazoko" || currentInternalStyle === "Ichimonji") {
+        if (drillDepthContainer) drillDepthContainer.style.display = "none";
     } else {
-        if(drillDepthContainer) drillDepthContainer.style.display = 'flex';
+        if (drillDepthContainer) drillDepthContainer.style.display = "flex";
     }
     if (idDepthRow) {
         // 6.交差穴加工径小では、見落とし防止のため常に表示を優先
@@ -1944,20 +2206,25 @@ function updateInternalStyleUI() {
         const tFn =
             window.NC_I18N && typeof window.NC_I18N.t === "function"
                 ? window.NC_I18N.t.bind(window.NC_I18N)
-                : function (k) { return k; };
+                : function (k) {
+                      return k;
+                  };
         const isAutoDrillDepthStyle =
             currentInternalStyle === "Hirazoko" ||
             isYoseMachiningStyle(currentInternalStyle) ||
             isYoseRelayStyle(currentInternalStyle) ||
             currentInternalStyle === "CrossSmall";
-        drillDepthInput.placeholder = isAutoDrillDepthStyle
-            ? tFn("drillAutoPlaceholder")
-            : "45.0";
+        drillDepthInput.placeholder = isAutoDrillDepthStyle ? tFn("drillAutoPlaceholder") : "45.0";
     }
 
-    const m12Resolved = (workType === "M12" || workType === "M12_MH") ? resolveM12FinishAndProfile() : { finishType: "", profile: "" };
+    const m12Resolved =
+        workType === "M12" || workType === "M12_MH" ? resolveM12FinishAndProfile() : { finishType: "", profile: "" };
     if (drillDepthInput && drillDepthLabel) {
-        if ((workType === "M12" || workType === "M12_MH") && m12Resolved.finishType === "halfmoon" && currentInternalStyle === "CrossSmall") {
+        if (
+            (workType === "M12" || workType === "M12_MH") &&
+            m12Resolved.finishType === "halfmoon" &&
+            currentInternalStyle === "CrossSmall"
+        ) {
             drillDepthLabel.setAttribute("data-i18n", "drillDepthHangetsu");
             drillDepthInput.readOnly = true;
             drillDepthInput.classList.add("input--readonly-computed");
@@ -1965,7 +2232,10 @@ function updateInternalStyleUI() {
             drillDepthLabel.setAttribute("data-i18n", "drillZ");
             drillDepthInput.readOnly = true;
             drillDepthInput.classList.add("input--readonly-computed");
-        } else if ((workType === "G18_40" || workType === "G18_42" || workType === "G18_40_MH" || workType === "G18_42_MH") && currentInternalStyle === "CrossSmall") {
+        } else if (
+            (workType === "G18_40" || workType === "G18_42" || workType === "G18_40_MH" || workType === "G18_42_MH") &&
+            currentInternalStyle === "CrossSmall"
+        ) {
             drillDepthLabel.setAttribute("data-i18n", "drillZ");
             drillDepthInput.readOnly = true;
             drillDepthInput.classList.add("input--readonly-computed");
@@ -1976,7 +2246,7 @@ function updateInternalStyleUI() {
         }
     }
 
-    if (workType === "M12" || workType === "M12_MH" || usesG18DrillShiageG1Block(workType)) {
+    if (workType === "M12" || workType === "M12_MH" || usesG18DrillShiageG1Block(workType) || isM8WorkType(workType)) {
         drillMode.value = "G1";
         drillMode.disabled = true;
     } else if (currentInternalStyle === "Ichimonji") {
@@ -1989,20 +2259,25 @@ function updateInternalStyleUI() {
     // M12 / 全G18 ではドリルモードは自動決定するため UI は出さない
     const drillModeRow = $id("drillModeRow");
     if (drillModeRow) {
-        const shouldHideDrillMode = workType === "M12" || workType === "M12_MH" || usesG18DrillShiageG1Block(workType) || !currentInternalStyle;
+        const shouldHideDrillMode =
+            workType === "M12" || workType === "M12_MH" || usesG18DrillShiageG1Block(workType) || isM8WorkType(workType) || !currentInternalStyle;
         drillModeRow.style.display = shouldHideDrillMode ? "none" : "flex";
     }
 
     updateM12SubPanels();
     updateG18SubPanels();
+    updateM8SubPanels();
 
     // ヨセ設定（ヨセ / ヨセ中継）
     if (isYoseMachiningStyle(currentInternalStyle) || isYoseRelayStyle(currentInternalStyle)) {
         yoseDiv.style.display = "block";
         if (yoseMethodRow) yoseMethodRow.style.display = isYoseMachiningStyle(currentInternalStyle) ? "flex" : "none";
-        if (yoseTotalLengthRow) yoseTotalLengthRow.style.display = isYoseRelayStyle(currentInternalStyle) ? "flex" : "none";
-        if (yosePartnerDepthRow) yosePartnerDepthRow.style.display = isYoseRelayStyle(currentInternalStyle) ? "flex" : "none";
-        if (yoseOpposedDistanceRow) yoseOpposedDistanceRow.style.display = isYoseRelayStyle(currentInternalStyle) ? "flex" : "none";
+        if (yoseTotalLengthRow)
+            yoseTotalLengthRow.style.display = isYoseRelayStyle(currentInternalStyle) ? "flex" : "none";
+        if (yosePartnerDepthRow)
+            yosePartnerDepthRow.style.display = isYoseRelayStyle(currentInternalStyle) ? "flex" : "none";
+        if (yoseOpposedDistanceRow)
+            yoseOpposedDistanceRow.style.display = isYoseRelayStyle(currentInternalStyle) ? "flex" : "none";
         if (yoseLengthRow) yoseLengthRow.style.display = isYoseRelayStyle(currentInternalStyle) ? "flex" : "none";
         if (yoseTaiLengthRow) yoseTaiLengthRow.style.display = isYoseRelayStyle(currentInternalStyle) ? "flex" : "none";
     } else {
@@ -2032,7 +2307,7 @@ function updateInternalStyleUI() {
         yoseTaiLengthInput.classList.add("input--readonly-computed");
     }
 
-    const idDepthInput = $id('idDepth');
+    const idDepthInput = $id("idDepth");
     if (idDepthInput) {
         const lockIdDepth = isYoseRelayStyle(currentInternalStyle);
         idDepthInput.readOnly = lockIdDepth;
@@ -2041,8 +2316,10 @@ function updateInternalStyleUI() {
 
     // 交差穴・一文字DR(面取り): CP 入力
     // M12 Ichimonji (一文字DR平底) はドリル深さベースのため CP 不要
-    const showCpArea = currentInternalStyle === 'CrossBig' || currentInternalStyle === 'CrossSmall' ||
-                       (currentInternalStyle === 'Ichimonji' && workType !== 'M12' && workType !== 'M12_MH');
+    const showCpArea =
+        currentInternalStyle === "CrossBig" ||
+        currentInternalStyle === "CrossSmall" ||
+        (currentInternalStyle === "Ichimonji" && workType !== "M12" && workType !== "M12_MH");
     cpArea.style.display = showCpArea ? "block" : "none";
 
     // 奥バイト面取りの有無は M12 の加工プロファイルで決める（チェック欄は使わない）
@@ -2050,15 +2327,14 @@ function updateInternalStyleUI() {
 
     const idDepthLabel = $id("idDepthLabel");
     if (idDepthLabel) {
-        const useIPDepthLabel =
-            currentInternalStyle === "CrossBig" || currentInternalStyle === "CrossSmall";
+        const useIPDepthLabel = currentInternalStyle === "CrossBig" || currentInternalStyle === "CrossSmall";
         idDepthLabel.setAttribute("data-i18n", useIPDepthLabel ? "idDepthCross" : "idDepth");
     }
 
     // 交差穴加工径小: 計算済み内径深さ表示行
-    const crossSmallFinishRow = $id('crossSmallFinishDepthRow');
+    const crossSmallFinishRow = $id("crossSmallFinishDepthRow");
     if (crossSmallFinishRow) {
-        crossSmallFinishRow.style.display = currentInternalStyle === 'CrossSmall' ? 'block' : 'none';
+        crossSmallFinishRow.style.display = currentInternalStyle === "CrossSmall" ? "block" : "none";
     }
 
     if (window.NC_I18N && typeof window.NC_I18N.applyI18n === "function") {
@@ -2082,12 +2358,12 @@ function recalcYoseRelayComputedFields() {
     if (!isYoseRelayStyle(style)) return;
 
     const relayInput = {
-        workType: $id('workType').value,
-        tubeSpec: $id('tubeSpecSelect') ? $id('tubeSpecSelect').value : "",
-        yoseTotalLength: $id('yoseTotalLength') ? $id('yoseTotalLength').value : "",
-        yosePartnerDepth: $id('yosePartnerDepth') ? $id('yosePartnerDepth').value : "",
-        yoseD: $id('yoseD') ? $id('yoseD').value : "",
-        yoseAngle: $id('yoseAngle') ? $id('yoseAngle').value : ""
+        workType: $id("workType").value,
+        tubeSpec: $id("tubeSpecSelect") ? $id("tubeSpecSelect").value : "",
+        yoseTotalLength: $id("yoseTotalLength") ? $id("yoseTotalLength").value : "",
+        yosePartnerDepth: $id("yosePartnerDepth") ? $id("yosePartnerDepth").value : "",
+        yoseD: $id("yoseD") ? $id("yoseD").value : "",
+        yoseAngle: $id("yoseAngle") ? $id("yoseAngle").value : "",
     };
     const metrics = calcYoseRelayMetrics(relayInput);
     if (!metrics) {
@@ -2110,11 +2386,11 @@ function recalcYoseRelayComputedFields() {
 }
 
 function calcDrillDepth() {
-    const workType = $id('workType').value;
+    const workType = $id("workType").value;
     const style = currentInternalStyle;
-    const idDepthVal = parseFloat($id('idDepth').value);
-    const cpVal = parseFloat($id('cpVal').value);
-    const drillDepthInput = $id('drillDepth');
+    const idDepthVal = parseFloat($id("idDepth").value);
+    const cpVal = parseFloat($id("cpVal").value);
+    const drillDepthInput = $id("drillDepth");
 
     if (isYoseRelayStyle(style)) {
         if (drillDepthInput) {
@@ -2125,7 +2401,15 @@ function calcDrillDepth() {
         return;
     }
 
-    if ((workType === 'M12' || workType === 'M12_MH' || workType === 'G18_40' || workType === 'G18_42' || workType === 'G18_40_MH' || workType === 'G18_42_MH') && style === 'CrossSmall') {
+    if (
+        (workType === "M12" ||
+            workType === "M12_MH" ||
+            workType === "G18_40" ||
+            workType === "G18_42" ||
+            workType === "G18_40_MH" ||
+            workType === "G18_42_MH") &&
+        style === "CrossSmall"
+    ) {
         if (drillDepthInput) {
             drillDepthInput.readOnly = true;
             drillDepthInput.classList.add("input--readonly-computed");
@@ -2139,10 +2423,10 @@ function calcDrillDepth() {
     }
 
     let drillDia = 0;
-    if (workType === 'Tube') {
-        const spec = $id('tubeSpecSelect').value;
+    if (workType === "Tube") {
+        const spec = $id("tubeSpecSelect").value;
         if (tubeData[spec] && tubeData[spec].drill) {
-            drillDia = parseFloat(tubeData[spec].drill.replace(/[^0-9.]/g, ''));
+            drillDia = parseFloat(tubeData[spec].drill.replace(/[^0-9.]/g, ""));
         }
     } else {
         drillDia = DRILL_DIA_MAP[workType] || 0;
@@ -2156,8 +2440,7 @@ function calcDrillDepth() {
     if (isYoseMachiningStyle(style) || isYoseRelayStyle(style)) {
         // ヨセ: 内径深さを基準に計算
         calcZ = calcSpecialDrillZ(style, drillDia, idDepthVal);
-    }
-    else if (style === 'CrossBig' || style === 'CrossSmall') {
+    } else if (style === "CrossBig" || style === "CrossSmall") {
         // 交差穴: CPを基準に計算
         calcZ = calcSpecialDrillZ(style, drillDia, cpVal);
     }
@@ -2168,22 +2451,21 @@ function calcDrillDepth() {
     }
 }
 
-
 function calcAutoCP() {
-    const cpEl = $id('cpVal');
+    const cpEl = $id("cpVal");
     if (!cpEl) return;
     const style = currentInternalStyle;
-    const isCross = style === 'CrossBig' || style === 'CrossSmall';
-    const isIchimonji = style === 'Ichimonji';
+    const isCross = style === "CrossBig" || style === "CrossSmall";
+    const isIchimonji = style === "Ichimonji";
     if (!isCross && !isIchimonji) {
         cpEl.value = "";
         return;
     }
     // 原点〜相手中心距離（交差穴時は図面上の IP に相当）— idDepth で入力（二重入力なし）
-    const dist = parseFloat($id('idDepth').value);
-    const pDia = parseFloat($id('valPartnerD').value);
+    const dist = parseFloat($id("idDepth").value);
+    const pDia = parseFloat($id("valPartnerD").value);
     if (!isNaN(dist) && !isNaN(pDia)) {
-        const cp = dist - (pDia / 2.0);
+        const cp = dist - pDia / 2.0;
         cpEl.value = cp.toFixed(3);
         calcDrillDepth();
     } else {
@@ -2198,77 +2480,77 @@ function calcAutoCP() {
  * {{入力_内径深さ}} に渡る値をユーザーが確認できるようにする（編集不可）
  */
 function updateCrossSmallFinishDepthDisplay() {
-    const el = $id('crossSmallFinishDepthVal');
+    const el = $id("crossSmallFinishDepthVal");
     if (!el) return;
-    if (currentInternalStyle !== 'CrossSmall') {
-        el.value = '';
+    if (currentInternalStyle !== "CrossSmall") {
+        el.value = "";
         return;
     }
     const inp = {
-        cpVal:      $id('cpVal')        ? $id('cpVal').value        : '',
-        valPartnerD: $id('valPartnerD') ? $id('valPartnerD').value  : '',
-        workType:   $id('workType')     ? $id('workType').value      : '',
-        tubeSpec:   $id('tubeSpecSelect') ? $id('tubeSpecSelect').value : '',
+        cpVal: $id("cpVal") ? $id("cpVal").value : "",
+        valPartnerD: $id("valPartnerD") ? $id("valPartnerD").value : "",
+        workType: $id("workType") ? $id("workType").value : "",
+        tubeSpec: $id("tubeSpecSelect") ? $id("tubeSpecSelect").value : "",
     };
     const depth = calcCrossSmallFinishDepth(inp);
-    el.value = (isNaN(depth) || !isFinite(depth)) ? '' : depth.toFixed(3);
+    el.value = isNaN(depth) || !isFinite(depth) ? "" : depth.toFixed(3);
 }
 
 /** 右上「?」: デバッグをドロップダウンに隠す */
 function setupHelpEasterDropdown() {
-    const btn = $id('helpEasterBtn');
-    const panel = $id('helpEasterDropdown');
+    const btn = $id("helpEasterBtn");
+    const panel = $id("helpEasterDropdown");
     if (!btn || !panel) return;
 
     function close() {
         if (panel.hidden) return;
         panel.hidden = true;
-        btn.setAttribute('aria-expanded', 'false');
+        btn.setAttribute("aria-expanded", "false");
     }
     function open() {
         panel.hidden = false;
-        btn.setAttribute('aria-expanded', 'true');
+        btn.setAttribute("aria-expanded", "true");
     }
 
-    btn.addEventListener('click', function (e) {
+    btn.addEventListener("click", function (e) {
         e.stopPropagation();
         if (panel.hidden) open();
         else close();
     });
-    panel.addEventListener('click', function (e) {
-        if (e.target.closest('button.help-easter-menu-item')) close();
+    panel.addEventListener("click", function (e) {
+        if (e.target.closest("button.help-easter-menu-item")) close();
     });
-    document.addEventListener('click', function (e) {
+    document.addEventListener("click", function (e) {
         if (!panel.hidden && !btn.contains(e.target) && !panel.contains(e.target)) close();
     });
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') close();
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") close();
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
     setupHalfWidthInputGuards();
     bindHighlightFilterControls();
     syncMachineSelectOptions();
 
     // 計算機能を適用するIDリスト
-    const calcTargets = ['valStockA', 'valStockB', 'valA', 'valB', 'drillDepth', 'ateLength', 'idDepth', 'maxOD'];
+    const calcTargets = ["valStockA", "valStockB", "valA", "valB", "drillDepth", "ateLength", "idDepth", "maxOD"];
 
-    calcTargets.forEach(id => {
+    calcTargets.forEach((id) => {
         const el = $id(id);
         if (!el) return;
 
-        el.addEventListener('change', (e) => {
-            if (id === 'ateLength') {
+        el.addEventListener("change", (e) => {
+            if (id === "ateLength") {
                 refreshAteLengthSourceState();
             }
             // 数式を計算
             const result = evaluateFormula(e.target.value);
-            if (typeof result === 'number') {
+            if (typeof result === "number") {
                 // 小数点第3位までに整形して上書き
                 e.target.value = parseFloat(result.toFixed(3));
 
-                if (id === 'drillDepth' || id === 'idDepth') {
+                if (id === "drillDepth" || id === "idDepth") {
                     calcAutoCP();
                     calcDrillDepth();
                 }
@@ -2277,9 +2559,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 既存の入力時連動
-    const idDepthEl = $id('idDepth');
+    const idDepthEl = $id("idDepth");
     if (idDepthEl) {
-        idDepthEl.addEventListener('input', function () {
+        idDepthEl.addEventListener("input", function () {
             calcAutoCP();
             calcDrillDepth();
         });
@@ -2294,17 +2576,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // yoseD: 入力確定時に内径加工寸法との大小をフィールド脇ポップアップで通知
     const _yoseDEl = $id("yoseD");
     if (_yoseDEl) {
-        _yoseDEl.addEventListener("input", function () { validateYoseDField(false); });
-        _yoseDEl.addEventListener("change", function () { validateYoseDField(true); });
-        _yoseDEl.addEventListener("blur", function () { validateYoseDField(true); });
+        _yoseDEl.addEventListener("input", function () {
+            validateYoseDField(false);
+        });
+        _yoseDEl.addEventListener("change", function () {
+            validateYoseDField(true);
+        });
+        _yoseDEl.addEventListener("blur", function () {
+            validateYoseDField(true);
+        });
     }
     const _workTypeEl = $id("workType");
     if (_workTypeEl) {
-        _workTypeEl.addEventListener("change", function () { validateYoseDField(false); });
+        _workTypeEl.addEventListener("change", function () {
+            validateYoseDField(false);
+        });
     }
     const _tubeSpecEl = $id("tubeSpecSelect");
     if (_tubeSpecEl) {
-        _tubeSpecEl.addEventListener("change", function () { validateYoseDField(false); });
+        _tubeSpecEl.addEventListener("change", function () {
+            validateYoseDField(false);
+        });
     }
     const maxOdEl = $id("maxOD");
     if (maxOdEl && !maxOdEl.dataset.maxOdDrawerBound) {
@@ -2360,7 +2652,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-
 function getAteLengthSelectedOption() {
     // コンボボックス化により廃止。isAteLengthKakuSelection() を使用
     return null;
@@ -2384,52 +2675,55 @@ function onAteLengthSelectChange() {
 function setActiveBtn(btn) {
     if (!btn) return;
     const parent = btn.parentElement;
-    const siblings = parent.getElementsByClassName('qb');
-    for (let el of siblings) el.classList.remove('active');
-    btn.classList.add('active');
+    const siblings = parent.getElementsByClassName("qb");
+    for (let el of siblings) el.classList.remove("active");
+    btn.classList.add("active");
 }
-function setAuthor(name, btn) { $id('workerName').value = name; setActiveBtn(btn); }
+function setAuthor(name, btn) {
+    $id("workerName").value = name;
+    setActiveBtn(btn);
+}
 function setAteOnly(val) {
-    const sel = $id('ateLength');
+    const sel = $id("ateLength");
     if (sel) sel.value = String(val);
     ateLengthFromKaku = false;
     syncMaxOdAteModeUi();
 }
 function setAteCalc(val) {
-    const sel = $id('ateLength');
+    const sel = $id("ateLength");
     if (sel) sel.value = String(val);
     /** 上段 15角〜43角 クイック: 外径（アテ長さ）式に利用可 */
     refreshAteLengthSourceState();
 }
 
 function updateMaxOdFromAteButtonActive() {
-  const card = $id("modeAte");
-  if (!card) return;
-  if (maxOdApplySource === "ate" && ateLengthFromKaku) {
-    card.classList.add("active");
-  } else {
-    card.classList.remove("active");
-  }
+    const card = $id("modeAte");
+    if (!card) return;
+    if (maxOdApplySource === "ate" && ateLengthFromKaku) {
+        card.classList.add("active");
+    } else {
+        card.classList.remove("active");
+    }
 }
 
 /**
  * 最大径「アテ長さ」カードの有効/無効と、不整合時のモードリセット
  */
 function syncMaxOdAteModeUi() {
-  const card = $id("modeAte");
-  if (card) {
-    card.classList.toggle("max-od-mode-ate--disabled", !ateLengthFromKaku);
-  }
-  if (!ateLengthFromKaku && maxOdApplySource === "ate") {
-    setCalcMode(currentCalcMode);
-  } else {
-    updateMaxOdFromAteButtonActive();
-  }
+    const card = $id("modeAte");
+    if (card) {
+        card.classList.toggle("max-od-mode-ate--disabled", !ateLengthFromKaku);
+    }
+    if (!ateLengthFromKaku && maxOdApplySource === "ate") {
+        setCalcMode(currentCalcMode);
+    } else {
+        updateMaxOdFromAteButtonActive();
+    }
 }
 
 /** 手入力・下段数値等でアテ欄を書き換えたとき: 上段角と連動しなくなった扱い */
 function onAteLengthFieldInput() {
-  refreshAteLengthSourceState();
+    refreshAteLengthSourceState();
 }
 
 function clearMaxOdApplyFromAte() {
@@ -2439,24 +2733,29 @@ function clearMaxOdApplyFromAte() {
 
 function selectMaxOdApplyFromAte() {
     if (!ateLengthFromKaku) {
-        alert(_maxOdApplyAlertMsg("maxOdAteNeedKaku", "※ 自動計算:   (50−アテ長さ)×2×√2 　15角〜43角でアテを選んだ場合のみ選択可能"));
+        alert(
+            _maxOdApplyAlertMsg(
+                "maxOdAteNeedKaku",
+                "※ 自動計算:   (50−アテ長さ)×2×√2 　15角〜43角でアテを選んだ場合のみ選択可能"
+            )
+        );
         return;
     }
     maxOdApplySource = "ate";
     // カード active 切り替え
-    ['modeNormal','modeEccentric','modeCorner','modeAte'].forEach(function(id) {
+    ["modeNormal", "modeEccentric", "modeCorner", "modeAte"].forEach(function (id) {
         const el = $id(id);
-        if (el) el.classList.remove('active');
+        if (el) el.classList.remove("active");
     });
-    const ateCard = $id('modeAte');
-    if (ateCard) ateCard.classList.add('active');
+    const ateCard = $id("modeAte");
+    if (ateCard) ateCard.classList.add("active");
     // 寸法入力を隠してアテ長さモードのヒントを表示
-    ['normalStockInputs','eccentricInputs','cornerInputs'].forEach(function(id) {
+    ["normalStockInputs", "eccentricInputs", "cornerInputs"].forEach(function (id) {
         const el = $id(id);
-        if (el) el.style.display = 'none';
+        if (el) el.style.display = "none";
     });
-    const hint = $id('ateInputHint');
-    if (hint) hint.style.display = 'block';
+    const hint = $id("ateInputHint");
+    if (hint) hint.style.display = "block";
 }
 
 function toggleMaxOdCalcDrawer() {
@@ -2538,7 +2837,12 @@ function _maxOdApplyAlertMsg(key, jaFallback) {
 function applyMaxOdCalcDrawer() {
     if (maxOdApplySource === "ate") {
         if (!ateLengthFromKaku) {
-            alert(_maxOdApplyAlertMsg("maxOdAteNeedKaku", "※ 自動計算:   (50−アテ長さ)×2×√2 　15角〜43角でアテを選んだ場合のみ選択可能"));
+            alert(
+                _maxOdApplyAlertMsg(
+                    "maxOdAteNeedKaku",
+                    "※ 自動計算:   (50−アテ長さ)×2×√2 　15角〜43角でアテを選んだ場合のみ選択可能"
+                )
+            );
             return;
         }
         const s = computeMaxOdFromAteLengthField();
@@ -2552,19 +2856,31 @@ function applyMaxOdCalcDrawer() {
         if (currentCalcMode === "normal") {
             s = computeMaxOdFromNormalStockFields();
             if (s == null) {
-                alert(_maxOdApplyAlertMsg("maxOdApplyErrNormal", "通常モードでは母材 A・B を半角数値で入力してください。"));
+                alert(
+                    _maxOdApplyAlertMsg("maxOdApplyErrNormal", "通常モードでは母材 A・B を半角数値で入力してください。")
+                );
                 return;
             }
         } else if (currentCalcMode === "eccentric") {
             s = computeMaxOdFromEccentricFields();
             if (s == null) {
-                alert(_maxOdApplyAlertMsg("maxOdApplyErrEccentric", "偏心モードでは距離 A・B を半角数値で入力してください。"));
+                alert(
+                    _maxOdApplyAlertMsg(
+                        "maxOdApplyErrEccentric",
+                        "偏心モードでは距離 A・B を半角数値で入力してください。"
+                    )
+                );
                 return;
             }
         } else if (currentCalcMode === "corner") {
             s = computeMaxOdFromCornerFields();
             if (s == null) {
-                alert(_maxOdApplyAlertMsg("maxOdApplyErrCorner", "角ありモードでは母材幅・追加高さを半角数値で入力してください。"));
+                alert(
+                    _maxOdApplyAlertMsg(
+                        "maxOdApplyErrCorner",
+                        "角ありモードでは母材幅・追加高さを半角数値で入力してください。"
+                    )
+                );
                 return;
             }
         }
@@ -2586,159 +2902,143 @@ function materializeMaxOdFromCurrentDimensionFields() {
  * Enter で次の欄へ進む前の検証。表示中の欄だけ必須とする（非表示はチェックしない）。
  */
 function validateEnterNavField(el) {
-  if (!el || !el.id) return { ok: true };
-  if (!isEnterNavVisible(el)) return { ok: true };
+    if (!el || !el.id) return { ok: true };
+    if (!isEnterNavVisible(el)) return { ok: true };
 
-  const wt = ($id("workType") && $id("workType").value) || "";
-  const w = (s) => s != null && String(s).trim() !== "";
-  const numOk = (s) => {
-    const x = parseFloat(String(s).replace(/,/g, ""));
-    return !isNaN(x) && isFinite(x);
-  };
+    const wt = ($id("workType") && $id("workType").value) || "";
+    const w = (s) => s != null && String(s).trim() !== "";
+    const numOk = (s) => {
+        const x = parseFloat(String(s).replace(/,/g, ""));
+        return !isNaN(x) && isFinite(x);
+    };
 
-  const id = el.id;
+    const id = el.id;
 
-  switch (id) {
-    case "machineSelect":
-      return w(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "使用機械を選択してください。" };
-    case "workType":
-      return w(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "ワーク種別を選択してください。" };
-    case "v1a":
-      return w(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "図番（PM-の番号）を入力してください。" };
-    case "v1b":
-      return w(el.value) && numOk(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "枝番を半角数値で入力してください。" };
-    case "v1c":
-      return { ok: true };
-    case "v2":
-      return w(el.value) && numOk(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "工程No を半角数値で入力してください。" };
-    case "ateLength":
-      return w(el.value) && numOk(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "アテ長さを半角数値で入力してください。" };
-    case "workerName":
-      return w(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "作成者を入力するか、ショートカットボタンで選んでください。" };
-    case "tubeSpecSelect":
-      if (wt !== "Tube") return { ok: true };
-      return w(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "チューブ規格を選択してください。" };
-    case "tubeLengthSelect":
-      if (wt !== "Tube") return { ok: true };
-      return w(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "チューブ長さ(L)を選択してください。" };
-    case "valStockA":
-      return w(el.value) && numOk(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "通常の「母材 A」を半角数値で入力してください。" };
-    case "valStockB":
-      return w(el.value) && numOk(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "通常の「母材 B」を半角数値で入力してください。" };
-    case "valA":
-      return w(el.value) && numOk(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "偏心の「距離 A (横)」を半角数値で入力してください。" };
-    case "valB":
-      return w(el.value) && numOk(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "偏心の「距離 B (縦)」を半角数値で入力してください。" };
-    case "valCornW":
-      return w(el.value) && numOk(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "角ありの「母材 幅」を半角数値で入力してください。" };
-    case "valCornH":
-      return w(el.value) && numOk(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "角ありの「追加 高さ」を半角数値で入力してください。" };
-    case "valPartnerD":
-      return w(el.value) && numOk(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "相手径(Φ)を半角数値で入力してください。" };
-    case "yoseMethod":
-      return w(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "ヨセの方法を選択してください。" };
-    case "yoseAngle":
-      return w(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "テーパ角度を選択してください。" };
-    case "yoseD": {
-      if (!w(el.value) || !numOk(el.value)) {
-        return { ok: false, msg: "ヨセの相手径を半角数値で入力してください。" };
-      }
-      const yoseDCheck = validateYoseDDiameter({
-        yoseD: el.value,
-        workType: wt,
-        tubeSpec: ($id("tubeSpecSelect") || {}).value || "",
-        internalStyle: currentInternalStyle
-      });
-      if (!yoseDCheck.ok) {
-        return { ok: false, msg: yoseDCheck.msg };
-      }
-      return { ok: true };
+    switch (id) {
+        case "machineSelect":
+            return w(el.value) ? { ok: true } : { ok: false, msg: "使用機械を選択してください。" };
+        case "workType":
+            return w(el.value) ? { ok: true } : { ok: false, msg: "ワーク種別を選択してください。" };
+        case "v1a":
+            return w(el.value) ? { ok: true } : { ok: false, msg: "図番（PM-の番号）を入力してください。" };
+        case "v1b":
+            return w(el.value) && numOk(el.value)
+                ? { ok: true }
+                : { ok: false, msg: "枝番を半角数値で入力してください。" };
+        case "v1c":
+            return { ok: true };
+        case "v2":
+            return w(el.value) && numOk(el.value)
+                ? { ok: true }
+                : { ok: false, msg: "工程No を半角数値で入力してください。" };
+        case "ateLength":
+            return w(el.value) && numOk(el.value)
+                ? { ok: true }
+                : { ok: false, msg: "アテ長さを半角数値で入力してください。" };
+        case "workerName":
+            return w(el.value)
+                ? { ok: true }
+                : { ok: false, msg: "作成者を入力するか、ショートカットボタンで選んでください。" };
+        case "tubeSpecSelect":
+            if (wt !== "Tube") return { ok: true };
+            return w(el.value) ? { ok: true } : { ok: false, msg: "チューブ規格を選択してください。" };
+        case "tubeLengthSelect":
+            if (wt !== "Tube") return { ok: true };
+            return w(el.value) ? { ok: true } : { ok: false, msg: "チューブ長さ(L)を選択してください。" };
+        case "valStockA":
+            return w(el.value) && numOk(el.value)
+                ? { ok: true }
+                : { ok: false, msg: "通常の「母材 A」を半角数値で入力してください。" };
+        case "valStockB":
+            return w(el.value) && numOk(el.value)
+                ? { ok: true }
+                : { ok: false, msg: "通常の「母材 B」を半角数値で入力してください。" };
+        case "valA":
+            return w(el.value) && numOk(el.value)
+                ? { ok: true }
+                : { ok: false, msg: "偏心の「距離 A (横)」を半角数値で入力してください。" };
+        case "valB":
+            return w(el.value) && numOk(el.value)
+                ? { ok: true }
+                : { ok: false, msg: "偏心の「距離 B (縦)」を半角数値で入力してください。" };
+        case "valCornW":
+            return w(el.value) && numOk(el.value)
+                ? { ok: true }
+                : { ok: false, msg: "角ありの「母材 幅」を半角数値で入力してください。" };
+        case "valCornH":
+            return w(el.value) && numOk(el.value)
+                ? { ok: true }
+                : { ok: false, msg: "角ありの「追加 高さ」を半角数値で入力してください。" };
+        case "valPartnerD":
+            return w(el.value) && numOk(el.value)
+                ? { ok: true }
+                : { ok: false, msg: "相手径(Φ)を半角数値で入力してください。" };
+        case "yoseMethod":
+            return w(el.value) ? { ok: true } : { ok: false, msg: "ヨセの方法を選択してください。" };
+        case "yoseAngle":
+            return w(el.value) ? { ok: true } : { ok: false, msg: "テーパ角度を選択してください。" };
+        case "yoseD": {
+            if (!w(el.value) || !numOk(el.value)) {
+                return { ok: false, msg: "ヨセの相手径を半角数値で入力してください。" };
+            }
+            const yoseDCheck = validateYoseDDiameter({
+                yoseD: el.value,
+                workType: wt,
+                tubeSpec: ($id("tubeSpecSelect") || {}).value || "",
+                internalStyle: currentInternalStyle,
+            });
+            if (!yoseDCheck.ok) {
+                return { ok: false, msg: yoseDCheck.msg };
+            }
+            return { ok: true };
+        }
+        case "yoseTotalLength":
+            if (currentInternalStyle !== "YoseRelay") return { ok: true };
+            return w(el.value) && numOk(el.value)
+                ? { ok: true }
+                : { ok: false, msg: "ヨセ中継の全長を半角数値で入力してください。" };
+        case "yosePartnerDepth":
+            if (currentInternalStyle !== "YoseRelay") return { ok: true };
+            return w(el.value) && numOk(el.value)
+                ? { ok: true }
+                : { ok: false, msg: "ヨセ中継の相手径深さを半角数値で入力してください。" };
+        case "maxOD": {
+            const maxOd = parseSimpleNumberOrFormula(el.value);
+            if (!w(el.value) || isNaN(maxOd) || !isFinite(maxOd)) {
+                return { ok: false, msg: "外径最大径を半角数値で入力してください。" };
+            }
+            if (maxOd <= 0) {
+                return { ok: false, msg: "外径最大径は 0 より大きい値にしてください。" };
+            }
+            return { ok: true };
+        }
+        case "internalStyleDrawerToggle":
+            return typeof currentInternalStyle !== "undefined" && w(currentInternalStyle)
+                ? { ok: true }
+                : { ok: false, msg: "内径加工スタイルを選択してください。（Enter または ▼で開き、カードを選ぶ）" };
+        case "drillMode":
+            return w(el.value) ? { ok: true } : { ok: false, msg: "ドリルモードを選択してください。" };
+        case "drillDepth":
+            return w(el.value) && numOk(el.value)
+                ? { ok: true }
+                : { ok: false, msg: "ドリル深さ(Z)を半角数値で入力してください。" };
+        case "idDepth": {
+            if (w(el.value) && numOk(el.value)) return { ok: true };
+            const usesIpDepth =
+                typeof currentInternalStyle !== "undefined" &&
+                (currentInternalStyle === "CrossBig" ||
+                    currentInternalStyle === "CrossSmall" ||
+                    currentInternalStyle === "Ichimonji");
+            return {
+                ok: false,
+                msg: usesIpDepth
+                    ? "IP(内径交差点)を半角数値で入力してください。"
+                    : "内径深さ(図面値)を半角数値で入力してください。",
+            };
+        }
+        default:
+            return { ok: true };
     }
-    case "yoseTotalLength":
-      if (currentInternalStyle !== "YoseRelay") return { ok: true };
-      return w(el.value) && numOk(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "ヨセ中継の全長を半角数値で入力してください。" };
-    case "yosePartnerDepth":
-      if (currentInternalStyle !== "YoseRelay") return { ok: true };
-      return w(el.value) && numOk(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "ヨセ中継の相手径深さを半角数値で入力してください。" };
-    case "maxOD": {
-      const maxOd = parseSimpleNumberOrFormula(el.value);
-      if (!w(el.value) || isNaN(maxOd) || !isFinite(maxOd)) {
-        return { ok: false, msg: "外径最大径を半角数値で入力してください。" };
-      }
-      if (maxOd <= 0) {
-        return { ok: false, msg: "外径最大径は 0 より大きい値にしてください。" };
-      }
-      return { ok: true };
-    }
-    case "internalStyleDrawerToggle":
-      return typeof currentInternalStyle !== "undefined" && w(currentInternalStyle)
-        ? { ok: true }
-        : { ok: false, msg: "内径加工スタイルを選択してください。（Enter または ▼で開き、カードを選ぶ）" };
-    case "drillMode":
-      return w(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "ドリルモードを選択してください。" };
-    case "drillDepth":
-      return w(el.value) && numOk(el.value)
-        ? { ok: true }
-        : { ok: false, msg: "ドリル深さ(Z)を半角数値で入力してください。" };
-    case "idDepth": {
-      if (w(el.value) && numOk(el.value)) return { ok: true };
-      const usesIpDepth =
-        typeof currentInternalStyle !== "undefined" &&
-        (currentInternalStyle === "CrossBig" ||
-         currentInternalStyle === "CrossSmall" ||
-         currentInternalStyle === "Ichimonji");
-      return {
-        ok: false,
-        msg: usesIpDepth
-          ? "IP(内径交差点)を半角数値で入力してください。"
-          : "内径深さ(図面値)を半角数値で入力してください。",
-      };
-    }
-    default:
-      return { ok: true };
-  }
 }
 
 /**
@@ -2746,233 +3046,248 @@ function validateEnterNavField(el) {
  * 非表示の欄は isEnterNavVisible でスキップされる
  */
 var ENTER_NAV_ORDER = [
-  // ── ユーザー指定順 ──────────────────────
-  "machineSelect",    // 使用機械
-  "ateLength",        // アテ長さ
-  "workType",         // テンプレート
-  "v1a",              // ファイル情報: 図番
-  "v1b",              //             枝番
-  "v1c",              //             改訂
-  "v2",               //             工程No
-  "workerName",       // 作成者
-  "maxOD",            // 外径最大径
-  "selM99P100",       // M99P100モード
-  "internalStyleDrawerToggle", // 内径加工スタイル（ドロワー切替）
-  "idDepth",          // 内径深さ
-  // ── 任意: 加工寸法（表示されているものだけナビ対象） ──
-  "valStockA",        // 通常: 外径A
-  "valStockB",        //       外径B
-  "valA",             // 偏心: A寸法
-  "valB",             //       B寸法
-  "valCornW",         // コーナー: 幅
-  "valCornH",         //           高さ
-  "valPartnerD",      // 相手径
-  "yoseMethod",       // ヨセ: 方法
-  "yoseAngle",        //       角度
-  "yoseD",            //       加工径
-  "yoseTotalLength",  //       全長
-  "yosePartnerDepth", //       相手径深さ
-  "drillMode",        // ドリルモード
-  "drillDepth",       // ドリル深さ
-  "tubeSpecSelect",   // チューブ規格
-  "tubeLengthSelect", //         長さ
-  "m12DrillType",     // M12: ドリル種別
-  "m12CrossMethod",   //      交差穴方法
-  "g18CrossMethod",   // G18_40/42: 交差穴方法
+    // ── ユーザー指定順 ──────────────────────
+    "machineSelect", // 使用機械
+    "ateLength", // アテ長さ
+    "workType", // テンプレート
+    "v1a", // ファイル情報: 図番
+    "v1b", //             枝番
+    "v1c", //             改訂
+    "v2", //             工程No
+    "workerName", // 作成者
+    "maxOD", // 外径最大径
+    "selM99P100", // M99P100モード
+    "internalStyleDrawerToggle", // 内径加工スタイル（ドロワー切替）
+    "idDepth", // 内径深さ
+    // ── 任意: 加工寸法（表示されているものだけナビ対象） ──
+    "valStockA", // 通常: 外径A
+    "valStockB", //       外径B
+    "valA", // 偏心: A寸法
+    "valB", //       B寸法
+    "valCornW", // コーナー: 幅
+    "valCornH", //           高さ
+    "valPartnerD", // 相手径
+    "yoseMethod", // ヨセ: 方法
+    "yoseAngle", //       角度
+    "yoseD", //       加工径
+    "yoseTotalLength", //       全長
+    "yosePartnerDepth", //       相手径深さ
+    "drillMode", // ドリルモード
+    "drillDepth", // ドリル深さ
+    "tubeSpecSelect", // チューブ規格
+    "tubeLengthSelect", //         長さ
+    "m12DrillType", // M12: ドリル種別
+    "m12CrossMethod", //      交差穴方法
+    "g18CrossMethod", // G18_40/42: 交差穴方法
+    "m8CrossMethod",  // M8: 横穴＆中バリ処理 方法
 ];
 
 function isEnterNavVisible(el) {
-  if (!el || !el.classList || !el.classList.contains("enter-target")) return false;
-  let n = el;
-  while (n && n !== document.documentElement) {
-    const cs = window.getComputedStyle(n);
-    if (cs.display === "none" || cs.visibility === "hidden") return false;
-    n = n.parentElement;
-  }
-  return true;
+    if (!el || !el.classList || !el.classList.contains("enter-target")) return false;
+    let n = el;
+    while (n && n !== document.documentElement) {
+        const cs = window.getComputedStyle(n);
+        if (cs.display === "none" || cs.visibility === "hidden") return false;
+        n = n.parentElement;
+    }
+    return true;
 }
 
 function getNextEnterNavField(fromEl) {
-  const ids = ENTER_NAV_ORDER;
-  const start = ids.indexOf(fromEl.id);
-  if (start === -1) return null;
-  for (let i = start + 1; i < ids.length; i++) {
-    const el = document.getElementById(ids[i]);
-    if (el && isEnterNavVisible(el)) return el;
-  }
-  return null;
+    const ids = ENTER_NAV_ORDER;
+    const start = ids.indexOf(fromEl.id);
+    if (start === -1) return null;
+    for (let i = start + 1; i < ids.length; i++) {
+        const el = document.getElementById(ids[i]);
+        if (el && isEnterNavVisible(el)) return el;
+    }
+    return null;
 }
 
 document.addEventListener("keydown", function (e) {
-  if (e.key !== "Enter") return;
-  const target = e.target;
-  if (!target.classList || !target.classList.contains("enter-target")) return;
+    if (e.key !== "Enter") return;
+    const target = e.target;
+    if (!target.classList || !target.classList.contains("enter-target")) return;
 
-  // 内径加工スタイル: ドロワーが閉じているとき Enter で開く（このときは次フィールドへ進まない）
-  if (target.id === "internalStyleDrawerToggle") {
-    const host = $id("internalStyleDrawer");
-    if (host && host.style.display !== "none" && !isInternalStyleDrawerOpen) {
-      e.preventDefault();
-      isInternalStyleDrawerOpen = true;
-      syncInternalStyleDrawerPanel();
-      return;
+    // 内径加工スタイル: ドロワーが閉じているとき Enter で開く（このときは次フィールドへ進まない）
+    if (target.id === "internalStyleDrawerToggle") {
+        const host = $id("internalStyleDrawer");
+        if (host && host.style.display !== "none" && !isInternalStyleDrawerOpen) {
+            e.preventDefault();
+            isInternalStyleDrawerOpen = true;
+            syncInternalStyleDrawerPanel();
+            return;
+        }
     }
-  }
 
-  const chk = validateEnterNavField(target);
-  if (!chk.ok) {
+    const chk = validateEnterNavField(target);
+    if (!chk.ok) {
+        e.preventDefault();
+        alert(chk.msg);
+        return;
+    }
+
     e.preventDefault();
-    alert(chk.msg);
-    return;
-  }
 
-  e.preventDefault();
-
-  let next = getNextEnterNavField(target);
-  if (!next) {
-    const ids = ENTER_NAV_ORDER;
-    const start = ids.indexOf(target.id);
-    if (start === -1) {
-      const inputs = Array.from(document.querySelectorAll(".enter-target")).filter(isEnterNavVisible);
-      const index = inputs.indexOf(target);
-      if (index > -1 && index < inputs.length - 1) {
-        next = inputs[index + 1];
-      }
-    } else {
-      const genBtn = document.querySelector(".btn-gen");
-      if (genBtn) genBtn.focus();
-      return;
+    let next = getNextEnterNavField(target);
+    if (!next) {
+        const ids = ENTER_NAV_ORDER;
+        const start = ids.indexOf(target.id);
+        if (start === -1) {
+            const inputs = Array.from(document.querySelectorAll(".enter-target")).filter(isEnterNavVisible);
+            const index = inputs.indexOf(target);
+            if (index > -1 && index < inputs.length - 1) {
+                next = inputs[index + 1];
+            }
+        } else {
+            const genBtn = document.querySelector(".btn-gen");
+            if (genBtn) genBtn.focus();
+            return;
+        }
     }
-  }
 
-  if (next) {
-    next.focus();
-    if (next.tagName === "INPUT") next.select();
-  }
+    if (next) {
+        next.focus();
+        if (next.tagName === "INPUT") next.select();
+    }
 });
 
 function runGeneration(fromUserButton = false) {
-  const workTypeEl = $id('workType');
-  const workTypeVal = workTypeEl ? workTypeEl.value : 'G78';
-  
-  const chkOkuBite = $id('chkOkuBite');
-  const m12Resolved = (workTypeVal === 'M12' || workTypeVal === 'M12_MH') ? resolveM12FinishAndProfile() : { finishType: 'hss', profile: 'drill_ichi_hira' };
-  const _isG18Small = workTypeVal === 'G18_40' || workTypeVal === 'G18_42' || workTypeVal === 'G18_40_MH' || workTypeVal === 'G18_42_MH';
-  const g18Resolved = _isG18Small ? resolveG18CrossFinishAndProfile() : { finishType: 'halfmoon', profile: 'cross_oku' };
-  const isOkuBiteEnabled =
-    (workTypeVal === 'M12' || workTypeVal === 'M12_MH')
-      ? m12ProfileImpliesOku(m12Resolved.profile)
-      : chkOkuBite
-        ? chkOkuBite.checked
-        : false;
+    const workTypeEl = $id("workType");
+    const workTypeVal = workTypeEl ? workTypeEl.value : "G78";
 
-  const m99SelEl = $id("selM99P100");
-  const m99Mode = m99SelEl ? m99SelEl.value : "";
+    const chkOkuBite = $id("chkOkuBite");
+    const m12Resolved =
+        workTypeVal === "M12" || workTypeVal === "M12_MH"
+            ? resolveM12FinishAndProfile()
+            : { finishType: "hss", profile: "drill_ichi_hira" };
+    const _isG18Small =
+        workTypeVal === "G18_40" ||
+        workTypeVal === "G18_42" ||
+        workTypeVal === "G18_40_MH" ||
+        workTypeVal === "G18_42_MH";
+    const g18Resolved = _isG18Small
+        ? resolveG18CrossFinishAndProfile()
+        : { finishType: "halfmoon", profile: "cross_oku" };
+    const m8Resolved = isM8WorkType(workTypeVal)
+        ? resolveM8CrossFinishAndProfile()
+        : { profile: "hss_oku" };
+    const isOkuBiteEnabled =
+        workTypeVal === "M12" || workTypeVal === "M12_MH"
+            ? m12ProfileImpliesOku(m12Resolved.profile)
+            : chkOkuBite
+              ? chkOkuBite.checked
+              : false;
 
-  const inputData = {
-    drawNumA: $id('v1a').value,   
-    drawNumB: $id('v1b').value,   
-    drawRev:  $id('v1c').value,   
-    processNum: $id('v2').value,  
-    workerName: $id('workerName').value,
-    ateLength: $id('ateLength').value,
-    maxOD: $id('maxOD').value,
-    
-    drillDepth: $id('drillDepth').value,
-    idDepth: $id('idDepth').value,
-    drillMode: $id('drillMode').value,
-    workType: workTypeVal,
-    m12FinishType: m12Resolved.finishType,
-    m12Profile: m12Resolved.profile,
-    m12BaitoDrillMode: getM12BaitoDrillModeForInput(),
-    g18FinishType: g18Resolved.finishType,
-    g18Profile: g18Resolved.profile,
-    m99Mode: m99Mode,
-    m99p100: m99Mode === "on",
+    const m99SelEl = $id("selM99P100");
+    const m99Mode = m99SelEl ? m99SelEl.value : "";
 
-    internalStyle: currentInternalStyle,
-    cpVal: $id('cpVal').value,
-    valPartnerD: $id('valPartnerD').value,
-    okuBiteEnabled: isOkuBiteEnabled,
-    
-    // ヨセ関連
-    yoseMethod: $id('yoseMethod').value,
-    yoseAngle: $id('yoseAngle').value,
-    yoseD: $id('yoseD').value,
-    yoseTotalLength: $id('yoseTotalLength') ? $id('yoseTotalLength').value : "",
-    yosePartnerDepth: $id('yosePartnerDepth') ? $id('yosePartnerDepth').value : "",
+    const inputData = {
+        drawNumA: $id("v1a").value,
+        drawNumB: $id("v1b").value,
+        drawRev: $id("v1c").value,
+        processNum: $id("v2").value,
+        workerName: $id("workerName").value,
+        ateLength: $id("ateLength").value,
+        maxOD: $id("maxOD").value,
 
-    tubeSpec: $id('tubeSpecSelect').value,
-    tubeLength: $id('tubeLengthSelect').value,
+        drillDepth: $id("drillDepth").value,
+        idDepth: $id("idDepth").value,
+        drillMode: $id("drillMode").value,
+        workType: workTypeVal,
+        m12FinishType: m12Resolved.finishType,
+        m12Profile: m12Resolved.profile,
+        m12BaitoDrillMode: getM12BaitoDrillModeForInput(),
+        g18FinishType: g18Resolved.finishType,
+        g18Profile: g18Resolved.profile,
+        m8Profile: m8Resolved.profile,
+        m99Mode: m99Mode,
+        m99p100: m99Mode === "on",
 
-    calcMode: currentCalcMode,
-    valCornW: $id('valCornW').value,
-    valCornH: $id('valCornH').value,
+        internalStyle: currentInternalStyle,
+        cpVal: $id("cpVal").value,
+        valPartnerD: $id("valPartnerD").value,
+        okuBiteEnabled: isOkuBiteEnabled,
 
-    mhOdTool: ($id('mhOdTool') ? $id('mhOdTool').value : "外径荒")
-  };
+        // ヨセ関連
+        yoseMethod: $id("yoseMethod").value,
+        yoseAngle: $id("yoseAngle").value,
+        yoseD: $id("yoseD").value,
+        yoseTotalLength: $id("yoseTotalLength") ? $id("yoseTotalLength").value : "",
+        yosePartnerDepth: $id("yosePartnerDepth") ? $id("yosePartnerDepth").value : "",
 
-  if (isYoseMachiningStyle(currentInternalStyle) || isYoseRelayStyle(currentInternalStyle)) {
-    const yoseDCheck = validateYoseDDiameter(inputData);
-    if (!yoseDCheck.ok) {
-      if (fromUserButton) {
-        const yoseEl = $id("yoseD");
-        if (yoseEl) {
-          yoseEl.setCustomValidity(yoseDCheck.msg);
-          yoseEl.reportValidity();
+        tubeSpec: $id("tubeSpecSelect").value,
+        tubeLength: $id("tubeLengthSelect").value,
+
+        calcMode: currentCalcMode,
+        valCornW: $id("valCornW").value,
+        valCornH: $id("valCornH").value,
+
+        mhOdTool: $id("mhOdTool") ? $id("mhOdTool").value : "外径荒",
+    };
+
+    if (isYoseMachiningStyle(currentInternalStyle) || isYoseRelayStyle(currentInternalStyle)) {
+        const yoseDCheck = validateYoseDDiameter(inputData);
+        if (!yoseDCheck.ok) {
+            if (fromUserButton) {
+                const yoseEl = $id("yoseD");
+                if (yoseEl) {
+                    yoseEl.setCustomValidity(yoseDCheck.msg);
+                    yoseEl.reportValidity();
+                }
+            }
+            return;
         }
-      }
-      return;
     }
-  }
 
-  const machineName = $id('machineSelect').value;
-  const genResult = generateGCode(inputData, machineName);
-  const gcodeHtml = genResult && typeof genResult === "object" && genResult.displayHtml !== undefined
-    ? genResult.displayHtml
-    : String(genResult);
-  _ncLastPlainGCode = genResult && typeof genResult === "object" && genResult.plainText !== undefined
-    ? genResult.plainText
-    : null;
+    const machineName = $id("machineSelect").value;
+    const genResult = generateGCode(inputData, machineName);
+    const gcodeHtml =
+        genResult && typeof genResult === "object" && genResult.displayHtml !== undefined
+            ? genResult.displayHtml
+            : String(genResult);
+    _ncLastPlainGCode =
+        genResult && typeof genResult === "object" && genResult.plainText !== undefined ? genResult.plainText : null;
 
-  const isGenError = _ncLastPlainGCode === null;
+    const isGenError = _ncLastPlainGCode === null;
 
-  // バリデーションエラーはボタン押下時のみ表示する
-  if (isGenError && !fromUserButton) {
-    return;
-  }
+    // バリデーションエラーはボタン押下時のみ表示する
+    if (isGenError && !fromUserButton) {
+        return;
+    }
 
-  // 新規生成時は逆ハイライトをリセット
-  clearTimeout(g_flashTimer);
-  clearInterval(g_flashBlink);
-  g_flashLineIdx = -1;
-  g_flashVisible = true;
+    // 新規生成時は逆ハイライトをリセット
+    clearTimeout(g_flashTimer);
+    clearInterval(g_flashBlink);
+    g_flashLineIdx = -1;
+    g_flashVisible = true;
 
-  if (!isGenError) {
-      // 各行を data-ln でラップしてツールパスからのジャンプを可能にする
-      const wrappedHtml = gcodeHtml.split('\n')
-          .map((l, i) => `<span class="gc-line" data-ln="${i + 1}">${l}</span>`)
-          .join('\n');
-      $id('resultArea').innerHTML = wrappedHtml;
-  } else {
-      $id('resultArea').innerHTML = gcodeHtml;
-  }
-  applyHighlightFilterToResultArea();
+    if (!isGenError) {
+        // 各行を data-ln でラップしてツールパスからのジャンプを可能にする
+        const wrappedHtml = gcodeHtml
+            .split("\n")
+            .map((l, i) => `<span class="gc-line" data-ln="${i + 1}">${l}</span>`)
+            .join("\n");
+        $id("resultArea").innerHTML = wrappedHtml;
+    } else {
+        $id("resultArea").innerHTML = gcodeHtml;
+    }
+    applyHighlightFilterToResultArea();
 
-  // デバッグパネルが開いていれば自動更新
-  const _dbgPanel = $id("debugPanel");
-  if (_dbgPanel && !_dbgPanel.hidden) renderDebugPanel();
+    // デバッグパネルが開いていれば自動更新
+    const _dbgPanel = $id("debugPanel");
+    if (_dbgPanel && !_dbgPanel.hidden) renderDebugPanel();
 
-  const saveBtn = $id("saveBtn");
-  if (isGenError) {
-    saveBtn.style.display = "none";
-    saveBtn.disabled = true;
-  } else {
-    saveBtn.style.display = "block";
-    saveBtn.disabled = false;
-  }
+    const saveBtn = $id("saveBtn");
+    if (isGenError) {
+        saveBtn.style.display = "none";
+        saveBtn.disabled = true;
+    } else {
+        saveBtn.style.display = "block";
+        saveBtn.disabled = false;
+    }
 
-  if (typeof drawPreview === "function") drawPreview(true);
+    if (typeof drawPreview === "function") drawPreview(true);
 }
 
 // ========== input export / import ==========
@@ -2980,36 +3295,37 @@ function runGeneration(fromUserButton = false) {
 /** 保存対象フィールド: id → "val"(input/select値) or "chk"(checkbox) or "mode"(特殊) */
 const NC_EXPORT_FIELDS = [
     { id: "machineSelect", t: "val" },
-    { id: "workType",      t: "val" },
-    { id: "v1a",           t: "val" },
-    { id: "v1b",           t: "val" },
-    { id: "v1c",           t: "val" },
-    { id: "v2",            t: "val" },
-    { id: "workerName",    t: "val" },
-    { id: "ateLength",     t: "val" },
-    { id: "maxOD",         t: "val" },
-    { id: "selM99P100",    t: "val" },
-    { id: "drillMode",     t: "val" },
-    { id: "drillDepth",    t: "val" },
-    { id: "idDepth",       t: "val" },
-    { id: "valStockA",     t: "val" },
-    { id: "valStockB",     t: "val" },
-    { id: "valA",          t: "val" },
-    { id: "valB",          t: "val" },
-    { id: "valCornW",      t: "val" },
-    { id: "valCornH",      t: "val" },
-    { id: "valPartnerD",   t: "val" },
-    { id: "yoseMethod",    t: "val" },
-    { id: "yoseAngle",     t: "val" },
-    { id: "yoseD",         t: "val" },
+    { id: "workType", t: "val" },
+    { id: "v1a", t: "val" },
+    { id: "v1b", t: "val" },
+    { id: "v1c", t: "val" },
+    { id: "v2", t: "val" },
+    { id: "workerName", t: "val" },
+    { id: "ateLength", t: "val" },
+    { id: "maxOD", t: "val" },
+    { id: "selM99P100", t: "val" },
+    { id: "drillMode", t: "val" },
+    { id: "drillDepth", t: "val" },
+    { id: "idDepth", t: "val" },
+    { id: "valStockA", t: "val" },
+    { id: "valStockB", t: "val" },
+    { id: "valA", t: "val" },
+    { id: "valB", t: "val" },
+    { id: "valCornW", t: "val" },
+    { id: "valCornH", t: "val" },
+    { id: "valPartnerD", t: "val" },
+    { id: "yoseMethod", t: "val" },
+    { id: "yoseAngle", t: "val" },
+    { id: "yoseD", t: "val" },
     { id: "yoseTotalLength", t: "val" },
     { id: "yosePartnerDepth", t: "val" },
-    { id: "tubeSpecSelect",   t: "val" },
+    { id: "tubeSpecSelect", t: "val" },
     { id: "tubeLengthSelect", t: "val" },
-    { id: "m12DrillType",     t: "val" },
-    { id: "m12CrossMethod",   t: "val" },
-    { id: "g18CrossMethod",   t: "val" },
-    { id: "chkOkuBite",       t: "chk" },
+    { id: "m12DrillType", t: "val" },
+    { id: "m12CrossMethod", t: "val" },
+    { id: "g18CrossMethod", t: "val" },
+    { id: "m8CrossMethod", t: "val" },
+    { id: "chkOkuBite", t: "chk" },
 ];
 
 function exportInputJson() {
@@ -3024,9 +3340,10 @@ function exportInputJson() {
 
     const v1a = $id("v1a").value || "noname";
     const v1b = $id("v1b").value || "";
-    let v1c = $id("v1c").value; if (v1c === "NONE") v1c = "";
+    let v1c = $id("v1c").value;
+    if (v1c === "NONE") v1c = "";
     const dt = new Date();
-    const dateStr = `${dt.getFullYear()}${String(dt.getMonth()+1).padStart(2,"0")}${String(dt.getDate()).padStart(2,"0")}`;
+    const dateStr = `${dt.getFullYear()}${String(dt.getMonth() + 1).padStart(2, "0")}${String(dt.getDate()).padStart(2, "0")}`;
     const fileName = `NC-INPUT_PM-${v1a}-${v1b}${v1c}_${dateStr}.json`;
 
     const a = document.createElement("a");
@@ -3099,7 +3416,8 @@ function _showImportToast(msg) {
     if (!t) {
         t = document.createElement("div");
         t.id = "ncImportToast";
-        t.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99999;" +
+        t.style.cssText =
+            "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99999;" +
             "background:#1a2a1a;border:1px solid #4caf50;color:#a5d6a7;padding:10px 20px;" +
             "border-radius:6px;font-family:monospace;font-size:13px;white-space:nowrap;" +
             "box-shadow:0 4px 16px rgba(0,0,0,0.6);transition:opacity 0.4s;";
@@ -3108,60 +3426,62 @@ function _showImportToast(msg) {
     t.textContent = msg;
     t.style.opacity = "1";
     clearTimeout(t._timer);
-    t._timer = setTimeout(() => { t.style.opacity = "0"; }, 3500);
+    t._timer = setTimeout(() => {
+        t.style.opacity = "0";
+    }, 3500);
 }
 
 function downloadFile() {
-  const content = _ncLastPlainGCode;
-  if (content == null || content === "") {
-    const msg = (typeof window.NC_I18N !== "undefined" && window.NC_I18N.t)
-      ? window.NC_I18N.t("saveError")
-      : "保存できるプレーンテキストがありません。先に Gコード生成を成功させてください。";
-    alert(msg);
-    return;
-  }
-  let v1a = $id('v1a').value;
-  if (!v1a) v1a = "noname";
-  const v1b = $id('v1b').value;
-  let v1c = $id('v1c').value;
-  if(v1c === "NONE") v1c = "";
-  const v2 = $id('v2').value;
-  const wtEl = $id("workType");
-  const workType = wtEl && wtEl.value ? wtEl.value : "UNKNOWN";
-  // =Q は本アプリで生成した保存プログラムであることを示す固定サフィックス。末尾はワーク種別(#workType の value)
-  const fileName = `PM-${v1a}-${v1b}${v1c}=No,${v2}=Q=${workType}.txt`;
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([content], {type: "text/plain"}));
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  exportInputJson();
+    const content = _ncLastPlainGCode;
+    if (content == null || content === "") {
+        const msg =
+            typeof window.NC_I18N !== "undefined" && window.NC_I18N.t
+                ? window.NC_I18N.t("saveError")
+                : "保存できるプレーンテキストがありません。先に Gコード生成を成功させてください。";
+        alert(msg);
+        return;
+    }
+    let v1a = $id("v1a").value;
+    if (!v1a) v1a = "noname";
+    const v1b = $id("v1b").value;
+    let v1c = $id("v1c").value;
+    if (v1c === "NONE") v1c = "";
+    const v2 = $id("v2").value;
+    const wtEl = $id("workType");
+    const workType = wtEl && wtEl.value ? wtEl.value : "UNKNOWN";
+    // =Q は本アプリで生成した保存プログラムであることを示す固定サフィックス。末尾はワーク種別(#workType の value)
+    const fileName = `PM-${v1a}-${v1b}${v1c}=No,${v2}=Q=${workType}.txt`;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([content], { type: "text/plain" }));
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    exportInputJson();
 }
 
 function setCalcMode(mode) {
     currentCalcMode = mode;
     maxOdApplySource = "dimensions";
     // カード active 切り替え（mode* + modeAte）
-    ['modeNormal','modeEccentric','modeCorner','modeAte'].forEach(function(id) {
+    ["modeNormal", "modeEccentric", "modeCorner", "modeAte"].forEach(function (id) {
         const el = $id(id);
-        if (el) el.classList.remove('active');
+        if (el) el.classList.remove("active");
     });
-    const modeCardMap = { normal: 'modeNormal', eccentric: 'modeEccentric', corner: 'modeCorner' };
+    const modeCardMap = { normal: "modeNormal", eccentric: "modeEccentric", corner: "modeCorner" };
     const targetCard = $id(modeCardMap[mode]);
-    if (targetCard) targetCard.classList.add('active');
+    if (targetCard) targetCard.classList.add("active");
     // 寸法入力パネル表示切り替え
-    document.querySelectorAll('.calc-inputs').forEach(function(el) {
-        if (el.id !== 'cpCalcArea' && el.id !== 'okuBiteArea') el.style.display = 'none';
+    document.querySelectorAll(".calc-inputs").forEach(function (el) {
+        if (el.id !== "cpCalcArea" && el.id !== "okuBiteArea") el.style.display = "none";
     });
-    if (mode === 'normal' && $id('normalStockInputs')) {
-        $id('normalStockInputs').style.display = 'flex';
-    } else if (mode === 'eccentric' && $id('eccentricInputs')) {
-        $id('eccentricInputs').style.display = 'flex';
-    } else if (mode === 'corner' && $id('cornerInputs')) {
-        $id('cornerInputs').style.display = 'flex';
+    if (mode === "normal" && $id("normalStockInputs")) {
+        $id("normalStockInputs").style.display = "flex";
+    } else if (mode === "eccentric" && $id("eccentricInputs")) {
+        $id("eccentricInputs").style.display = "flex";
+    } else if (mode === "corner" && $id("cornerInputs")) {
+        $id("cornerInputs").style.display = "flex";
     }
-    const hint = $id('ateInputHint');
-    if (hint) hint.style.display = 'none';
+    const hint = $id("ateInputHint");
+    if (hint) hint.style.display = "none";
 }
-

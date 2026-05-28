@@ -13,3 +13,15 @@ alwaysApply: true
 ```powershell
 $msg = "subject`n`nbody line 1`nbody line 2"; $msg | Out-File -Encoding utf8 "$env:TEMP\commitmsg.txt"; git commit -F "$env:TEMP\commitmsg.txt"
 ```
+
+## ファイル読み書き（PowerShell）
+- テキストファイルの読み書きは必ず `[System.IO.File]::ReadAllText` / `WriteAllText` と `[System.Text.Encoding]::UTF8` を使う（`Get-Content` / `Set-Content` はエンコーディング未指定だと Shift-JIS になり全角文字が壊れる）
+- `Get-Content` / `Set-Content` を使う場合も **両方に** `-Encoding UTF8` を付ける
+- 一括置換は対象ファイルを事前に絞り込んでから行う（無関係なファイルを上書きしない）
+
+```powershell
+# 推奨パターン
+$content = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
+$replaced = $content -replace '置換前', '置換後'
+[System.IO.File]::WriteAllText($path, $replaced, [System.Text.Encoding]::UTF8)
+```

@@ -1,0 +1,323 @@
+================================================================
+  NC Program Generator — テンプレート追加手順書
+  最終更新: 2026-05-28
+================================================================
+
+【目的】
+新しい加工テンプレートを追加する際に、
+「何を確認すべきか」「どのファイルのどこを変更するか」を
+漏れなく把握するためのチェックリスト。
+
+================================================================
+■ STEP 0 ── 事前に確認が必要な情報
+================================================================
+
+次の項目を必ず確認してから実装に入ること。
+未確認のまま進めると「後から分岐を追加し直す」羽目になる。
+
+─────────────────────────────────────────────
+【0-A】テンプレート基本情報
+─────────────────────────────────────────────
+  □ workType値（コード内部キー）例: M8_21 / G18_40 / M12
+  □ 表示名（プルダウンに出るラベル）例: M8(φ2.1)
+  □ MH（裏加工）バリエーションがあるか？ → _MH 系も作るか
+  □ サイズバリエーションが複数あるか？ → M8_21/M8_31 のように分ける
+
+─────────────────────────────────────────────
+【0-B】ドリル情報（★ 最重要。必ず確認）
+─────────────────────────────────────────────
+  □ ドリルの公称径（mm）→ DRILL_DIA_MAP に追加
+      例: M8_21 → 2.2mm、M8_31 → 3.2mm
+
+  □ ドリルロジック（どの関数を使うか）
+      ① 汎用 G74サイクル or G1単動（ユーザー選択制）
+           → getDrillBlock(depth, drillMode)
+           → drillMode UI を表示する
+      ② HSS 仕上げ G1ステップバック（M12HSS/M8 方式）
+           → getDrillShiageBlock() または getDrillShiageBlock_M8()
+           → drillMode UI を非表示（G1固定）
+           ★ 既存の getDrillShiageBlock は M12 HSS専用。
+             M8等の新テンプレートは独立した _M8版等を作ること。
+      ③ G1単動1発（全G18 方式）
+           → getDrillBlock(depth, "G1") で固定
+           → drillMode UI を非表示
+
+─────────────────────────────────────────────
+【0-C】中バリ処理（{{内バリ処理}} の内容）（★ 必ず確認）
+─────────────────────────────────────────────
+  テンプレートに {{内バリ処理}} があるか確認。ある場合：
+
+  □ スタイルなし（固定テンプレートで中バリ不要）→ 空文字のまま
+  □ 一文字ドリル 面取り（バリ取り）
+       → getIchimonjiBlock(cpVal)
+       → CP入力が必要・style=Ichimonji または CrossSmall
+  □ 一文字ドリル 平底仕上げ
+       → getIchimonjiHirazokoBlock(idDepth)
+       → 内径深さ入力が必要・style=Ichimonji（M12/M8方式）
+  □ 奥バイト面取り（M12版）
+       → getOkuBiteBlock(cpVal) ← 内径ダイヤΦ4使用
+       → 相手径 ≥ 6.0mm の場合のみ出力
+  □ 奥バイト面取り（G18版）
+       → getOkuBiteBlockG18(cpVal) ← X径がM12版と異なる
+  □ M8専用の横穴処理 など新規が必要な場合
+       → 新しい getXxxBlock 関数を blocks セクションに追加
+
+─────────────────────────────────────────────
+【0-D】内径加工スタイル（6枚のカード）
+─────────────────────────────────────────────
+  以下6スタイルのうち、どれが選択可能かを確認する:
+
+  1. 内径バイト平底 (Hirazoko)
+  2. 一文字DR平底   (Ichimonji) ← 内径深さ入力が必要
+  3. 通常バイト加工 (Normal)
+  4. ヨセ中継       (YoseRelay) ← 全長/相手径深さ入力が必要
+  5. ヨセ           (Yose)
+  6. 交差穴加工径小 (CrossSmall) ← 相手径/CP入力が必要
+
+  使用不可スタイルは restrictStyles() でグレーアウト。
+
+─────────────────────────────────────────────
+【0-E】CrossSmall を使う場合の加工方法オプション（★ 必ず確認）
+─────────────────────────────────────────────
+  CrossSmall が使用可能な場合、「加工方法」サブパネルが必要。
+  以下を確認すること:
+
+  □ どのドリルで横穴を開けるか？（HSS / HGDR / バイト など）
+  □ 中バリ処理はどの方法か？
+       a) 奥バイト面取り → getOkuBiteBlock 系
+          ※ M8 では HSS + 奥バイトは【使用不可】
+       b) 一文字ドリル面取り → getIchimonjiBlock
+  □ 組み合わせは何択か？（G18は2択、M12は5択）
+
+  サブパネル例（G18: 2択）:
+    hgdr_oku → HGDRドリル + 奥バイト面取り
+    hgdr_men → HGDRドリル + 一文字面取り
+
+  サブパネル例（M8: 1択 — hss_oku は使用不可）:
+    hss_men → HSSドリル + 一文字面取り
+
+─────────────────────────────────────────────
+【0-F】工具キー（機械定義）
+─────────────────────────────────────────────
+  □ 既存キー（外径荒/内径荒/ドリルHSS/ネジ切り 等）で足りるか？
+  □ 新規工具キーが必要か？
+       例: M8スーパー / M8内径荒 → data.js の全機械に追加 & T番号を手動設定
+
+─────────────────────────────────────────────
+【0-G】プレースホルダー一覧（テンプレート固有）
+─────────────────────────────────────────────
+  テンプレートファイル内の {{...}} をすべて洗い出し、
+  既存の replaceMap で解決できるか確認。新規は app.js に追加。
+
+  既存の主要プレースホルダー:
+    入力_図番 / 入力_工程No / 入力_日付 / 入力_アテ長さ / 入力_作成者
+    機械名ヘッダー / 初期設定ブロック / 終了設定ブロック
+    M51 / M59 / M458 / M459 / 扉閉じ / M53/M61/M408
+    外径荒 / 内径荒 / ドリルHSS / ドリルHGDR / ネジ切り 等（機械キー）
+    最大径-5 / 最大径+角 / 最大径+3
+    DRILL_BLOCK / 内バリ処理
+    M99P100 / 入力_内径深さ
+
+================================================================
+■ STEP 1 ── テンプレートファイルの作成
+================================================================
+
+  場所: テンプレート/data_template_<workType>.js
+  形式:
+    const template_<workType>=`
+    %
+    O{{入力_工程No}}(PM-{{入力_図番}}=No,{{入力_工程No}}=Q)
+    ...
+    %
+    `;
+
+  ルール:
+  - プレースホルダーは {{キー名}} 形式（}} 閉じ忘れに注意）
+  - {{最大径+角}} など特殊な計算値はテンプレート側で行頭を書かない
+  - "check" などの確認メモは本番前に削除すること
+  - literal M51 等は書かず、必ず {{M51}} プレースホルダーを使う
+
+================================================================
+■ STEP 2 ── index.html の変更
+================================================================
+
+  【2-A】workType プルダウンに option を追加
+    場所: id="workType" の <select> 内
+    例: <option value="M8_21">M8(φ2.1)</option>
+
+  【2-B】script タグを追加
+    場所: </body> 直前のスクリプト群の末尾付近
+    例: <script src="テンプレート/data_template_M8_21.js"></script>
+
+  【2-C】CrossSmall サブパネルが必要な場合
+    場所: id="g18CrossPanel" の直後
+    テンプレート（g18CrossPanel を参考にコピー）:
+      id="<workType>CrossPanel"
+      onchange="on<WorkType>CrossMethodChange()"
+    ※ option は STEP 0-E で確認した択のみ追加
+
+================================================================
+■ STEP 3 ── assets/data.js の変更
+================================================================
+
+  【3-A】新規工具キーが必要な場合
+    全機械（NCL044 / NCL015 / NCL085 / NCL012 / CL-25-2 / CL-25-1）に
+    同じキーを追加。T番号は手動で設定（初期値は空文字 ""）。
+    例:
+      M8スーパー: "",
+      M8内径荒:   "",
+
+================================================================
+■ STEP 4 ── assets/app.js の変更（10箇所）
+================================================================
+
+--- 4-1. ヘルパー関数 isXxxWorkType ---
+  場所: isM42X3_25175WorkType の直後（line ~510付近）
+  テンプレート:
+    function is<Name>WorkType(wt) {
+        return wt === "<workType1>" || wt === "<workType2>";
+    }
+
+--- 4-2. DRILL_DIA_MAP ---
+  場所: const DRILL_DIA_MAP = { ... } 内（line ~540付近）
+  追加: <workType>: <ドリル径mm>,
+
+--- 4-3. WORK_ID_MAP（内径深さ自動計算が必要な場合のみ）---
+  場所: const WORK_ID_MAP = { ... } 内（line ~465付近）
+  追加: <workType>: <内径公称径mm>,
+  ※ テンプレート内に {{入力_内径深さ}} がない場合は不要
+
+--- 4-4. ドリルブロック関数（新規ロジックの場合のみ）---
+  場所: getDrillShiageBlock_M8 の直後（line ~250付近）
+  テンプレート: getDrillShiageBlock_<Name>() を追加
+  ★ M12HSS と M8 は同名でも別関数。将来の調整のため独立させること。
+
+--- 4-5. drillBlockValue の計算 ---
+  場所: const drillBlockValue = ... （line ~1210付近）
+  追加: isXxxWorkType の条件を適切な位置に追加
+  例（HSS 仕上げ方式）:
+    : isXxxWorkType(input.workType)
+      ? getDrillShiageBlock_Xxx(finalDrillDepth)
+
+--- 4-6. テンプレート dispatch ---
+  場所: } else if (input.workType === "M15") { の後（line ~1320付近）
+  追加:
+    } else if (input.workType === "<workType>") {
+        if (typeof template_<workType> !== "undefined") finalCode = template_<workType>;
+
+--- 4-7. restrictStyles ---
+  場所: function restrictStyles(workType) 内（line ~1890付近）
+  パターン別に追加:
+    完全固定テンプレート:
+      setInternalStyleCardsLocked(true); if(currentInternalStyle) setInternalStyle("");
+    一部スタイル制限:
+      ["styleHirazoko", "styleNormal", ...].forEach(...) でグレーアウト
+      if (!["Ichimonji","YoseRelay",...].includes(currentInternalStyle)) setInternalStyle("");
+
+--- 4-8. updateInternalStyleUI ---
+  (a) styleDrawer 非表示（固定テンプレートの場合）
+      showDrawer の条件に && !isXxxWorkType(workType) を追加
+  (b) drillDepth 常時表示（固定テンプレートでドリルが必要な場合）
+      isM8WorkType の分岐に || isXxxWorkType を追加、または専用 if 追加
+  (c) drillMode を G1/disabled にする場合
+      isM8WorkType の条件に || isXxxWorkType を追加
+  (d) drillModeRow を非表示にする場合
+      shouldHideDrillMode の条件に || isXxxWorkType を追加
+  (e) サブパネル更新関数の呼び出しを追加（CrossSmall の場合）
+      updateM12SubPanels(); updateG18SubPanels(); updateM8SubPanels(); の行末に追加
+
+--- 4-9. rearChamferEarly 分岐（中バリ処理あり）---
+  場所: let rearChamferEarly = ""; の直後（line ~1115付近）
+  確認: STEP 0-C / 0-E の結論を実装する
+  パターン:
+    Ichimonji（平底）: getIchimonjiHirazokoBlock(baseIDDepth, machineConfig)
+    Ichimonji（面取）: getIchimonjiBlock(cpVal, machineConfig)
+    CrossSmall/奥バイト: getOkuBiteBlock or getOkuBiteBlockG18
+    CrossSmall/一文字: getIchimonjiBlock
+
+--- 4-10. collectInputData ---
+  場所: const inputData = { ... } の組み立て部（line ~3140付近）
+  CrossSmall サブパネルを追加した場合:
+    const <name>Resolved = is<Name>WorkType(workTypeVal)
+        ? resolve<Name>CrossFinishAndProfile()
+        : { profile: "<default>" };
+  そして inputData に追加:
+    <name>Profile: <name>Resolved.profile,
+
+--- 4-11. バリデーション needsCp ---
+  場所: const needsCp = ... （line ~960付近）
+  Ichimonji で CP 不要（内径深さベース）の場合:
+    && !is<Name>WorkType(input.workType) を末尾に追加
+
+--- 4-12. NC_ENTER_TARGET_IDS ---
+  場所: const NC_ENTER_TARGET_IDS = [...] （line ~3020付近）
+  新規 select を追加した場合: "<workType>CrossMethod" を追加
+
+--- 4-13. NC_EXPORT_FIELDS ---
+  場所: const NC_EXPORT_FIELDS = [...] （line ~3260付近）
+  新規 select を追加した場合:
+    { id: "<workType>CrossMethod", t: "val" }, を追加
+
+--- 4-14. CrossSmall サブパネル 関数（CrossSmall ありの場合）---
+  追加場所: onG18CrossMethodChange() の直後（line ~1815付近）
+  追加する関数:
+    resolve<Name>CrossFinishAndProfile()
+    update<Name>SubPanels()
+    on<Name>CrossMethodChange()
+
+================================================================
+■ STEP 5 ── 動作確認チェックリスト
+================================================================
+
+  □ テンプレートが選択できる（プルダウンに出る）
+  □ 加工設定パネルが表示される
+  □ 使用可能スタイルだけ選択できる（他はグレー）
+  □ ドリル深さ入力欄が表示される / 非表示になる
+  □ ドリルモード行が表示 / 非表示（G1固定の場合は非表示）
+  □ CrossSmall 選択時にサブパネルが出る / 外れると消える
+  □ G コード生成が成功する（未解決プレースホルダーが赤くない）
+  □ デバッグパネル（?ボタン→デバッグパネル）でカバレッジ 100%
+  □ エクスポート → インポートで全入力値が復元される
+  □ 各機械を切り替えても T番号が正しく置換される
+  □ "check" などのメモ文字列が出力に含まれていない
+
+================================================================
+■ 既存テンプレートの分類早見表
+================================================================
+
+workType         ドリルロジック        中バリ処理           使用可スタイル
+───────────────────────────────────────────────────────────────────────
+M40/M22/M18/M15  汎用G74/G1           各スタイルに従う     1-6 (Ichimoji除く)
+G78              汎用G74/G1           各スタイルに従う     1-6 (Ichimoji除く)
+M12(HSS)         HSSステップバック    Hirazoko/一文字平底  2/3/4/5/6
+M12(HGDR)        汎用G1               一文字面取り/奥バイト 2/3/4/5/6
+M12(BAITO)       汎用G1               奥バイト             2/3/4/5/6
+G18_40/42        G1単動               奥バイトG18/一文字   4/6 のみ
+G18_62/655/6175  G1単動               各スタイルに従う     1/3/4 のみ
+M42X3_25175系    汎用G74/G1           各スタイルに従う     1/3/4/5 のみ
+M8_21/M8_31      HSSステップバック_M8  一文字平底/一文字面取り 2/4/6
+                 (実機確認後調整予定)  ※6:一文字面取りのみ(奥バイト不可)
+
+================================================================
+■ よくあるミスと注意事項
+================================================================
+
+① プレースホルダーの }} 閉じ忘れ
+     {{最大径+角} ← NG  /  {{最大径+角}} ← OK
+
+② literal M-コードを直書き（{{M51}} を使うべきところに M51 と書く）
+     機械定義の条件分岐が効かなくなる
+
+③ getDrillShiageBlock を M12 以外で流用
+     将来の独立調整ができなくなる → 必ず専用コピーを作る
+
+④ 新工具キーを data.js の一部の機械にだけ追加
+     他機械で未定義エラーが出る → 全機械に追加すること
+
+⑤ CrossSmall のサブパネルを追加したがリストに登録し忘れ
+     NC_ENTER_TARGET_IDS と NC_EXPORT_FIELDS の両方に追加すること
+
+⑥ "check" など確認メモを本番テンプレートに残す
+     Gコードにそのまま出力されるので必ず除去すること
+
+================================================================

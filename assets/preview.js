@@ -15,13 +15,18 @@
 
 // --- グローバル変数 ---
 let g_paths = [];
-let g_minX = 0, g_maxX = 0, g_minZ = 0, g_maxZ = 0;
+let g_minX = 0,
+    g_maxX = 0,
+    g_minZ = 0,
+    g_maxZ = 0;
 let g_scale = 1.0;
 /** リセット時のフィットをやや拡大（バウンディング中心は画面中央のまま） */
 const PREVIEW_DEFAULT_FIT_ZOOM = 1.28;
-let g_offsetX = 0, g_offsetY = 0;
+let g_offsetX = 0,
+    g_offsetY = 0;
 let g_isDragging = false;
-let g_lastMouseX = 0, g_lastMouseY = 0;
+let g_lastMouseX = 0,
+    g_lastMouseY = 0;
 
 // フィルタ・表示設定
 /** 表示するNブロック＝N番号(コメント)（複数選択可）。空のときは全ブロックを表示 */
@@ -37,11 +42,11 @@ let g_stickyBoxPersistTimer = null;
 const LS_STICKY_BOX = "ncPreviewStickyBox";
 
 // インスペクタ用
-let g_highlightIdx = -1;      // キャンバスホバーによる一時ハイライト (g_paths 配列インデックス)
-let g_flashLineIdx   = -1;    // Gコードdblclick → ツールパス黄色点滅 (lineIdx)
-let g_flashVisible   = true;  // 点滅の表示/非表示フラグ
-let g_flashTimer     = null;  // 5秒終了タイマー
-let g_flashBlink     = null;  // 点滅インターバル
+let g_highlightIdx = -1; // キャンバスホバーによる一時ハイライト (g_paths 配列インデックス)
+let g_flashLineIdx = -1; // Gコードdblclick → ツールパス黄色点滅 (lineIdx)
+let g_flashVisible = true; // 点滅の表示/非表示フラグ
+let g_flashTimer = null; // 5秒終了タイマー
+let g_flashBlink = null; // 点滅インターバル
 let g_mousePos = { x: 0, y: 0 };
 
 // キャンバス要素のキャッシュ
@@ -100,12 +105,15 @@ function persistStickyPreviewBox(container) {
             const h = container.offsetHeight;
             if (w < 300 || h < 180) return;
             const r = container.getBoundingClientRect();
-            localStorage.setItem(LS_STICKY_BOX, JSON.stringify({
-                w: w,
-                h: h,
-                left: Math.round(r.left),
-                top: Math.round(r.top)
-            }));
+            localStorage.setItem(
+                LS_STICKY_BOX,
+                JSON.stringify({
+                    w: w,
+                    h: h,
+                    left: Math.round(r.left),
+                    top: Math.round(r.top),
+                })
+            );
         } catch (err) {}
     }, 400);
 }
@@ -235,16 +243,17 @@ function setupPreviewResizeGrip() {
  * 画面追従(Sticky)の状態をDOMに反映（左上固定・リサイズ可能・サイズは localStorage に保存）
  */
 function updatePreviewSticky() {
-    const container = document.getElementById('previewContainer');
+    const container = document.getElementById("previewContainer");
     if (!container) return;
 
-    if (document.fullscreenElement || container.classList.contains('pseudo-full')) return;
+    if (document.fullscreenElement || container.classList.contains("pseudo-full")) return;
 
     if (g_stickyPreview) {
-        container.classList.add('preview-sticky');
-        container.title = (typeof window.NC_I18N !== "undefined" && window.NC_I18N.t)
-            ? window.NC_I18N.t("previewStickyContainerTitle")
-            : "パネル右下の斜線をドラッグしてサイズを変えられます（左上位置は固定）。";
+        container.classList.add("preview-sticky");
+        container.title =
+            typeof window.NC_I18N !== "undefined" && window.NC_I18N.t
+                ? window.NC_I18N.t("previewStickyContainerTitle")
+                : "パネル右下の斜線をドラッグしてサイズを変えられます（左上位置は固定）。";
         applyStickyBoxFromStorage(container);
         setupPreviewStickyDrag();
         setupPreviewResizeGrip();
@@ -254,7 +263,7 @@ function updatePreviewSticky() {
         });
     } else {
         teardownStickyPreviewResizeObserver();
-        container.classList.remove('preview-sticky');
+        container.classList.remove("preview-sticky");
         container.title = "";
         container.style.width = "";
         container.style.height = "";
@@ -268,14 +277,14 @@ function updatePreviewSticky() {
  * 全画面切り替え機能
  */
 function toggleFullscreen() {
-    const container = document.getElementById('previewContainer');
+    const container = document.getElementById("previewContainer");
     if (!container) return;
 
-    const isFull = document.fullscreenElement || container.classList.contains('pseudo-full');
+    const isFull = document.fullscreenElement || container.classList.contains("pseudo-full");
 
     if (!isFull) {
         teardownStickyPreviewResizeObserver();
-        container.classList.remove('preview-sticky');
+        container.classList.remove("preview-sticky");
         if (container.requestFullscreen) {
             container.requestFullscreen().catch(() => activatePseudoFull(container));
         } else {
@@ -292,31 +301,32 @@ function toggleFullscreen() {
 
 function activatePseudoFull(el) {
     teardownStickyPreviewResizeObserver();
-    el.classList.remove('preview-sticky');
-    el.classList.add('pseudo-full');
-    el.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9999; background:#1e1e1e; margin:0; padding:0;";
+    el.classList.remove("preview-sticky");
+    el.classList.add("pseudo-full");
+    el.style.cssText =
+        "position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9999; background:#1e1e1e; margin:0; padding:0;";
     handleResize();
 }
 
 function deactivatePseudoFull(el) {
-    el.classList.remove('pseudo-full');
+    el.classList.remove("pseudo-full");
     el.style.cssText = "";
     updatePreviewSticky();
     // updatePreviewSticky 内で handleResize（非追従は同期／追従は rAF）が呼ばれるため二重にしない
 }
 
 function handleResize() {
-    if (!g_canvas) g_canvas = document.getElementById('simCanvas');
+    if (!g_canvas) g_canvas = document.getElementById("simCanvas");
     if (!g_canvas) return;
-    const container = document.getElementById('previewContainer');
-    const isFull = document.fullscreenElement || (container && container.classList.contains('pseudo-full'));
+    const container = document.getElementById("previewContainer");
+    const isFull = document.fullscreenElement || (container && container.classList.contains("pseudo-full"));
 
     if (isFull) {
         g_canvas.width = window.innerWidth;
         // 見出し・ツール列・凡例・下段コントロール分を差し引き、描画域をできるだけ広くする
         const chrome = 120;
         g_canvas.height = Math.max(220, window.innerHeight - chrome);
-    } else if (g_stickyPreview && container && container.classList.contains('preview-sticky')) {
+    } else if (g_stickyPreview && container && container.classList.contains("preview-sticky")) {
         syncStickyPreviewCanvasSize();
     } else {
         g_canvas.width = 800;
@@ -329,24 +339,24 @@ function handleResize() {
  * メイン描画関数
  */
 function drawPreview(forceFit = false) {
-    const resultArea = document.getElementById('resultArea');
+    const resultArea = document.getElementById("resultArea");
     if (!resultArea) return;
     // プレビューは機械送りと同じプレーン文字列を優先（ハイライト用 span を経由しない）
     const rawCode =
-      typeof _ncLastPlainGCode === "string" && _ncLastPlainGCode.length > 0
-        ? _ncLastPlainGCode
-        : resultArea.innerText;
+        typeof _ncLastPlainGCode === "string" && _ncLastPlainGCode.length > 0
+            ? _ncLastPlainGCode
+            : resultArea.innerText;
 
-    g_canvas = document.getElementById('simCanvas');
+    g_canvas = document.getElementById("simCanvas");
     if (!g_canvas) return;
-    g_ctx = g_canvas.getContext('2d');
-    
-    const previewEl = document.getElementById('previewContainer');
+    g_ctx = g_canvas.getContext("2d");
+
+    const previewEl = document.getElementById("previewContainer");
     if (previewEl) {
-        if (g_stickyPreview && previewEl.classList.contains('preview-sticky')) {
-            previewEl.style.display = '';
+        if (g_stickyPreview && previewEl.classList.contains("preview-sticky")) {
+            previewEl.style.display = "";
         } else {
-            previewEl.style.display = 'block';
+            previewEl.style.display = "block";
         }
     }
 
@@ -373,9 +383,9 @@ function drawPreview(forceFit = false) {
 }
 
 function setupLiveUpdate() {
-    const resultArea = document.getElementById('resultArea');
+    const resultArea = document.getElementById("resultArea");
     if (!resultArea) return;
-    resultArea.addEventListener('input', () => {
+    resultArea.addEventListener("input", () => {
         if (g_debounceTimer) clearTimeout(g_debounceTimer);
         g_debounceTimer = setTimeout(() => drawPreview(false), 300);
     });
@@ -393,21 +403,21 @@ function setupLiveUpdate() {
 function startFlashHighlight(lineIdx) {
     clearTimeout(g_flashTimer);
     clearInterval(g_flashBlink);
-    g_flashLineIdx  = lineIdx;
-    g_flashVisible  = true;
-    if (typeof renderCanvas === 'function') renderCanvas();
+    g_flashLineIdx = lineIdx;
+    g_flashVisible = true;
+    if (typeof renderCanvas === "function") renderCanvas();
 
     g_flashBlink = setInterval(() => {
         g_flashVisible = !g_flashVisible;
-        if (typeof renderCanvas === 'function') renderCanvas();
+        if (typeof renderCanvas === "function") renderCanvas();
     }, 400);
 
     g_flashTimer = setTimeout(() => {
         clearInterval(g_flashBlink);
-        g_flashBlink   = null;
+        g_flashBlink = null;
         g_flashLineIdx = -1;
         g_flashVisible = true;
-        if (typeof renderCanvas === 'function') renderCanvas();
+        if (typeof renderCanvas === "function") renderCanvas();
     }, 5000);
 }
 
@@ -417,12 +427,12 @@ function startFlashHighlight(lineIdx) {
  * resultArea 全体に委譲リスナーを 1 つだけ付ける（innerHTML 再生成後も追加不要）。
  */
 function setupGCodeHighlightSync() {
-    const resultArea = document.getElementById('resultArea');
+    const resultArea = document.getElementById("resultArea");
     if (!resultArea || resultArea.dataset.gcHighlightBound) return;
     resultArea.dataset.gcHighlightBound = "true";
 
-    resultArea.addEventListener('dblclick', e => {
-        const line = e.target.closest('.gc-line');
+    resultArea.addEventListener("dblclick", (e) => {
+        const line = e.target.closest(".gc-line");
         if (!line) return;
         // contenteditable でのテキスト選択を抑止
         e.preventDefault();
@@ -431,14 +441,14 @@ function setupGCodeHighlightSync() {
         const lineIdx = parseInt(line.dataset.ln, 10);
         if (isNaN(lineIdx)) return;
         // 対応パスが存在しない行は無視
-        if (!g_paths || !g_paths.some(p => p.lineIdx === lineIdx)) return;
+        if (!g_paths || !g_paths.some((p) => p.lineIdx === lineIdx)) return;
 
         startFlashHighlight(lineIdx);
 
         // プレビューエリアへ自動スクロール
-        const preview = document.getElementById('previewContainer');
+        const preview = document.getElementById("previewContainer");
         if (preview && preview.offsetParent !== null) {
-            preview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            preview.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
     });
 }
@@ -449,16 +459,16 @@ function setupGCodeHighlightSync() {
  */
 function isAngleInArcRange(phi, phi0, phi1, isCw) {
     const TAU = 2 * Math.PI;
-    const norm = a => ((a % TAU) + TAU) % TAU;
+    const norm = (a) => ((a % TAU) + TAU) % TAU;
     if (isCw) {
         // CW: phi0 から減少方向(dPhi<0)で phi1 へ
-        const total   = norm(phi0 - phi1);
+        const total = norm(phi0 - phi1);
         const portion = norm(phi0 - phi);
         return portion <= total + 1e-9;
     } else {
         // CCW: phi0 から増加方向(dPhi>0)で phi1 へ
-        const total   = norm(phi1 - phi0);
-        const portion = norm(phi  - phi0);
+        const total = norm(phi1 - phi0);
+        const portion = norm(phi - phi0);
         return portion <= total + 1e-9;
     }
 }
@@ -473,12 +483,17 @@ function arcWorldBounds(zc, rc, R, phi0, phi1, isCw) {
     for (const c of cardinals) {
         if (isAngleInArcRange(c, phi0, phi1, isCw)) pts.push(c);
     }
-    let minZ = Infinity, maxZ = -Infinity, minR = Infinity, maxR = -Infinity;
+    let minZ = Infinity,
+        maxZ = -Infinity,
+        minR = Infinity,
+        maxR = -Infinity;
     for (const phi of pts) {
         const z = zc + R * Math.cos(phi);
         const r = rc + R * Math.sin(phi);
-        minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
-        minR = Math.min(minR, r); maxR = Math.max(maxR, r);
+        minZ = Math.min(minZ, z);
+        maxZ = Math.max(maxZ, z);
+        minR = Math.min(minR, r);
+        maxR = Math.max(maxR, r);
     }
     return { minX: minR * 2, maxX: maxR * 2, minZ, maxZ };
 }
@@ -496,8 +511,10 @@ function arcWorldBounds(zc, rc, R, phi0, phi1, isCw) {
  *  ・両端点 x1/z1, x2/z2 は G1 と同形式で格納し、当たり判定やバウンズ計算に共用。
  */
 function buildArcMeta(curX, curZ, nextX, nextZ, I, K, isCw, lineIdx, originalText, tool, arcMode, nComment) {
-    const r0 = curX / 2, z0 = curZ;
-    const r1 = nextX / 2, z1 = nextZ;
+    const r0 = curX / 2,
+        z0 = curZ;
+    const r1 = nextX / 2,
+        z1 = nextZ;
     const zc = z0 + K;
     const rc = r0 + I;
     const d0 = Math.hypot(z0 - zc, r0 - rc);
@@ -507,15 +524,25 @@ function buildArcMeta(curX, curZ, nextX, nextZ, I, K, isCw, lineIdx, originalTex
     const R = (d0 + d1) / 2;
     const phi0 = Math.atan2(r0 - rc, z0 - zc);
     let dPhi = Math.atan2(r1 - rc, z1 - zc) - phi0;
-    while (dPhi > Math.PI)  dPhi -= 2 * Math.PI;
+    while (dPhi > Math.PI) dPhi -= 2 * Math.PI;
     while (dPhi < -Math.PI) dPhi += 2 * Math.PI;
-    if (isCw)  { if (dPhi > 0) dPhi -= 2 * Math.PI; }
-    else        { if (dPhi < 0) dPhi += 2 * Math.PI; }
+    if (isCw) {
+        if (dPhi > 0) dPhi -= 2 * Math.PI;
+    } else {
+        if (dPhi < 0) dPhi += 2 * Math.PI;
+    }
     const phi1 = phi0 + dPhi;
     return {
-        lineIdx, originalText, mode: arcMode, tool, nComment,
-        x1: curX, z1: curZ, x2: nextX, z2: nextZ,
-        arcMeta: { zc, rc, R, phi0, phi1, isCw }
+        lineIdx,
+        originalText,
+        mode: arcMode,
+        tool,
+        nComment,
+        x1: curX,
+        z1: curZ,
+        x2: nextX,
+        z2: nextZ,
+        arcMeta: { zc, rc, R, phi0, phi1, isCw },
     };
 }
 
@@ -528,38 +555,53 @@ function buildArcMeta(curX, curZ, nextX, nextZ, I, K, isCw, lineIdx, originalTex
  * Math.max(0, ...) でクランプして NaN を防ぐ。
  */
 function buildArcMetaFromR(curX, curZ, nextX, nextZ, Rval, isCw, lineIdx, originalText, tool, arcMode, nComment) {
-    const r0 = curX / 2, z0 = curZ;
-    const r1 = nextX / 2, z1 = nextZ;
-    const dz = z1 - z0, dr = r1 - r0;
+    const r0 = curX / 2,
+        z0 = curZ;
+    const r1 = nextX / 2,
+        z1 = nextZ;
+    const dz = z1 - z0,
+        dr = r1 - r0;
     const chord = Math.hypot(dz, dr);
     if (chord < 1e-9) return null;
     const absR = Math.abs(Rval);
     // 弦長が直径を超える場合は不正
     if (chord > 2 * absR * (1 + 0.01) + 1e-3) return null;
     const h = Math.sqrt(Math.max(0, absR * absR - (chord / 2) * (chord / 2)));
-    const zm = (z0 + z1) / 2, rm = (r0 + r1) / 2;
+    const zm = (z0 + z1) / 2,
+        rm = (r0 + r1) / 2;
     // 弦方向に対して垂直な単位ベクトル（90°CCW 回転）
-    const pz = -dr / chord, pr = dz / chord;
+    const pz = -dr / chord,
+        pr = dz / chord;
 
     const candidates = [
         { zc: zm + h * pz, rc: rm + h * pr },
-        { zc: zm - h * pz, rc: rm - h * pr }
+        { zc: zm - h * pz, rc: rm - h * pr },
     ];
 
     for (const { zc, rc } of candidates) {
         const phi0 = Math.atan2(r0 - rc, z0 - zc);
         let dPhi = Math.atan2(r1 - rc, z1 - zc) - phi0;
-        while (dPhi > Math.PI)  dPhi -= 2 * Math.PI;
+        while (dPhi > Math.PI) dPhi -= 2 * Math.PI;
         while (dPhi < -Math.PI) dPhi += 2 * Math.PI;
-        if (isCw)  { if (dPhi > 0) dPhi -= 2 * Math.PI; }
-        else        { if (dPhi < 0) dPhi += 2 * Math.PI; }
+        if (isCw) {
+            if (dPhi > 0) dPhi -= 2 * Math.PI;
+        } else {
+            if (dPhi < 0) dPhi += 2 * Math.PI;
+        }
         // R>0 → 短弧(|dPhi|≤π)、R<0 → 長弧(|dPhi|>π)
         const isShort = Math.abs(dPhi) <= Math.PI + 1e-9;
-        if ((Rval > 0) === isShort) {
+        if (Rval > 0 === isShort) {
             return {
-                lineIdx, originalText, mode: arcMode, tool, nComment,
-                x1: curX, z1: curZ, x2: nextX, z2: nextZ,
-                arcMeta: { zc, rc, R: absR, phi0, phi1: phi0 + dPhi, isCw }
+                lineIdx,
+                originalText,
+                mode: arcMode,
+                tool,
+                nComment,
+                x1: curX,
+                z1: curZ,
+                x2: nextX,
+                z2: nextZ,
+                arcMeta: { zc, rc, R: absR, phi0, phi1: phi0 + dPhi, isCw },
             };
         }
     }
@@ -568,20 +610,29 @@ function buildArcMetaFromR(curX, curZ, nextX, nextZ, Rval, isCw, lineIdx, origin
 
 function parseGCode(code) {
     g_paths = [];
-    const lines = code.split('\n');
-    let curX = 100.0, curZ = 50.0;
-    let minX = 100, maxX = -100, minZ = 100, maxZ = -100;
+    const lines = code.split("\n");
+    let curX = 100.0,
+        curZ = 50.0;
+    let minX = 100,
+        maxX = -100,
+        minZ = 100,
+        maxZ = -100;
     let hasData = false;
 
-    const regexX = /X([-0-9.]+)/, regexZ = /Z([-0-9.]+)/;
-    const regexU = /U([-0-9.]+)/, regexW = /W([-0-9.]+)/;
-    const regexI = /I([-0-9.]+)/, regexK = /K([-0-9.]+)/;
+    const regexX = /X([-0-9.]+)/,
+        regexZ = /Z([-0-9.]+)/;
+    const regexU = /U([-0-9.]+)/,
+        regexW = /W([-0-9.]+)/;
+    const regexI = /I([-0-9.]+)/,
+        regexK = /K([-0-9.]+)/;
     const regexR = /R([-0-9.]+)/;
-    const regexT = /T([0-9]{2,4})/, regexG_Num = /G([0-9]+)/g;
+    const regexT = /T([0-9]{2,4})/,
+        regexG_Num = /G([0-9]+)/g;
 
-    let currentMode = 'G0', currentTool = 'Unknown';
+    let currentMode = "G0",
+        currentTool = "Unknown";
     /** 直近の Nブロック全体の文字列 例 N1(DR14.0)（次の移動に付与。N行のみのときは次行へ継承） */
-    let lastNComment = '';
+    let lastNComment = "";
     /**
      * ハッチング対象サイクル種別: G71=71, G72=72, G73=73, G70/G28以降=null
      * G70は仕上げ(再トレース)なのでハッチング不要。G28でブロック間リセット。
@@ -590,17 +641,21 @@ function parseGCode(code) {
 
     function expandBounds(ax, az, bx, bz) {
         if (!hasData) {
-            minX = Math.min(ax, bx); maxX = Math.max(ax, bx);
-            minZ = Math.min(az, bz); maxZ = Math.max(az, bz);
+            minX = Math.min(ax, bx);
+            maxX = Math.max(ax, bx);
+            minZ = Math.min(az, bz);
+            maxZ = Math.max(az, bz);
             hasData = true;
         } else {
-            minX = Math.min(minX, ax, bx); maxX = Math.max(maxX, ax, bx);
-            minZ = Math.min(minZ, az, bz); maxZ = Math.max(maxZ, az, bz);
+            minX = Math.min(minX, ax, bx);
+            maxX = Math.max(maxX, ax, bx);
+            minZ = Math.min(minZ, az, bz);
+            maxZ = Math.max(maxZ, az, bz);
         }
     }
 
-    lines.forEach((line, index) => { 
-        const normalizedLine = line.replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0)-0xFEE0));
+    lines.forEach((line, index) => {
+        const normalizedLine = line.replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0));
         /** N1(DR14.0) 形式のみ（(M99…) や M1(…) は N番号がないため一致しない） */
         const reNComment = /\bN(\d+)\(([^)]*)\)/g;
         let nm;
@@ -608,57 +663,93 @@ function parseGCode(code) {
             lastNComment = "N" + nm[1] + "(" + nm[2].trim() + ")";
         }
 
-        let cleanLine = normalizedLine.split('(')[0].toUpperCase();
+        let cleanLine = normalizedLine.split("(")[0].toUpperCase();
         const matchT = cleanLine.match(regexT);
         if (matchT) currentTool = "T" + matchT[1];
 
-        let gNumbers = [], match;
+        let gNumbers = [],
+            match;
         while ((match = regexG_Num.exec(cleanLine)) !== null) gNumbers.push(parseInt(match[1], 10));
         // ハッチング用サイクル種別を skip 前に確定
-        if (gNumbers.some(n => [71, 72, 73].includes(n))) {
+        if (gNumbers.some((n) => [71, 72, 73].includes(n))) {
             pendingCycleType = gNumbers.includes(71) ? 71 : gNumbers.includes(72) ? 72 : 73;
         } else if (gNumbers.includes(70) || gNumbers.includes(28)) {
             // G70: 仕上げ→ハッチ不要。G28: N ブロック間の帰還→リセット。
             pendingCycleType = null;
         }
-        if (gNumbers.some(n => [4, 10, 28, 50, 65, 70, 71, 72, 73].includes(n))) return;
+        if (gNumbers.some((n) => [4, 10, 28, 50, 65, 70, 71, 72, 73].includes(n))) return;
 
-        if (gNumbers.includes(0)) currentMode = 'G0';
-        else if (gNumbers.includes(2)) currentMode = 'G2';
-        else if (gNumbers.includes(3)) currentMode = 'G3';
-        else if (gNumbers.some(n => [1].includes(n))) currentMode = 'G1';
+        if (gNumbers.includes(0)) currentMode = "G0";
+        else if (gNumbers.includes(2)) currentMode = "G2";
+        else if (gNumbers.includes(3)) currentMode = "G3";
+        else if (gNumbers.some((n) => [1].includes(n))) currentMode = "G1";
 
-        let nextX = curX, nextZ = curZ, moved = false;
-        const mX = cleanLine.match(regexX), mZ = cleanLine.match(regexZ);
-        const mU = cleanLine.match(regexU), mW = cleanLine.match(regexW);
+        let nextX = curX,
+            nextZ = curZ,
+            moved = false;
+        const mX = cleanLine.match(regexX),
+            mZ = cleanLine.match(regexZ);
+        const mU = cleanLine.match(regexU),
+            mW = cleanLine.match(regexW);
 
-        if (mX) { nextX = parseFloat(mX[1]); moved = true; }
-        if (mZ) { nextZ = parseFloat(mZ[1]); moved = true; }
-        if (mU) { nextX += parseFloat(mU[1]); moved = true; }
-        if (mW) { nextZ += parseFloat(mW[1]); moved = true; }
+        if (mX) {
+            nextX = parseFloat(mX[1]);
+            moved = true;
+        }
+        if (mZ) {
+            nextZ = parseFloat(mZ[1]);
+            moved = true;
+        }
+        if (mU) {
+            nextX += parseFloat(mU[1]);
+            moved = true;
+        }
+        if (mW) {
+            nextZ += parseFloat(mW[1]);
+            moved = true;
+        }
 
         if (moved) {
             const skipSegmentForPreview = /\bM(?:51|59|61|408|459)\b/i.test(cleanLine);
             const isG2 = gNumbers.includes(2);
             const isG3 = gNumbers.includes(3);
-            const mI = cleanLine.match(regexI), mK = cleanLine.match(regexK);
+            const mI = cleanLine.match(regexI),
+                mK = cleanLine.match(regexK);
             const mR = cleanLine.match(regexR);
             let arcPieces = null;
             if (!skipSegmentForPreview && (isG2 || isG3)) {
                 if (mI && mK) {
                     // I/K 指定円弧
-                    const I = parseFloat(mI[1]), K = parseFloat(mK[1]);
+                    const I = parseFloat(mI[1]),
+                        K = parseFloat(mK[1]);
                     const arcSeg = buildArcMeta(
-                        curX, curZ, nextX, nextZ, I, K, isG2,
-                        index + 1, line.trim(), currentTool, isG2 ? 'G2' : 'G3',
+                        curX,
+                        curZ,
+                        nextX,
+                        nextZ,
+                        I,
+                        K,
+                        isG2,
+                        index + 1,
+                        line.trim(),
+                        currentTool,
+                        isG2 ? "G2" : "G3",
                         lastNComment
                     );
                     if (arcSeg) arcPieces = [arcSeg];
                 } else if (mR) {
                     // R 指定円弧（R>0=短弧、R<0=長弧）
                     const arcSeg = buildArcMetaFromR(
-                        curX, curZ, nextX, nextZ, parseFloat(mR[1]), isG2,
-                        index + 1, line.trim(), currentTool, isG2 ? 'G2' : 'G3',
+                        curX,
+                        curZ,
+                        nextX,
+                        nextZ,
+                        parseFloat(mR[1]),
+                        isG2,
+                        index + 1,
+                        line.trim(),
+                        currentTool,
+                        isG2 ? "G2" : "G3",
                         lastNComment
                     );
                     if (arcSeg) arcPieces = [arcSeg];
@@ -677,33 +768,42 @@ function parseGCode(code) {
                     }
                 });
             } else if (!skipSegmentForPreview) {
-                const drawMode = (currentMode === 'G2' || currentMode === 'G3') && (!mI || !mK) ? 'G1' : currentMode;
+                const drawMode = (currentMode === "G2" || currentMode === "G3") && (!mI || !mK) ? "G1" : currentMode;
                 g_paths.push({
-                    lineIdx: index+1,
+                    lineIdx: index + 1,
                     originalText: line.trim(),
                     mode: drawMode,
                     tool: currentTool,
                     nComment: lastNComment,
                     cycleType: pendingCycleType,
-                    x1: curX, z1: curZ, x2: nextX, z2: nextZ
+                    x1: curX,
+                    z1: curZ,
+                    x2: nextX,
+                    z2: nextZ,
                 });
                 expandBounds(curX, curZ, nextX, nextZ);
             } else {
                 expandBounds(curX, curZ, nextX, nextZ);
             }
-            curX = nextX; curZ = nextZ;
+            curX = nextX;
+            curZ = nextZ;
         }
     });
     // 初期仮想位置(100,50)が min/max に残ると表示が極端に小さくなるため、実軌跡の端点だけで範囲を取り直す
     // 円弧は端点だけでなく解析的バウンズを使用（カーディナル点を含む）
     if (g_paths.length > 0) {
-        minX = Infinity; maxX = -Infinity; minZ = Infinity; maxZ = -Infinity;
-        g_paths.forEach(p => {
+        minX = Infinity;
+        maxX = -Infinity;
+        minZ = Infinity;
+        maxZ = -Infinity;
+        g_paths.forEach((p) => {
             if (p.arcMeta) {
                 const { zc, rc, R, phi0, phi1, isCw } = p.arcMeta;
                 const b = arcWorldBounds(zc, rc, R, phi0, phi1, isCw);
-                minX = Math.min(minX, b.minX); maxX = Math.max(maxX, b.maxX);
-                minZ = Math.min(minZ, b.minZ); maxZ = Math.max(maxZ, b.maxZ);
+                minX = Math.min(minX, b.minX);
+                maxX = Math.max(maxX, b.maxX);
+                minZ = Math.min(minZ, b.minZ);
+                maxZ = Math.max(maxZ, b.maxZ);
             } else {
                 minX = Math.min(minX, p.x1, p.x2);
                 maxX = Math.max(maxX, p.x1, p.x2);
@@ -712,7 +812,10 @@ function parseGCode(code) {
             }
         });
     }
-    g_minX = minX; g_maxX = maxX; g_minZ = minZ; g_maxZ = maxZ;
+    g_minX = minX;
+    g_maxX = maxX;
+    g_minZ = minZ;
+    g_maxZ = maxZ;
 }
 
 function fitToScreen() {
@@ -720,19 +823,27 @@ function fitToScreen() {
     const padding = 40;
 
     // 表示中のパス（工具フィルター＋G0/G1表示フラグ）のみを対象に範囲を算出
-    let minX = g_minX, maxX = g_maxX, minZ = g_minZ, maxZ = g_maxZ;
+    let minX = g_minX,
+        maxX = g_maxX,
+        minZ = g_minZ,
+        maxZ = g_maxZ;
     if (g_paths.length > 0) {
-        let fxMin = Infinity, fxMax = -Infinity, fzMin = Infinity, fzMax = -Infinity;
+        let fxMin = Infinity,
+            fxMax = -Infinity,
+            fzMin = Infinity,
+            fzMax = -Infinity;
         let hasVisible = false;
-        g_paths.forEach(p => {
+        g_paths.forEach((p) => {
             if (!toolPathPassesToolFilter(p)) return;
             if (p.mode === "G0" && !g_showG0) return;
             if (isCuttingMoveMode(p.mode) && !g_showG1) return;
             if (p.arcMeta) {
                 const { zc, rc, R, phi0, phi1, isCw } = p.arcMeta;
                 const b = arcWorldBounds(zc, rc, R, phi0, phi1, isCw);
-                fxMin = Math.min(fxMin, b.minX); fxMax = Math.max(fxMax, b.maxX);
-                fzMin = Math.min(fzMin, b.minZ); fzMax = Math.max(fzMax, b.maxZ);
+                fxMin = Math.min(fxMin, b.minX);
+                fxMax = Math.max(fxMax, b.maxX);
+                fzMin = Math.min(fzMin, b.minZ);
+                fzMax = Math.max(fzMax, b.maxZ);
             } else {
                 fxMin = Math.min(fxMin, p.x1, p.x2);
                 fxMax = Math.max(fxMax, p.x1, p.x2);
@@ -742,20 +853,24 @@ function fitToScreen() {
             hasVisible = true;
         });
         if (hasVisible) {
-            minX = fxMin; maxX = fxMax; minZ = fzMin; maxZ = fzMax;
+            minX = fxMin;
+            maxX = fxMax;
+            minZ = fzMin;
+            maxZ = fzMax;
         }
     }
 
-    const rangeZ = (maxZ - minZ) || 100, rangeX = (maxX - minX) || 50;
-    let s = Math.min((g_canvas.width - padding*2) / rangeZ, (g_canvas.height - padding*2) / (rangeX/2 + 10));
+    const rangeZ = maxZ - minZ || 100,
+        rangeX = maxX - minX || 50;
+    let s = Math.min((g_canvas.width - padding * 2) / rangeZ, (g_canvas.height - padding * 2) / (rangeX / 2 + 10));
     s *= PREVIEW_DEFAULT_FIT_ZOOM;
     g_scale = s;
-    g_offsetX = (g_canvas.width/2) - (((minZ + maxZ)/2) * g_scale);
-    g_offsetY = (g_canvas.height/2) + (((minX + maxX)/4) * g_scale);
+    g_offsetX = g_canvas.width / 2 - ((minZ + maxZ) / 2) * g_scale;
+    g_offsetY = g_canvas.height / 2 + ((minX + maxX) / 4) * g_scale;
 }
 
 function worldToScreen(wx, wz) {
-    return { x: (wz * g_scale) + g_offsetX, y: g_offsetY - (wx / 2 * g_scale) };
+    return { x: wz * g_scale + g_offsetX, y: g_offsetY - (wx / 2) * g_scale };
 }
 
 /**
@@ -808,7 +923,9 @@ function strokeColorForToolpath(p, idx) {
     if (idx === g_highlightIdx) return "#ffff00";
     if (g_flashLineIdx !== -1 && p.lineIdx === g_flashLineIdx && g_flashVisible) return "#ffff00";
     const t = TOOL_PREVIEW_PALETTE[toolPaletteIndex(p.tool)];
-    const hue = t[0], sat = t[1], lig = t[2];
+    const hue = t[0],
+        sat = t[1],
+        lig = t[2];
     if (p.mode === "G0") return "hsla(" + hue + "," + sat + "%," + lig + "%,0.42)";
     return "hsl(" + hue + "," + sat + "%," + lig + "%)";
 }
@@ -828,7 +945,7 @@ function drawApproachHatching(ctx) {
     const groups = [];
     let currentGroup = null;
     let lastG0 = null;
-    g_paths.forEach(p => {
+    g_paths.forEach((p) => {
         if (!toolPathPassesToolFilter(p)) return;
         if (p.mode === "G0") {
             currentGroup = null;
@@ -878,11 +995,12 @@ function drawApproachHatching(ctx) {
         ctx.clip();
 
         // 45° 斜線ハッチング（canvas 全体に描いてクリップで切り抜く）
-        ctx.strokeStyle = 'rgba(80, 160, 255, 0.18)';
+        ctx.strokeStyle = "rgba(80, 160, 255, 0.18)";
         ctx.lineWidth = 1;
         ctx.setLineDash([]);
         const spacing = Math.max(6, Math.min(18, g_scale * 3));
-        const cW = g_canvas.width, cH = g_canvas.height;
+        const cW = g_canvas.width,
+            cH = g_canvas.height;
         for (let x = -cH; x < cW + cH; x += spacing) {
             ctx.beginPath();
             ctx.moveTo(x, 0);
@@ -931,7 +1049,7 @@ function renderCanvas() {
     // ハッチング（パスの下に描画）
     drawApproachHatching(ctx);
 
-    g_paths.forEach(function(p, idx) {
+    g_paths.forEach(function (p, idx) {
         if (!toolPathPassesToolFilter(p)) return;
         if (p.mode === "G0" && !g_showG0) return;
         if (isCuttingMoveMode(p.mode) && !g_showG1) return;
@@ -941,16 +1059,17 @@ function renderCanvas() {
         ctx.strokeStyle = strokeColorForToolpath(p, idx);
         const isFlash = g_flashLineIdx !== -1 && p.lineIdx === g_flashLineIdx && g_flashVisible;
         const isHover = idx === g_highlightIdx;
-        ctx.lineWidth = isFlash ? 22 : isHover ? 5 : (p.mode === "G0" ? 1 : 3);
+        ctx.lineWidth = isFlash ? 22 : isHover ? 5 : p.mode === "G0" ? 1 : 3;
         if (isFlash) {
             ctx.shadowColor = "#ffff00";
-            ctx.shadowBlur  = 28;
+            ctx.shadowBlur = 28;
         }
         ctx.beginPath();
         if (p.arcMeta) {
             drawArcSegment(ctx, p);
         } else {
-            const p1 = worldToScreen(p.x1, p.z1), p2 = worldToScreen(p.x2, p.z2);
+            const p1 = worldToScreen(p.x1, p.z1),
+                p2 = worldToScreen(p.x2, p.z2);
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
         }
@@ -987,56 +1106,83 @@ function drawOriginMarkXZ0() {
 
 function drawTooltip(p) {
     const endPos = worldToScreen(p.x2, p.z2);
-    g_ctx.fillStyle = '#ffff00'; g_ctx.beginPath(); g_ctx.arc(endPos.x, endPos.y, 4, 0, Math.PI*2); g_ctx.fill();
+    g_ctx.fillStyle = "#ffff00";
+    g_ctx.beginPath();
+    g_ctx.arc(endPos.x, endPos.y, 4, 0, Math.PI * 2);
+    g_ctx.fill();
     const hasN = p.nComment != null && String(p.nComment).length > 0;
-    const fmtCoord = v => (Math.round(v * 1000) / 1000).toString();
+    const fmtCoord = (v) => (Math.round(v * 1000) / 1000).toString();
     const coordStr = `X${fmtCoord(p.x2)}  Z${fmtCoord(p.z2)}`;
     const txt = hasN
         ? [`${p.nComment}`, `${p.mode}  ${coordStr}`, `Line ${p.lineIdx}: ${p.originalText}`]
         : [`${p.mode}  ${coordStr}`, `Line ${p.lineIdx}: ${p.originalText}`];
     g_ctx.font = "12px monospace";
-    let bx = g_mousePos.x + 15, by = g_mousePos.y + 15;
-    const tw = Math.min(420, Math.max(220, 14 + Math.max.apply(null, txt.map(function (s) { return s.length; })) * 7));
+    let bx = g_mousePos.x + 15,
+        by = g_mousePos.y + 15;
+    const tw = Math.min(
+        420,
+        Math.max(
+            220,
+            14 +
+                Math.max.apply(
+                    null,
+                    txt.map(function (s) {
+                        return s.length;
+                    })
+                ) *
+                    7
+        )
+    );
     const th = hasN ? 56 : 40;
     if (bx + tw > g_canvas.width) bx -= tw + 20;
-    g_ctx.fillStyle = "rgba(0,0,0,0.9)"; g_ctx.fillRect(bx, by, tw, th);
+    g_ctx.fillStyle = "rgba(0,0,0,0.9)";
+    g_ctx.fillRect(bx, by, tw, th);
     g_ctx.fillStyle = "#aaa";
-    if (hasN) g_ctx.fillText(txt[0], bx+5, by+15);
-    g_ctx.fillStyle = "#fff"; g_ctx.fillText(hasN ? txt[1] : txt[0], bx+5, by + (hasN ? 30 : 15));
-    g_ctx.fillStyle = "#ccc"; g_ctx.fillText(hasN ? txt[2] : txt[1], bx+5, by + (hasN ? 45 : 30));
+    if (hasN) g_ctx.fillText(txt[0], bx + 5, by + 15);
+    g_ctx.fillStyle = "#fff";
+    g_ctx.fillText(hasN ? txt[1] : txt[0], bx + 5, by + (hasN ? 30 : 15));
+    g_ctx.fillStyle = "#ccc";
+    g_ctx.fillText(hasN ? txt[2] : txt[1], bx + 5, by + (hasN ? 45 : 30));
 }
 
 function createPreviewUI() {
-    const container = document.getElementById('previewContainer');
+    const container = document.getElementById("previewContainer");
     if (!container) return;
-    let area = document.getElementById('toolBtnArea') || (()=>{
-        const a = document.createElement('div');
-        a.id = 'toolBtnArea';
-        a.className = 'preview-tool-btn-area';
-        container.insertBefore(a, g_canvas);
-        return a;
-    })();
-    area.innerHTML = '';
-    const row = document.createElement('div');
-    row.className = 'preview-toolbar-row';
+    let area =
+        document.getElementById("toolBtnArea") ||
+        (() => {
+            const a = document.createElement("div");
+            a.id = "toolBtnArea";
+            a.className = "preview-tool-btn-area";
+            container.insertBefore(a, g_canvas);
+            return a;
+        })();
+    area.innerHTML = "";
+    const row = document.createElement("div");
+    row.className = "preview-toolbar-row";
 
-    const grpNav = document.createElement('div');
-    grpNav.className = 'preview-toolbar-group';
-    const tUi = (typeof window.NC_I18N !== "undefined" && window.NC_I18N.t) ? window.NC_I18N.t.bind(window.NC_I18N) : function (k) { return k; };
-    const btnFit = document.createElement('button');
-    btnFit.type = 'button';
+    const grpNav = document.createElement("div");
+    grpNav.className = "preview-toolbar-group";
+    const tUi =
+        typeof window.NC_I18N !== "undefined" && window.NC_I18N.t
+            ? window.NC_I18N.t.bind(window.NC_I18N)
+            : function (k) {
+                  return k;
+              };
+    const btnFit = document.createElement("button");
+    btnFit.type = "button";
     btnFit.innerText = tUi("previewReset");
     btnFit.className = "qb preview-toolbar-btn-main";
     btnFit.onclick = function () {
         drawPreview(true);
     };
-    const btnFull = document.createElement('button');
-    btnFull.type = 'button';
+    const btnFull = document.createElement("button");
+    btnFull.type = "button";
     btnFull.innerText = tUi("previewFull");
     btnFull.className = "qb preview-toolbar-btn-main";
     btnFull.onclick = toggleFullscreen;
-    const btnSticky = document.createElement('button');
-    btnSticky.type = 'button';
+    const btnSticky = document.createElement("button");
+    btnSticky.type = "button";
     btnSticky.innerText = tUi("previewSticky");
     btnSticky.className = "qb preview-toolbar-btn-main" + (g_stickyPreview ? " active" : "");
     btnSticky.onclick = function () {
@@ -1048,15 +1194,35 @@ function createPreviewUI() {
     grpNav.appendChild(btnFull);
     grpNav.appendChild(btnSticky);
 
-    const grpG = document.createElement('div');
-    grpG.className = 'preview-toolbar-group preview-toolbar-group--path-toggles';
-    grpG.appendChild(createCheckLabel("G0", g_showG0, e => { g_showG0 = e.target.checked; renderCanvas(); }, "preview-check-label"));
-    grpG.appendChild(createCheckLabel(tUi("previewCutting"), g_showG1, e => { g_showG1 = e.target.checked; renderCanvas(); }, "preview-check-label"));
+    const grpG = document.createElement("div");
+    grpG.className = "preview-toolbar-group preview-toolbar-group--path-toggles";
+    grpG.appendChild(
+        createCheckLabel(
+            "G0",
+            g_showG0,
+            (e) => {
+                g_showG0 = e.target.checked;
+                renderCanvas();
+            },
+            "preview-check-label"
+        )
+    );
+    grpG.appendChild(
+        createCheckLabel(
+            tUi("previewCutting"),
+            g_showG1,
+            (e) => {
+                g_showG1 = e.target.checked;
+                renderCanvas();
+            },
+            "preview-check-label"
+        )
+    );
 
     // N番号(コメント) 付きブロック別フィルター — 全パスから出現順に収集
     const nBlockOrder = [];
     const nBlockSeen = new Set();
-    g_paths.forEach(p => {
+    g_paths.forEach((p) => {
         if (!p.nComment) return;
         if (!nBlockSeen.has(p.nComment)) {
             nBlockSeen.add(p.nComment);
@@ -1067,11 +1233,11 @@ function createPreviewUI() {
         g_nBlockFilterSet.clear();
     }
 
-    const grpNBlock = document.createElement('div');
-    grpNBlock.className = 'preview-toolbar-group preview-toolbar-group--nblocks';
+    const grpNBlock = document.createElement("div");
+    grpNBlock.className = "preview-toolbar-group preview-toolbar-group--nblocks";
     if (nBlockOrder.length > 1) {
         grpNBlock.appendChild(createNBlockFilterBtn(tUi("previewAll"), null));
-        nBlockOrder.forEach(nb => grpNBlock.appendChild(createNBlockFilterBtn(nb, nb)));
+        nBlockOrder.forEach((nb) => grpNBlock.appendChild(createNBlockFilterBtn(nb, nb)));
     }
 
     row.appendChild(grpNav);
@@ -1079,7 +1245,7 @@ function createPreviewUI() {
     row.appendChild(grpNBlock);
     area.appendChild(row);
 
-    const orphanBottom = document.getElementById('bottomCtrl');
+    const orphanBottom = document.getElementById("bottomCtrl");
     if (orphanBottom) orphanBottom.remove();
 }
 
@@ -1093,11 +1259,16 @@ function refreshPreviewUiI18n() {
 }
 
 function createCheckLabel(t, c, fn, extraClass) {
-    const l = document.createElement('label');
+    const l = document.createElement("label");
     l.style.cssText = "display:flex; align-items:center; cursor:pointer; color:#fff;";
     if (extraClass) l.className = extraClass;
-    const i = document.createElement('input'); i.type = "checkbox"; i.checked = c; i.style.marginRight = "4px"; i.onchange = fn;
-    l.append(i, t); return l;
+    const i = document.createElement("input");
+    i.type = "checkbox";
+    i.checked = c;
+    i.style.marginRight = "4px";
+    i.onchange = fn;
+    l.append(i, t);
+    return l;
 }
 
 function toolPathPassesToolFilter(p) {
@@ -1106,13 +1277,13 @@ function toolPathPassesToolFilter(p) {
 }
 
 function createNBlockFilterBtn(l, id) {
-    const b = document.createElement('button');
+    const b = document.createElement("button");
     b.innerText = l;
     b.className = "qb preview-nblock-filter-btn";
     if (id === null) {
-        if (g_nBlockFilterSet.size === 0) b.classList.add('active');
+        if (g_nBlockFilterSet.size === 0) b.classList.add("active");
     } else if (g_nBlockFilterSet.has(id)) {
-        b.classList.add('active');
+        b.classList.add("active");
     }
     b.onclick = () => {
         if (id === null) {
@@ -1129,12 +1300,12 @@ function createNBlockFilterBtn(l, id) {
 }
 
 function onPreviewFullscreenLayoutChange() {
-    const c = document.getElementById('previewContainer');
+    const c = document.getElementById("previewContainer");
     if (document.fullscreenElement === c) {
         teardownStickyPreviewResizeObserver();
-        if (c) c.classList.remove('preview-sticky');
-    } else if (c && g_stickyPreview && !c.classList.contains('pseudo-full')) {
-        c.classList.add('preview-sticky');
+        if (c) c.classList.remove("preview-sticky");
+    } else if (c && g_stickyPreview && !c.classList.contains("pseudo-full")) {
+        c.classList.add("preview-sticky");
         applyStickyBoxFromStorage(c);
         setupStickyPreviewResizeObserver();
     }
@@ -1144,36 +1315,44 @@ function onPreviewFullscreenLayoutChange() {
 function scrollToGCodeLine(lineIdx) {
     const el = document.querySelector(`#resultArea .gc-line[data-ln="${lineIdx}"]`);
     if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.classList.remove('gc-line-blink');
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.remove("gc-line-blink");
     void el.offsetWidth;
-    el.classList.add('gc-line-blink');
-    el.addEventListener('animationend', () => el.classList.remove('gc-line-blink'), { once: true });
+    el.classList.add("gc-line-blink");
+    el.addEventListener("animationend", () => el.classList.remove("gc-line-blink"), { once: true });
 }
 
 function initEventListeners(canvas) {
-    document.addEventListener('fullscreenchange', onPreviewFullscreenLayoutChange);
-    window.addEventListener('resize', function () {
+    document.addEventListener("fullscreenchange", onPreviewFullscreenLayoutChange);
+    window.addEventListener("resize", function () {
         if (!g_stickyPreview) return;
-        const c = document.getElementById('previewContainer');
-        if (!c || !c.classList.contains('preview-sticky')) return;
+        const c = document.getElementById("previewContainer");
+        if (!c || !c.classList.contains("preview-sticky")) return;
         const mw = window.innerWidth - 20;
         const mh = window.innerHeight - 20;
-        if (c.offsetWidth > mw) c.style.width = mw + 'px';
-        if (c.offsetHeight > mh) c.style.height = mh + 'px';
+        if (c.offsetWidth > mw) c.style.width = mw + "px";
+        if (c.offsetHeight > mh) c.style.height = mh + "px";
         clampStickyPanelPosition(c);
         handleResize();
     });
-    
+
     // マウスホイール
-    canvas.addEventListener('wheel', e => {
-        e.preventDefault(); const d = e.deltaY > 0 ? 0.9 : 1.1; const r = canvas.getBoundingClientRect();
-        g_offsetX -= (e.clientX - r.left - g_offsetX) * (d - 1); g_offsetY -= (e.clientY - r.top - g_offsetY) * (d - 1);
-        g_scale *= d; renderCanvas();
-    }, { passive: false });
+    canvas.addEventListener(
+        "wheel",
+        (e) => {
+            e.preventDefault();
+            const d = e.deltaY > 0 ? 0.9 : 1.1;
+            const r = canvas.getBoundingClientRect();
+            g_offsetX -= (e.clientX - r.left - g_offsetX) * (d - 1);
+            g_offsetY -= (e.clientY - r.top - g_offsetY) * (d - 1);
+            g_scale *= d;
+            renderCanvas();
+        },
+        { passive: false }
+    );
 
     // 左ダブルクリック: ツールパス上→Gコード行ジャンプ、空白→全画面ON/OFF
-    canvas.addEventListener('dblclick', e => {
+    canvas.addEventListener("dblclick", (e) => {
         if (e.button !== 0) return;
         e.preventDefault();
         if (g_highlightIdx !== -1 && !document.fullscreenElement) {
@@ -1188,7 +1367,7 @@ function initEventListeners(canvas) {
     const MIDDLE_DBLCLICK_MS = 320;
 
     // パン開始: ホイールボタンドラッグのみ
-    canvas.addEventListener('mousedown', e => {
+    canvas.addEventListener("mousedown", (e) => {
         if (e.button !== 1) return;
         const now = Date.now();
         if (now - middleLastDownAt <= MIDDLE_DBLCLICK_MS) {
@@ -1203,26 +1382,27 @@ function initEventListeners(canvas) {
         g_isDragging = true;
         g_lastMouseX = e.clientX;
         g_lastMouseY = e.clientY;
-        canvas.style.cursor = 'grabbing';
+        canvas.style.cursor = "grabbing";
     });
-    
-    window.addEventListener('mousemove', e => {
+
+    window.addEventListener("mousemove", (e) => {
         if (g_stickyPanelDragging) return;
-        const r = canvas.getBoundingClientRect(); 
-        g_mousePos.x = e.clientX - r.left; 
+        const r = canvas.getBoundingClientRect();
+        g_mousePos.x = e.clientX - r.left;
         g_mousePos.y = e.clientY - r.top;
 
-        if (g_isDragging) { 
-            g_offsetX += e.clientX - g_lastMouseX; 
-            g_offsetY += e.clientY - g_lastMouseY; 
-            g_lastMouseX = e.clientX; 
-            g_lastMouseY = e.clientY; 
-            renderCanvas(); 
-            return; 
+        if (g_isDragging) {
+            g_offsetX += e.clientX - g_lastMouseX;
+            g_offsetY += e.clientY - g_lastMouseY;
+            g_lastMouseX = e.clientX;
+            g_lastMouseY = e.clientY;
+            renderCanvas();
+            return;
         }
 
         // --- 軌跡（線分・円弧）への当たり判定ロジック ---
-        let bestDist = 20, bestIdx = -1;
+        let bestDist = 20,
+            bestIdx = -1;
         g_paths.forEach((p, idx) => {
             if (!toolPathPassesToolFilter(p)) return;
             if (p.mode === "G0" && !g_showG0) return;
@@ -1236,7 +1416,8 @@ function initEventListeners(canvas) {
                 const { zc, rc, R, phi0, phi1, isCw } = p.arcMeta;
                 const sc = worldToScreen(rc * 2, zc);
                 const sR = R * g_scale;
-                const dx = m.x - sc.x, dy = m.y - sc.y;
+                const dx = m.x - sc.x,
+                    dy = m.y - sc.y;
                 const dCenter = Math.sqrt(dx * dx + dy * dy);
                 dist = Math.abs(dCenter - sR);
                 if (dist < bestDist) {
@@ -1249,17 +1430,29 @@ function initEventListeners(canvas) {
             } else {
                 const s1 = worldToScreen(p.x1, p.z1);
                 const s2 = worldToScreen(p.x2, p.z2);
-                const A = m.x - s1.x; const B = m.y - s1.y;
-                const C = s2.x - s1.x; const D = s2.y - s1.y;
+                const A = m.x - s1.x;
+                const B = m.y - s1.y;
+                const C = s2.x - s1.x;
+                const D = s2.y - s1.y;
                 const dot = A * C + B * D;
                 const lenSq = C * C + D * D;
-                let param = (lenSq !== 0) ? dot / lenSq : -1;
+                let param = lenSq !== 0 ? dot / lenSq : -1;
                 let dx, dy;
-                if (param < 0)      { dx = m.x - s1.x; dy = m.y - s1.y; }
-                else if (param > 1) { dx = m.x - s2.x; dy = m.y - s2.y; }
-                else                { dx = m.x - (s1.x + param * C); dy = m.y - (s1.y + param * D); }
+                if (param < 0) {
+                    dx = m.x - s1.x;
+                    dy = m.y - s1.y;
+                } else if (param > 1) {
+                    dx = m.x - s2.x;
+                    dy = m.y - s2.y;
+                } else {
+                    dx = m.x - (s1.x + param * C);
+                    dy = m.y - (s1.y + param * D);
+                }
                 dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < bestDist) { bestDist = dist; bestIdx = idx; }
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestIdx = idx;
+                }
             }
         });
 
@@ -1269,43 +1462,54 @@ function initEventListeners(canvas) {
         }
     });
 
-    window.addEventListener('mouseup', e => {
+    window.addEventListener("mouseup", (e) => {
         if (e.button !== 1 && !g_isDragging) return;
         g_isDragging = false;
-        canvas.style.cursor = 'crosshair';
+        canvas.style.cursor = "crosshair";
     });
 
     // スマホ タッチ操作
     let startDist = 0;
-    canvas.addEventListener('touchstart', e => {
-        if (e.touches.length === 2) {
-            startDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-        } else if (e.touches.length === 1) {
-            g_isDragging = true;
-            g_lastMouseX = e.touches[0].clientX;
-            g_lastMouseY = e.touches[0].clientY;
-        }
-    }, { passive: false });
+    canvas.addEventListener(
+        "touchstart",
+        (e) => {
+            if (e.touches.length === 2) {
+                startDist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+            } else if (e.touches.length === 1) {
+                g_isDragging = true;
+                g_lastMouseX = e.touches[0].clientX;
+                g_lastMouseY = e.touches[0].clientY;
+            }
+        },
+        { passive: false }
+    );
 
-    canvas.addEventListener('touchmove', e => {
-        e.preventDefault();
-        if (e.touches.length === 2) {
-            const d = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-            if (startDist > 0) {
-                g_scale *= (d / startDist);
-                startDist = d;
+    canvas.addEventListener(
+        "touchmove",
+        (e) => {
+            e.preventDefault();
+            if (e.touches.length === 2) {
+                const d = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                if (startDist > 0) {
+                    g_scale *= d / startDist;
+                    startDist = d;
+                    renderCanvas();
+                }
+            } else if (e.touches.length === 1 && g_isDragging) {
+                g_offsetX += e.touches[0].clientX - g_lastMouseX;
+                g_offsetY += e.touches[0].clientY - g_lastMouseY;
+                g_lastMouseX = e.touches[0].clientX;
+                g_lastMouseY = e.touches[0].clientY;
                 renderCanvas();
             }
-        } else if (e.touches.length === 1 && g_isDragging) {
-            g_offsetX += e.touches[0].clientX - g_lastMouseX;
-            g_offsetY += e.touches[0].clientY - g_lastMouseY;
-            g_lastMouseX = e.touches[0].clientX;
-            g_lastMouseY = e.touches[0].clientY;
-            renderCanvas();
-        }
-    }, { passive: false });
+        },
+        { passive: false }
+    );
 
-    canvas.addEventListener('touchend', () => { 
-        g_isDragging = false; 
+    canvas.addEventListener("touchend", () => {
+        g_isDragging = false;
     });
 }
