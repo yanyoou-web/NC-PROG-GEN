@@ -877,11 +877,12 @@ function generateGCode(input, machineName) {
     // ── M99P100 / X50.U8.処理（チューブは対象外） ──
     if (input.workType && input.workType !== "Tube") {
         const m99Mode = input.m99Mode;
-        if (m99Mode !== "on" && m99Mode !== "off") {
+        const validM99Modes = input.workType === "M40" ? ["on", "off", "x50u8"] : ["on", "off"];
+        if (!validM99Modes.includes(m99Mode)) {
             errors.push(
                 input.workType === "M40"
-                    ? "[X50.U8.処理] が未選択です。「使用しない」または「X50.U8.処理」をプルダウンから選んでください。"
-                    : "[M99P100] が未選択です。「使用しない」または「M99P100」をプルダウンから選んでください。"
+                    ? "[M99P100 / X50.U8.処理] が未選択です。プルダウンから選んでください。"
+                    : "[M99P100] が未選択です。「使用しない」または「使用する」を選んでください。"
             );
         }
     }
@@ -1115,11 +1116,11 @@ function generateGCode(input, machineName) {
     if (input.drawNumB) fullDrawStr += "-" + input.drawNumB;
     if (input.drawRev && input.drawRev !== "NONE") fullDrawStr += input.drawRev;
 
-    // M99P100：M40 の X50.U8.処理 ON のときは本文に M99P100 を付けない（(M99P100) 行は空欄）
-    let valM99 = input.m99p100 ? " M99P100" : "";
-    if (input.workType === "M40" && input.m99p100) {
-        valM99 = "";
-    }
+    // M99P100 出力制御:
+    //   m99Mode "on"    → M99P100 を出力（全ワーク共通）
+    //   m99Mode "x50u8" → X50.U8.処理 を適用（M40専用、M99P100 は出力しない）
+    //   m99Mode "off"   → 何も出力しない
+    let valM99 = input.m99Mode === "on" ? " M99P100" : "";
 
     // --- 2. ドリル深さ決定ロジック ---
     // const style = input.internalStyle; // 上で定義済み
@@ -1419,7 +1420,7 @@ function generateGCode(input, machineName) {
         }
     } else if (input.workType === "M40") {
         if (typeof template_M40 !== "undefined") finalCode = template_M40;
-        if (input.m99p100) {
+        if (input.m99Mode === "x50u8") {
             // X50.U8.処理: プレースホルダー代入前にテンプレート内の固定値を置換
             finalCode = finalCode.replace("G71U4.5R.5", "G71U8.0R.5");
             finalCode = finalCode.replace("N22X{{最大径-5}}F.35", "N22X56.F.35");
@@ -1810,14 +1811,32 @@ function updateM40M99UI(type) {
     const label = $id("lblM99P100");
     const sel = $id("selM99P100");
     if (!label || !sel) return;
+
     if (resolvedType === "M40") {
-        label.textContent = "X50.U8.処理";
+        label.textContent = "M99P100 / X50.U8.処理";
         sel.options[0].textContent = "使用しない";
-        if (sel.options[1]) sel.options[1].textContent = "X50.U8.処理";
+        if (sel.options[1]) sel.options[1].textContent = "M99P100 を使用する";
+        // X50.U8.処理 選択肢がなければ追加
+        if (!sel.querySelector('option[value="x50u8"]')) {
+            const opt = document.createElement("option");
+            opt.value = "x50u8";
+            opt.textContent = "X50.U8.処理";
+            sel.appendChild(opt);
+        }
     } else {
         label.textContent = "M99P100";
         sel.options[0].textContent = "使用しない";
         if (sel.options[1]) sel.options[1].textContent = "使用する";
+        // M40 以外では x50u8 選択肢を除去
+        const x50opt = sel.querySelector('option[value="x50u8"]');
+        if (x50opt) {
+            if (sel.value === "x50u8") sel.value = "off";
+            sel.removeChild(x50opt);
+        }
+        // MH系ワークタイプはM99P100をデフォルトON
+        if (resolvedType && resolvedType.endsWith("_MH") && sel.value === "off") {
+            sel.value = "on";
+        }
     }
 }
 window._ncUpdateM40M99UI = function () {
@@ -3691,35 +3710,35 @@ function downloadFile() {
 // ========== F6: workType 説明 ==========
 
 const WORK_TYPE_DESCRIPTIONS = {
-    M12: "M12 — ドリル φ4.05 / 内径加工 Φ4.0 / 仕上げ: HSS・HGDR・バイト選択",
-    M15: "M15 — ドリル φ3.3 / 内径加工 Φ6.0",
-    M18: "M18 — ドリル φ7.0 / 内径加工 Φ8.0",
-    M22: "M22 — ドリル φ7.0 / 内径加工 Φ10.0",
-    G78: "G78 — ドリル φ14.0 / 内径加工 Φ16.0 (汎用標準)",
-    M40: "M40 — ドリル φ14.0 / 内径加工 Φ22.0 / X50.U8.処理オプションあり",
-    M12_MH: "M12-MH — M12 + 外径MH仕上げ (外径荒/外径溝 切替可)",
-    M15_MH: "M15-MH — M15 + 外径MH仕上げ",
-    M18_MH: "M18-MH — M18 + 外径MH仕上げ",
-    M22_MH: "M22-MH — M22 + 外径MH仕上げ",
-    G78_MH: "G78-MH — G78 + 外径MH仕上げ",
-    M40_MH: "M40-MH — M40 + 外径MH仕上げ",
-    M42X3_25175: "M42×3 φ25.175 ストレート — 内径ダイヤΦ16 使用",
-    M42X3_25175_16: "M42×3 φ25.175→φ16 段付き",
-    M42X3_25175_20: "M42×3 φ25.175→φ20 段付き",
-    M42X3_25175_22: "M42×3 φ25.175→φ22 段付き",
-    M8_21: "M8(φ2.1) — 固定テンプレート / ドリル φ2.2 / 内径スタイル選択不要",
-    M8_31: "M8(φ3.1) — 固定テンプレート / ドリル φ3.2 / 内径スタイル選択不要",
-    G18_40: "G18(φ4.0) — G1仕上げ / ドリル φ4.05 / CrossSmall対応",
-    G18_42: "G18(φ4.2) — G1仕上げ / ドリル φ4.15 / CrossSmall対応",
-    G18_62: "G18(φ6.2) — HGDR仕上げ / ドリル φ4.15 / 内径Φ6.2",
-    G18_655: "G18(φ6.55) — HGDR仕上げ / ドリル φ4.15 / 内径Φ6.55",
-    G18_6175: "G18(φ6.175) — HGDR仕上げ / ドリル φ4.15 / 内径Φ6.175",
-    G18_40_MH: "G18(φ4.0)-MH — MH外径仕上げ付き",
-    G18_42_MH: "G18(φ4.2)-MH — MH外径仕上げ付き",
-    G18_62_MH: "G18(φ6.2)-MH — MH外径仕上げ付き",
-    G18_655_MH: "G18(φ6.55)-MH — MH外径仕上げ付き",
-    G18_6175_MH: "G18(φ6.175)-MH — MH外径仕上げ付き",
-    Tube: "チューブ偏心加工 — 規格・長さ(L)を選択 / 内径スタイル不要",
+    M12:            "M12 — 内径 Φ4.0 / ドリル φ4.05 / 仕上げ: HSS・HGDR・バイト選択",
+    M15:            "M15 — 内径 Φ6.0 / ドリル φ3.3",
+    M18:            "M18 — 内径 Φ8.0 / ドリル φ7.0",
+    M22:            "M22 — 内径 Φ10.0 / ドリル φ7.0",
+    G78:            "G78 — 内径 Φ16.0 / ドリル φ14.0",
+    M40:            "M40 — 内径 Φ22.0 / ドリル φ14.0 /",
+    M12_MH:         "M12-MH — 内径 Φ4.0 / ドリル φ4.05 /",
+    M15_MH:         "M15-MH — 内径 Φ6.0 / ドリル φ3.3 /",
+    M18_MH:         "M18-MH — 内径 Φ8.0 / ドリル φ7.0 /",
+    M22_MH:         "M22-MH — 内径 Φ10.0 / ドリル φ7.0 /",
+    G78_MH:         "G78-MH — 内径 Φ16.0 / ドリル φ14.0 /",
+    M40_MH:         "M40-MH — 内径 Φ22.0 / ドリル φ14.0 /",
+    M42X3_25175:    "M42×3 Φ25.175 ストレート — 内径 Φ25.175 / 内径バイト Φ16",
+    M42X3_25175_16: "M42×3 Φ25.175→Φ16 段付き — 内径 Φ16 / 内径バイト Φ16",
+    M42X3_25175_20: "M42×3 Φ25.175→Φ20 段付き — 内径 Φ20 / 内径バイト Φ16",
+    M42X3_25175_22: "M42×3 Φ25.175→Φ22 段付き — 内径 Φ22 / 内径バイト Φ16",
+    M8_21:          "M8(φ2.1) — 内径 Φ2.1 / ドリル φ2.2",
+    M8_31:          "M8(φ3.1) — 内径 Φ3.1 / ドリル φ3.2",
+    G18_40:         "G18(φ4.0) — 内径 Φ4.0 / ドリル φ4.05 / G1仕上げ・横穴加工対応",
+    G18_42:         "G18(φ4.2) — 内径 Φ4.2 / ドリル φ4.15 / G1仕上げ・横穴加工対応",
+    G18_62:         "G18(φ6.2) — 内径 Φ6.2 / ドリル φ4.15 / HGDR仕上げ",
+    G18_655:        "G18(φ6.55) — 内径 Φ6.55 / ドリル φ4.15 / HGDR仕上げ",
+    G18_6175:       "G18(φ6.175) — 内径 Φ6.175 / ドリル φ4.15 / HGDR仕上げ",
+    G18_40_MH:      "G18(φ4.0)-MH — 内径 Φ4.0 / ドリル φ4.05 / G1仕上げ・横穴対応・MH外径仕上げ",
+    G18_42_MH:      "G18(φ4.2)-MH — 内径 Φ4.2 / ドリル φ4.15 / G1仕上げ・横穴対応・MH外径仕上げ",
+    G18_62_MH:      "G18(φ6.2)-MH — 内径 Φ6.2 / ドリル φ4.15 / HGDR仕上げ・MH外径仕上げ付き",
+    G18_655_MH:     "G18(φ6.55)-MH — 内径 Φ6.55 / ドリル φ4.15 / HGDR仕上げ・MH外径仕上げ付き",
+    G18_6175_MH:    "G18(φ6.175)-MH — 内径 Φ6.175 / ドリル φ4.15 / HGDR仕上げ・MH外径仕上げ付き",
+    Tube:           "チューブ偏心 — 内径・ドリル径は規格依存 / 規格とチューブ長さを選択して使用",
 };
 
 function updateWorkTypeDesc() {
