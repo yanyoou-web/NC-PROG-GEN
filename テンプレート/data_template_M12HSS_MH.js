@@ -1,5 +1,4 @@
-﻿const template_M12HSS_MH=`
-%
+﻿const template_M12HSS_MH=`%
 O{{入力_工程No}}(PM-{{入力_図番}}=No,{{入力_工程No}}=Q)
 (M12-HSS-MH)
 ({{入力_日付}})(ATE={{入力_アテ長さ}})({{入力_作成者}})
