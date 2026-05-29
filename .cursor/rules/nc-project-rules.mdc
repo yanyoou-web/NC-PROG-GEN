@@ -19,6 +19,19 @@ $msg = "subject`n`nbody line 1`nbody line 2"; $msg | Out-File -Encoding utf8 "$e
 - `Get-Content` / `Set-Content` を使う場合も **両方に** `-Encoding UTF8` を付ける
 - 一括置換は対象ファイルを事前に絞り込んでから行う（無関係なファイルを上書きしない）
 
+## テンプレート追加時の必須確認（ユーザーへ）
+新規テンプレートを追加・結合する前に、**必ずユーザーに以下 3 点を確認**してから実装すること。
+推測や図面コメント行（N3/N4 の X 値など）から勝手に決めない。
+
+1. **内径 Φ**（`WORK_ID_MAP` の値 — ヨセ計算・内径深さロジックの基準径）
+2. **ドリル φ**（`DRILL_DIA_MAP` の値 — N1 の DR コメントと一致させる）
+3. **内径バイト Φ**（`FLAT_BOTTOM_TOOL_DIA_MM` の値 — テンプレの `{{内径ダイヤΦ*}}` と一致）
+
+確認例:
+`G12B-G-ST-12.175-8 — 内径 Φ8 / ドリル φ7.0 / 内径バイト Φ8`
+
+内径 Φ と内径バイト Φ が同径のとき、Hirazoko 時の `{{平底_内径仕上出口}}` は `U-.2` になる（`computeFlatBottomExitLine` の仕様）。
+
 ```powershell
 # 推奨パターン
 $content = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)

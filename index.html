@@ -214,6 +214,7 @@
                         <option value="M42X3_25175_22">M42X3 φ25.175→φ22</option>
                         <option value="M8_21">M8(φ2.1)</option>
                         <option value="M8_31">M8(φ3.1)</option>
+                        <option value="J_M8_300">J-M8-ASWD-300</option>
                         <option value="G18_40">G18(φ4.0)</option>
                         <option value="G18_42">G18(φ4.2)</option>
                         <option value="G18_62">G18(φ6.2)</option>
@@ -224,6 +225,7 @@
                         <option value="G18_62_MH">G18(φ6.2)-MH</option>
                         <option value="G18_655_MH">G18(φ6.55)-MH</option>
                         <option value="G18_6175_MH">G18(φ6.175)-MH</option>
+                        <option value="G12B_G_ST_12175_8">G12B-G-ST-12.175-8</option>
                         <option value="Tube" data-i18n="workTypeTube">チューブ</option>
                     </select>
                 </div>
@@ -233,6 +235,13 @@
                     <select id="mhOdTool" class="w-long enter-target">
                         <option value="外径荒">外径荒 (T0505系)</option>
                         <option value="外径溝">外径溝 (T1010系)</option>
+                    </select>
+                </div>
+                <div id="g12bNoseRRow" class="row" style="display: none">
+                    <label>根本ノーズR</label>
+                    <select id="g12bNoseRSelect" class="w-long enter-target">
+                        <option value="none">なし</option>
+                        <option value="r05">あり (R0.5)</option>
                     </select>
                 </div>
                 <div id="tubeVariantGroup" class="nc-tube-variant" style="display: none">
@@ -1229,6 +1238,7 @@
         <script src="テンプレート/data_template_M42X3_25175.js"></script>
         <script src="テンプレート/data_template_M8_21.js"></script>
         <script src="テンプレート/data_template_M8_31.js"></script>
+        <script src="テンプレート/data_template_J_M8_300.js"></script>
         <script src="テンプレート/data_template_G18_40.js"></script>
         <script src="テンプレート/data_template_G18_42.js"></script>
         <script src="テンプレート/data_template_G18_62.js"></script>
@@ -1239,6 +1249,7 @@
         <script src="テンプレート/data_template_G18_62-MH.js"></script>
         <script src="テンプレート/data_template_G18_655-MH.js"></script>
         <script src="テンプレート/data_template_G18_6175-MH.js"></script>
+        <script src="テンプレート/data_template_G12B_G_ST_12175_8.js"></script>
         <script src="assets/app.js"></script>
         <script src="assets/preview.js"></script>
         <script src="assets/debug.js"></script>
