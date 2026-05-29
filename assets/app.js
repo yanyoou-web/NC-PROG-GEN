@@ -13,6 +13,7 @@
  *
  * Do not reorder sections; dependencies follow this order. */
 /* global _ncDebugLastInput, _ncDebugLastReplaceMap, _ncDebugLastTemplateKeys, _ncDebugLastUnresolved */
+/* global _ncDebugLastCalcValues */
 /* global renderDebugPanel, drawPreview, updatePreviewSticky, refreshPreviewUiI18n, isDebugModeOn */
 /* global g_flashTimer, g_flashBlink, g_flashLineIdx, g_flashVisible */
 // ========== utils ==========
@@ -766,6 +767,27 @@ function calcCrossSmallFinishDepth(input) {
 
 // --- バリデーション ---
 
+/**
+ * 横穴＆中バリ処理(CrossSmall)の相手径バリデーション
+ * 相手径が加工径の ±0.5 以内の場合は加工不可（通常バイト加工を促す）
+ * @returns {{ ok: boolean, msg: string }}
+ */
+function validateCrossSmallPartnerDia(input) {
+    const partnerDia = parseFloat(String((input && input.valPartnerD) != null ? input.valPartnerD : "").replace(/,/g, ""));
+    const machinedDia = resolveWorkBigDiameter(input || {});
+    if (isNaN(partnerDia) || !isFinite(partnerDia) || isNaN(machinedDia) || !isFinite(machinedDia)) {
+        return { ok: true, msg: "" };
+    }
+    const diff = partnerDia - machinedDia;
+    if (Math.abs(diff) <= 0.5) {
+        return {
+            ok: false,
+            msg: `相手径(Φ${partnerDia})と加工径(Φ${machinedDia.toFixed(3)})の差が ±0.5 以内です。通常バイト加工での生成をご利用ください。`,
+        };
+    }
+    return { ok: true, msg: "" };
+}
+
 function validateYoseDDiameter(input) {
     const partnerDia = parseFloat(String((input && input.yoseD) != null ? input.yoseD : "").replace(/,/g, ""));
     const machinedDia = resolveWorkBigDiameter(input || {});
@@ -977,6 +999,11 @@ function generateGCode(input, machineName) {
     if (style === "CrossSmall") {
         if (isNaN(parseFloat(input.valPartnerD))) {
             errors.push("[相手径 (Φ)] が入力されていません。");
+        } else {
+            const crossSmallCheck = validateCrossSmallPartnerDia(input);
+            if (!crossSmallCheck.ok) {
+                errors.push(`[横穴＆中バリ処理: 相手径] ${crossSmallCheck.msg}`);
+            }
         }
         // M8 系（M8_21 / M8_31）は CrossSmall でも drill_ichi_men（面取りのみ）を使用するため
         // calcCrossSmallFinishDepth を呼び出さず、内径深さ自動計算チェックをスキップする
@@ -1532,6 +1559,55 @@ function generateGCode(input, machineName) {
     _ncDebugLastTemplateKeys = _templateKeySet;
     _ncDebugLastUnresolved = new Set(_unresolvedKeys);
 
+    // デバッグ用: 中間算出値を保持
+    {
+        const _bigD = resolveWorkBigDiameter(input);
+        const _drillDia = resolveDrillDia(input);
+        const _yoseMetrics = isYoseRelayStyle(style) ? calcYoseRelayMetrics(input) : null;
+        const _crossSmallDepth =
+            style === "CrossSmall" && !isM8WorkType(input.workType) ? calcCrossSmallFinishDepth(input) : null;
+        const _ft = input.m12FinishType || "hss";
+        let _templateName = "template_" + input.workType;
+        if (input.workType === "M12") {
+            _templateName = "template_M12" + (_ft === "baito" ? "BAITO" : _ft === "hss" ? "HSS" : "HGDR");
+        } else if (input.workType === "M12_MH") {
+            _templateName = "template_M12" + (_ft === "baito" ? "BAITO" : _ft === "hss" ? "HSS" : "HGDR") + "_MH";
+        }
+        const _drillBlockKind = usesG18DrillShiageG1Block(input.workType)
+            ? "G1仕上げ(G18)"
+            : isM8WorkType(input.workType)
+              ? "M8専用ドリル仕上げ"
+              : (input.workType === "M12" || input.workType === "M12_MH") && _ft === "hss"
+                ? "HSS仕上げブロック"
+                : "getDrillBlock(" + (input.drillMode || "G74") + ")";
+        _ncDebugLastCalcValues = {
+            machineName,
+            style,
+            templateName: _templateName,
+            calcMode: input.calcMode,
+            drillBlockKind: _drillBlockKind,
+            // 外径
+            valMaxOD: isNaN(valMaxOD) ? null : valMaxOD,
+            calcMax1,
+            calcMax2,
+            calcMainMax,
+            calcCorner,
+            isCorner: input.calcMode === "corner",
+            // 深さ
+            baseIDDepth: isNaN(baseIDDepth) ? null : baseIDDepth,
+            finalDrillDepth: isNaN(finalDrillDepth) ? null : finalDrillDepth,
+            finalFinishDepth: isNaN(finalFinishDepth) ? null : finalFinishDepth,
+            // ワーク固有
+            bigD: isNaN(_bigD) ? null : _bigD,
+            drillDia: isNaN(_drillDia) ? null : _drillDia,
+            crossSmallDepth: _crossSmallDepth != null && !isNaN(_crossSmallDepth) ? _crossSmallDepth : null,
+            yoseRelayMetrics: _yoseMetrics,
+            // その他
+            fullDrawStr,
+            valM99,
+        };
+    }
+
     return {
         displayHtml: _debugValidationWarning + finalCode,
         plainText: gcodeDisplayHtmlToPlainText(finalCode),
@@ -1672,6 +1748,10 @@ function setupHalfWidthInputGuards() {
 
 let currentInternalStyle = "";
 let currentCalcMode = "normal";
+/** 最後に「適用」ボタンで確定したモード。生成時はこちらを参照する。
+ *  currentCalcMode はドロワー内の UI 状態（カード選択中）を表し、
+ *  lastAppliedCalcMode は実際に maxOD へ反映したモードを表す。 */
+let lastAppliedCalcMode = "normal";
 /** 外径ドロワー「入力」: dimensions=モード寸法 / ate=アテ長さ式 */
 let maxOdApplySource = "dimensions";
 /** 最大径（アテ長さ）式: 上段 15角〜43角 クイック直後に限り true。下段数値・手入力では false。 */
@@ -1680,6 +1760,7 @@ let ateLengthFromKaku = false;
 const ATE_LENGTH_KAKU_VALUES = new Set(["42.5", "41", "39.5", "37.5", "33.25", "28.5"]);
 
 function updateWorkTypeSettings() {
+    updateWorkTypeDesc();
     const type = $id("workType").value;
     const normalArea = $id("normalProcessArea");
     const drillMode = $id("drillMode");
@@ -1728,17 +1809,15 @@ function updateM40M99UI(type) {
     const resolvedType = type !== undefined ? type : $id("workType") ? $id("workType").value : "";
     const label = $id("lblM99P100");
     const sel = $id("selM99P100");
-    if (!label || !sel || sel.options.length < 3) return;
+    if (!label || !sel) return;
     if (resolvedType === "M40") {
         label.textContent = "X50.U8.処理";
-        sel.options[0].textContent = "未選択";
-        sel.options[1].textContent = "使用しない";
-        sel.options[2].textContent = "X50.U8.処理";
+        sel.options[0].textContent = "使用しない";
+        if (sel.options[1]) sel.options[1].textContent = "X50.U8.処理";
     } else {
         label.textContent = "M99P100";
-        sel.options[0].textContent = "未選択";
-        sel.options[1].textContent = "使用しない";
-        sel.options[2].textContent = "M99P100";
+        sel.options[0].textContent = "使用しない";
+        if (sel.options[1]) sel.options[1].textContent = "使用する";
     }
 }
 window._ncUpdateM40M99UI = function () {
@@ -2098,6 +2177,12 @@ function updateInternalStyleDrawerLabel() {
     const key = currentInternalStyle ? getInternalStyleI18nKey(currentInternalStyle) : "styleUnselected";
     const txt = window.NC_I18N && typeof window.NC_I18N.t === "function" ? window.NC_I18N.t(key) : key;
     out.textContent = String(txt || "").replace(/\n/g, " ");
+    // ヒント / 選択済みスタイルの同期
+    const toggleBtn = $id("internalStyleDrawerToggle");
+    const hint = $id("internalStyleHint");
+    const isSelected = !!currentInternalStyle;
+    if (toggleBtn) toggleBtn.classList.toggle("style-selected", isSelected);
+    if (hint) hint.classList.toggle("hint-hidden", isSelected);
 }
 
 function syncInternalStyleDrawerPanel() {
@@ -2139,6 +2224,11 @@ function setInternalStyle(style) {
         isInternalStyleDrawerOpen = false;
         syncInternalStyleDrawerPanel();
     }
+    // 選択済みになったらボタンのスタイルとヒントを更新
+    const toggleBtn = $id("internalStyleDrawerToggle");
+    if (toggleBtn) toggleBtn.classList.add("style-selected");
+    const hint = $id("internalStyleHint");
+    if (hint) hint.classList.add("hint-hidden");
 }
 
 // ========== プログレッシブ・リビール ==========
@@ -2146,39 +2236,40 @@ function setInternalStyle(style) {
  * フォームのプログレッシブ・リビール制御。
  * 各入力ステップの充足状況に応じて、次のセクションを表示/非表示にする。
  *
- * Step 1 (常時)  : machineSelect, ateLength
- * Step 2         : ateLength 入力後 → workType 行を表示
- * Step 3         : workType 選択後 → 右カラム（ファイル情報 + 作成者）を表示
- * Step 4         : v2 + workerName 入力後 → machiningSettingsGroup を表示
- * Step 5         : maxOD + selM99P100 入力後 → internalStyleDrawer を表示
- * Step 6 (既存)  : internalStyle 選択後 → style 固有フィールドを表示（updateInternalStyleUI 内で制御）
+ * Step 1         : ファイル情報・作成者 (fileInfoCard) — 常時表示
+ *                  図番(v1a) + 作成者 入力後 → machineWorkCard を表示
+ * Step 2         : 機械・ワーク選択 (machineWorkCard)
+ *                  ateLength 入力後 → workType 行を表示
+ *                  workType 入力後 → machiningSettingsGroup を表示
+ * Step 3         : 加工設定 (machiningSettingsGroup)
+ *                  maxOD + selM99P100 入力後 → internalStyleDrawer を表示
+ * Step 4 (既存)  : internalStyle 選択後 → style 固有フィールドを表示
  */
 function updateProgressiveReveal() {
     const wtVal     = ($id("workType")    || {}).value || "";
     const ateVal    = (($id("ateLength")  || {}).value || "").trim();
     const ateFilled = ateVal !== "" && !isNaN(parseFloat(ateVal));
     const wnFilled  = (($id("workerName") || {}).value || "").trim() !== "";
+    const v1aFilled = (($id("v1a")        || {}).value || "").trim() !== "";
     const maxODVal  = (($id("maxOD")      || {}).value || "").trim();
     const maxODFilled = maxODVal !== "";
     const m99Val    = ($id("selM99P100")  || {}).value || "";
     const m99Filled = m99Val !== "";
 
-    // --- Step 2: workType 行はアテ長さ入力後に解禁 ---
+    // --- Step1完了: 図番(v1a) + 作成者 → 機械・ワーク選択カードを解禁 ---
+    const fileInfoFilled = v1aFilled && wnFilled;
+    const machineCard = $id("machineWorkCard");
+    if (machineCard) machineCard.style.display = fileInfoFilled ? "" : "none";
+
+    // --- workType 行はアテ長さ入力後に解禁 ---
     const wtEl  = $id("workType");
     const wtRow = wtEl && wtEl.closest(".row");
     if (wtRow) {
         wtRow.classList.toggle("reveal-section--hidden", !ateFilled);
     }
 
-    // --- Step 3: 右カラム（ファイル情報 + 作成者）は workType 選択後 ---
-    const rightCol = document.querySelector(".form-layout-split__col--input");
-    if (rightCol) {
-        const showRight = !!wtVal;
-        rightCol.classList.toggle("reveal-section--hidden", !showRight);
-    }
-
-    // --- Step 4: 加工設定は workType + workerName 入力後（v2 は生成時バリデーションで担保） ---
-    const showMachining = !!(wtVal && wnFilled);
+    // --- 加工設定は Step1完了 + ateLength + workType 入力後 ---
+    const showMachining = !!(fileInfoFilled && ateFilled && wtVal);
     const machGrp = $id("machiningSettingsGroup");
     const mainActionRow = $id("mainActionRow");
     const hlFilterRow   = $id("highlightFilterRow");
@@ -2186,7 +2277,7 @@ function updateProgressiveReveal() {
     if (mainActionRow) mainActionRow.style.display  = showMachining ? "flex" : "none";
     if (hlFilterRow)   hlFilterRow.style.display    = showMachining ? "flex" : "none";
 
-    // --- Step 5: internalStyleDrawer は maxOD + selM99P100 入力後 ---
+    // --- internalStyleDrawer は maxOD + selM99P100 入力後 ---
     const showDrawer = !!(wtVal && maxODFilled && m99Filled);
     const styleDrawer = $id("internalStyleDrawer");
     if (styleDrawer) {
@@ -2197,6 +2288,29 @@ function updateProgressiveReveal() {
                 syncInternalStyleDrawerPanel();
             }
         }
+    }
+
+    // --- ステップ進捗インジケーター同期 (4ステップ) ---
+    // 1:ファイル情報  2:機械・ワーク選択  3:加工設定  4:内径スタイル
+    var currentStep;
+    if (!fileInfoFilled)           currentStep = 1;
+    else if (!ateFilled || !wtVal) currentStep = 2;
+    else if (!maxODFilled)         currentStep = 3;
+    else                           currentStep = 4;
+    _syncStepProgress(currentStep);
+}
+
+function _syncStepProgress(currentStep) {
+    for (var i = 1; i <= 4; i++) {
+        var dot = $id("stepDot" + i);
+        if (!dot) continue;
+        dot.classList.remove("step-dot--done", "step-dot--current");
+        if (i < currentStep)        dot.classList.add("step-dot--done");
+        else if (i === currentStep) dot.classList.add("step-dot--current");
+    }
+    for (var j = 1; j <= 3; j++) {
+        var conn = $id("stepConn" + j);
+        if (conn) conn.classList.toggle("step-conn--done", j < currentStep);
     }
 }
 
@@ -2234,17 +2348,22 @@ function updateInternalStyleUI() {
         maxOdRow.style.display = isTemplateSelected ? "flex" : "none";
     }
 
-    // ドリル深さUI制御（平底・一文字は図面の内径深さから自動計算するため入力欄を隠す）
+    // ドリル深さUI制御
+    // ・Hirazoko / Ichimonji : 自動計算のため非表示
+    // ・M8 worktype           : idDepth を使わないため即時表示
+    // ・それ以外              : 内径深さ入力後に表示（idDepth に値があるとき）
     const drillDepthInput = $id("drillDepth");
     const drillDepthLabel = $id("drillDepthLabel");
-    const drillDepthContainer = drillDepthInput && drillDepthInput.parentElement;
+    const drillDepthContainer = $id("drillDepthRow");
+    const idDepthFilled = (($id("idDepth") || {}).value || "").trim() !== "";
     if (isM8WorkType(workType)) {
-        // M8 固定テンプレート: スタイル選択なしでもドリル深さ入力を常時表示
+        // M8: スタイル選択なし・idDepth 不使用 → 常時表示
         if (drillDepthContainer) drillDepthContainer.style.display = "flex";
     } else if (!currentInternalStyle || currentInternalStyle === "Hirazoko" || currentInternalStyle === "Ichimonji") {
         if (drillDepthContainer) drillDepthContainer.style.display = "none";
     } else {
-        if (drillDepthContainer) drillDepthContainer.style.display = "flex";
+        // 内径深さ入力後にドリル深さを表示
+        if (drillDepthContainer) drillDepthContainer.style.display = idDepthFilled ? "flex" : "none";
     }
     if (idDepthRow) {
         // 6.交差穴加工径小では、見落とし防止のため常に表示を優先
@@ -2617,6 +2736,7 @@ document.addEventListener("DOMContentLoaded", () => {
         idDepthEl.addEventListener("input", function () {
             calcAutoCP();
             calcDrillDepth();
+            updateInternalStyleUI();   // 内径深さ入力 → ドリル深さ欄の表示を更新
         });
     }
     ["yoseTotalLength", "yosePartnerDepth", "yoseD", "yoseAngle", "tubeSpecSelect", "workType"].forEach(function (id) {
@@ -2656,12 +2776,18 @@ document.addEventListener("DOMContentLoaded", () => {
         maxOdEl.dataset.maxOdDrawerBound = "1";
         maxOdEl.addEventListener("click", openMaxOdCalcDrawer);
         maxOdEl.addEventListener("focus", openMaxOdCalcDrawer);
+        maxOdEl.addEventListener("input", function () {
+            // 手動編集時は角ありモードを解除して通常モードに戻す
+            lastAppliedCalcMode = "normal";
+            currentCalcMode = "normal";
+        });
     }
 
     setupHelpEasterDropdown();
 
     // ---- プログレッシブ・リビール: 各入力フィールドの変更時に再評価 ----
     [
+        { id: "v1a",         events: ["input", "change"] },
         { id: "ateLength",   events: ["input", "change"] },
         { id: "workType",    events: ["change"] },
         { id: "v2",          events: ["input", "change"] },
@@ -2961,8 +3087,11 @@ function applyMaxOdCalcDrawer() {
         }
         $id("maxOD").value = s;
     }
+    // 適用時のモードを確定として記録（生成時に参照）
+    lastAppliedCalcMode = maxOdApplySource === "ate" ? "normal" : currentCalcMode;
     clearMaxOdApplyFromAte();
     closeMaxOdCalcDrawer();
+    updateProgressiveReveal();
 }
 
 function materializeMaxOdFromCurrentDimensionFields() {
@@ -3294,7 +3423,7 @@ function runGeneration(fromUserButton = false) {
         tubeSpec: $id("tubeSpecSelect").value,
         tubeLength: $id("tubeLengthSelect").value,
 
-        calcMode: currentCalcMode,
+        calcMode: lastAppliedCalcMode,
         valCornW: $id("valCornW").value,
         valCornH: $id("valCornH").value,
 
@@ -3314,6 +3443,9 @@ function runGeneration(fromUserButton = false) {
             return;
         }
     }
+
+    // 差分ビュー用: 生成前に前回テキストを退避
+    if (_ncLastPlainGCode) _ncPrevPlainGCode = _ncLastPlainGCode;
 
     const machineName = $id("machineSelect").value;
     const genResult = generateGCode(inputData, machineName);
@@ -3348,6 +3480,13 @@ function runGeneration(fromUserButton = false) {
         $id("resultArea").innerHTML = gcodeHtml;
     }
     applyHighlightFilterToResultArea();
+    // 生成後は必ずロック状態に戻す
+    (function() {
+        const area = $id("resultArea");
+        const btn  = $id("resultLockBtn");
+        if (area) { area.contentEditable = "false"; area.classList.remove("result-editing"); area.classList.add("result-locked"); }
+        if (btn)  { btn.textContent = "🔒 編集ロック中"; btn.className = "btn-result-lock btn-result-lock--locked"; btn.title = "クリックすると編集モードに切り替わります"; }
+    })();
 
     // デバッグパネルが開いていれば自動更新
     const _dbgPanel = $id("debugPanel");
@@ -3363,6 +3502,18 @@ function runGeneration(fromUserButton = false) {
     }
 
     if (typeof drawPreview === "function") drawPreview(true);
+
+    // 生成成功時のみ履歴に追加 + 差分ビューをリセット
+    if (!isGenError) {
+        _pushHistory(inputData, machineName, gcodeHtml, _ncLastPlainGCode);
+        if (_ncDiffVisible) {
+            _ncDiffVisible = false;
+            const btn = $id("diffToggleBtn");
+            if (btn) { btn.textContent = "前回との差分"; btn.classList.remove("active"); }
+        }
+        // workType 説明を更新
+        updateWorkTypeDesc();
+    }
 }
 
 // ========== input export / import ==========
@@ -3537,6 +3688,360 @@ function downloadFile() {
     exportInputJson();
 }
 
+// ========== F6: workType 説明 ==========
+
+const WORK_TYPE_DESCRIPTIONS = {
+    M12: "M12 — ドリル φ4.05 / 内径加工 Φ4.0 / 仕上げ: HSS・HGDR・バイト選択",
+    M15: "M15 — ドリル φ3.3 / 内径加工 Φ6.0",
+    M18: "M18 — ドリル φ7.0 / 内径加工 Φ8.0",
+    M22: "M22 — ドリル φ7.0 / 内径加工 Φ10.0",
+    G78: "G78 — ドリル φ14.0 / 内径加工 Φ16.0 (汎用標準)",
+    M40: "M40 — ドリル φ14.0 / 内径加工 Φ22.0 / X50.U8.処理オプションあり",
+    M12_MH: "M12-MH — M12 + 外径MH仕上げ (外径荒/外径溝 切替可)",
+    M15_MH: "M15-MH — M15 + 外径MH仕上げ",
+    M18_MH: "M18-MH — M18 + 外径MH仕上げ",
+    M22_MH: "M22-MH — M22 + 外径MH仕上げ",
+    G78_MH: "G78-MH — G78 + 外径MH仕上げ",
+    M40_MH: "M40-MH — M40 + 外径MH仕上げ",
+    M42X3_25175: "M42×3 φ25.175 ストレート — 内径ダイヤΦ16 使用",
+    M42X3_25175_16: "M42×3 φ25.175→φ16 段付き",
+    M42X3_25175_20: "M42×3 φ25.175→φ20 段付き",
+    M42X3_25175_22: "M42×3 φ25.175→φ22 段付き",
+    M8_21: "M8(φ2.1) — 固定テンプレート / ドリル φ2.2 / 内径スタイル選択不要",
+    M8_31: "M8(φ3.1) — 固定テンプレート / ドリル φ3.2 / 内径スタイル選択不要",
+    G18_40: "G18(φ4.0) — G1仕上げ / ドリル φ4.05 / CrossSmall対応",
+    G18_42: "G18(φ4.2) — G1仕上げ / ドリル φ4.15 / CrossSmall対応",
+    G18_62: "G18(φ6.2) — HGDR仕上げ / ドリル φ4.15 / 内径Φ6.2",
+    G18_655: "G18(φ6.55) — HGDR仕上げ / ドリル φ4.15 / 内径Φ6.55",
+    G18_6175: "G18(φ6.175) — HGDR仕上げ / ドリル φ4.15 / 内径Φ6.175",
+    G18_40_MH: "G18(φ4.0)-MH — MH外径仕上げ付き",
+    G18_42_MH: "G18(φ4.2)-MH — MH外径仕上げ付き",
+    G18_62_MH: "G18(φ6.2)-MH — MH外径仕上げ付き",
+    G18_655_MH: "G18(φ6.55)-MH — MH外径仕上げ付き",
+    G18_6175_MH: "G18(φ6.175)-MH — MH外径仕上げ付き",
+    Tube: "チューブ偏心加工 — 規格・長さ(L)を選択 / 内径スタイル不要",
+};
+
+function updateWorkTypeDesc() {
+    const sel = $id("workType");
+    const desc = $id("workTypeDesc");
+    if (!sel || !desc) return;
+    const txt = WORK_TYPE_DESCRIPTIONS[sel.value];
+    if (txt) {
+        desc.textContent = txt;
+        desc.hidden = false;
+    } else {
+        desc.hidden = true;
+    }
+}
+
+// ========== F5: バリデーションリアルタイム化 ==========
+
+function _setFieldError(fieldId, msg) {
+    const el = $id(fieldId);
+    if (!el) return;
+    let hint = el.parentElement && el.parentElement.querySelector(".field-inline-error");
+    if (!hint) {
+        hint = document.createElement("div");
+        hint.className = "field-inline-error";
+        (el.parentElement || el).appendChild(hint);
+    }
+    if (msg) {
+        hint.textContent = msg;
+        hint.hidden = false;
+        el.classList.add("field-error");
+    } else {
+        hint.textContent = "";
+        hint.hidden = true;
+        el.classList.remove("field-error");
+    }
+}
+
+function _validateFieldOnBlur(fieldId) {
+    const el = $id(fieldId);
+    if (!el) return;
+    const val = el.value.trim();
+
+    if (fieldId === "idDepth") {
+        if (val === "") { _setFieldError(fieldId, null); return; }
+        const n = parseFloat(val);
+        if (isNaN(n)) { _setFieldError(fieldId, "数値で入力してください"); return; }
+        const style = typeof currentInternalStyle !== "undefined" ? currentInternalStyle : "";
+        const skipCheck = style === "CrossSmall" || style === "Yose" || style === "YoseRelay" || style === "Tube";
+        if (!skipCheck && n <= 7) { _setFieldError(fieldId, "7より大きい値が必要です"); return; }
+        _setFieldError(fieldId, null);
+        return;
+    }
+    if (fieldId === "ateLength") {
+        if (val === "") { _setFieldError(fieldId, null); return; }
+        const n = parseFloat(val);
+        if (isNaN(n)) { _setFieldError(fieldId, "数値で入力してください"); return; }
+        if (n <= 0) { _setFieldError(fieldId, "0より大きい値が必要です"); return; }
+        _setFieldError(fieldId, null);
+        return;
+    }
+    if (fieldId === "maxOD") {
+        if (val === "") { _setFieldError(fieldId, null); return; }
+        const n = parseSimpleNumberOrFormula(val);
+        if (isNaN(n) || !isFinite(n)) { _setFieldError(fieldId, "数値または計算式を入力してください"); return; }
+        if (n <= 0) { _setFieldError(fieldId, "正の値が必要です"); return; }
+        _setFieldError(fieldId, null);
+        return;
+    }
+    if (fieldId === "cpVal") {
+        if (val === "") { _setFieldError(fieldId, null); return; }
+        const n = parseFloat(val);
+        if (isNaN(n)) { _setFieldError(fieldId, "数値で入力してください"); return; }
+        _setFieldError(fieldId, null);
+        return;
+    }
+    if (fieldId === "valPartnerD") {
+        if (val === "") { _setFieldError(fieldId, null); return; }
+        const n = parseFloat(val);
+        if (isNaN(n)) { _setFieldError(fieldId, "数値で入力してください"); return; }
+        if (n <= 0) { _setFieldError(fieldId, "正の値が必要です"); return; }
+        if (typeof currentInternalStyle !== "undefined" && currentInternalStyle === "CrossSmall") {
+            const wt = $id("workType") ? $id("workType").value : "";
+            const ts = $id("tubeSpecSelect") ? $id("tubeSpecSelect").value : "";
+            const csCheck = validateCrossSmallPartnerDia({ valPartnerD: val, workType: wt, tubeSpec: ts });
+            if (!csCheck.ok) { _setFieldError(fieldId, csCheck.msg); return; }
+        }
+        _setFieldError(fieldId, null);
+        return;
+    }
+    if (fieldId === "yoseD") {
+        if (val === "") { _setFieldError(fieldId, null); return; }
+        const wt = $id("workType") ? $id("workType").value : "";
+        const res = validateYoseDDiameter({
+            yoseD: val,
+            workType: wt,
+            tubeSpec: $id("tubeSpecSelect") ? $id("tubeSpecSelect").value : "",
+            internalStyle: typeof currentInternalStyle !== "undefined" ? currentInternalStyle : "",
+        });
+        _setFieldError(fieldId, res.ok ? null : res.msg);
+        return;
+    }
+}
+
+function initRealTimeValidation() {
+    ["idDepth", "ateLength", "maxOD", "cpVal", "valPartnerD", "yoseD"].forEach((id) => {
+        const el = $id(id);
+        if (el) {
+            el.addEventListener("blur", () => _validateFieldOnBlur(id));
+        }
+    });
+}
+
+// ========== F1: 生成履歴 / Undo ==========
+
+const _NC_HISTORY_MAX = 10;
+var _ncHistory = [];
+
+function _pushHistory(inputData, machineName, gcodeHtml, plainText) {
+    const dt = new Date();
+    const label =
+        (inputData.workType || "?") +
+        " — " +
+        machineName +
+        " — " +
+        (inputData.drawNumA || "未設定") +
+        " — " +
+        dt.toLocaleTimeString("ja-JP");
+    _ncHistory.unshift({ id: dt.getTime(), label, inputData, machineName, gcodeHtml, plainText });
+    if (_ncHistory.length > _NC_HISTORY_MAX) _ncHistory.pop();
+    _renderHistoryPanel();
+}
+
+function _renderHistoryPanel() {
+    const list = $id("historyList");
+    if (!list) return;
+    if (_ncHistory.length === 0) {
+        list.innerHTML = '<div class="history-empty">まだ生成履歴はありません</div>';
+        return;
+    }
+    list.innerHTML = _ncHistory
+        .map(
+            (entry, idx) =>
+                `<div class="history-item" onclick="_restoreHistory(${idx})">` +
+                `<span class="history-item__label">${escapeHtml(entry.label)}</span>` +
+                `</div>`
+        )
+        .join("");
+}
+
+function _restoreHistory(idx) {
+    const entry = _ncHistory[idx];
+    if (!entry) return;
+
+    // 入力値を復元（既存の importInputJson と同じ流れ）
+    const inp = entry.inputData;
+
+    if (inp._calcMode || inp.calcMode) setCalcMode(inp._calcMode || inp.calcMode);
+
+    // フィールドを直接セット
+    const fieldMap = {
+        machineSelect: entry.machineName,
+        workType: inp.workType,
+        v1a: inp.drawNumA,
+        v1b: inp.drawNumB,
+        v1c: inp.drawRev,
+        v2: inp.processNum,
+        workerName: inp.workerName,
+        ateLength: inp.ateLength,
+        maxOD: inp.maxOD,
+        drillDepth: inp.drillDepth,
+        idDepth: inp.idDepth,
+        drillMode: inp.drillMode,
+        cpVal: inp.cpVal,
+        valPartnerD: inp.valPartnerD,
+        yoseMethod: inp.yoseMethod,
+        yoseAngle: inp.yoseAngle,
+        yoseD: inp.yoseD,
+        yoseTotalLength: inp.yoseTotalLength,
+        yosePartnerDepth: inp.yosePartnerDepth,
+        valCornW: inp.valCornW,
+        valCornH: inp.valCornH,
+    };
+    for (const [id, val] of Object.entries(fieldMap)) {
+        const el = $id(id);
+        if (el && val != null) el.value = val;
+    }
+    if (inp.m99Mode) { const sel = $id("selM99P100"); if (sel) sel.value = inp.m99Mode; }
+
+    updateWorkTypeSettings();
+    if (inp.internalStyle) setInternalStyle(inp.internalStyle);
+    if (inp.tubeSpec) {
+        const ts = $id("tubeSpecSelect");
+        if (ts) { ts.value = inp.tubeSpec; updateTubeLengths(); }
+    }
+    if (inp.tubeLength) { const tl = $id("tubeLengthSelect"); if (tl) tl.value = inp.tubeLength; }
+
+    // 出力を直接復元
+    const resultArea = $id("resultArea");
+    if (resultArea && entry.gcodeHtml) resultArea.innerHTML = entry.gcodeHtml;
+    if (entry.plainText) _ncLastPlainGCode = entry.plainText;
+
+    updateProgressiveReveal();
+    applyHighlightFilterToResultArea();
+    if (typeof drawPreview === "function") drawPreview(true);
+
+    toggleHistoryPanel();
+    _showImportToast("⏱ 履歴復元: " + entry.label);
+}
+
+function toggleHistoryPanel() {
+    const panel = $id("historyPanel");
+    if (!panel) return;
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) _renderHistoryPanel();
+}
+
+// ========== F4: 生成差分ビュー ==========
+
+var _ncPrevPlainGCode = null;
+var _ncDiffVisible = false;
+
+// LCS ベースの行差分計算
+function _computeLineDiff(oldText, newText) {
+    if (!oldText || !newText) return null;
+    const oldLines = oldText.split("\n");
+    const newLines = newText.split("\n");
+
+    // 短い方を最大 500 行に制限してパフォーマンス確保
+    if (oldLines.length > 500 || newLines.length > 500) {
+        return { oldLines, newLines, ops: null }; // diff 不可
+    }
+
+    const m = oldLines.length;
+    const n = newLines.length;
+
+    // LCS テーブル
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            if (oldLines[i - 1] === newLines[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+
+    // バックトラック
+    const ops = []; // { type: 'keep'|'add'|'remove', line }
+    let i = m, j = n;
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+            ops.unshift({ type: "keep", line: newLines[j - 1] });
+            i--; j--;
+        } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+            ops.unshift({ type: "add", line: newLines[j - 1] });
+            j--;
+        } else {
+            ops.unshift({ type: "remove", line: oldLines[i - 1] });
+            i--;
+        }
+    }
+    return { oldLines, newLines, ops };
+}
+
+function toggleDiffView() {
+    if (!_ncPrevPlainGCode) {
+        _showImportToast("⚠ 前回の生成結果がありません。2回以上生成してから差分を確認してください。");
+        return;
+    }
+    _ncDiffVisible = !_ncDiffVisible;
+    _renderDiffOrNormal();
+    const btn = $id("diffToggleBtn");
+    if (btn) {
+        btn.textContent = _ncDiffVisible ? "差分を隠す" : "前回との差分";
+        btn.classList.toggle("active", _ncDiffVisible);
+    }
+}
+
+function _renderDiffOrNormal() {
+    const resultArea = $id("resultArea");
+    if (!resultArea) return;
+    if (!_ncDiffVisible || !_ncPrevPlainGCode || !_ncLastPlainGCode) {
+        // 通常表示に戻す
+        runGeneration(false);
+        return;
+    }
+
+    const diff = _computeLineDiff(_ncPrevPlainGCode, _ncLastPlainGCode);
+    if (!diff || !diff.ops) {
+        resultArea.innerHTML =
+            '<span style="color:#ffaa44;">差分計算スキップ (行数が多すぎます)</span>\n' +
+            (_ncLastPlainGCode || "").split("\n").map((l) => escapeHtml(l)).join("\n");
+        return;
+    }
+
+    const html = diff.ops
+        .map((op) => {
+            const escaped = escapeHtml(op.line);
+            if (op.type === "add") {
+                return `<span class="diff-add">+ ${escaped}</span>`;
+            } else if (op.type === "remove") {
+                return `<span class="diff-remove">- ${escaped}</span>`;
+            } else {
+                return `<span class="diff-keep">  ${escaped}</span>`;
+            }
+        })
+        .join("\n");
+
+    const addCount = diff.ops.filter((o) => o.type === "add").length;
+    const rmCount = diff.ops.filter((o) => o.type === "remove").length;
+    const header = `<span class="diff-header">差分: +${addCount}行 / -${rmCount}行</span>\n`;
+    resultArea.innerHTML = header + html;
+}
+
+// ========== 初期化 ==========
+
+document.addEventListener("DOMContentLoaded", function () {
+    initRealTimeValidation();
+    updateWorkTypeDesc();
+});
+
 function setCalcMode(mode) {
     currentCalcMode = mode;
     maxOdApplySource = "dimensions";
@@ -3562,3 +4067,30 @@ function setCalcMode(mode) {
     const hint = $id("ateInputHint");
     if (hint) hint.style.display = "none";
 }
+
+// ===== resultArea ロック / 編集トグル =====
+function toggleResultLock() {
+    const area = $id("resultArea");
+    const btn  = $id("resultLockBtn");
+    if (!area || !btn) return;
+    const isLocked = area.contentEditable !== "true";
+    if (isLocked) {
+        area.contentEditable = "true";
+        area.classList.remove("result-locked");
+        area.classList.add("result-editing");
+        btn.textContent = "✏ 編集モード中";
+        btn.classList.remove("btn-result-lock--locked");
+        btn.classList.add("btn-result-lock--editing");
+        btn.title = "クリックすると編集ロックに戻ります";
+        area.focus();
+    } else {
+        area.contentEditable = "false";
+        area.classList.remove("result-editing");
+        area.classList.add("result-locked");
+        btn.textContent = "🔒 編集ロック中";
+        btn.classList.remove("btn-result-lock--editing");
+        btn.classList.add("btn-result-lock--locked");
+        btn.title = "クリックすると編集モードに切り替わります";
+    }
+}
+window.toggleResultLock = toggleResultLock;

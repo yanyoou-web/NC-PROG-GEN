@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="28" fill="#1a2030"/>
+  <!-- Gear teeth -->
+  <path d="M96 24 l8 16 h16 l8-16 -8-8 h-24 z" fill="#7ec8e3" opacity="0.8"/>
+  <path d="M168 96 l-16 8 v16 l16 8 8-8 v-24 z" fill="#7ec8e3" opacity="0.8"/>
+  <path d="M96 168 l-8-16 h-16 l-8 16 8 8 h24 z" fill="#7ec8e3" opacity="0.8"/>
+  <path d="M24 96 l16-8 v-16 l-16-8 -8 8 v24 z" fill="#7ec8e3" opacity="0.8"/>
+  <!-- Gear circle -->
+  <circle cx="96" cy="96" r="48" fill="none" stroke="#7ec8e3" stroke-width="12"/>
+  <circle cx="96" cy="96" r="20" fill="#1a2030" stroke="#7ec8e3" stroke-width="6"/>
+  <!-- NC text -->
+  <text x="96" y="103" font-family="monospace" font-size="18" font-weight="bold"
+        text-anchor="middle" fill="#ffff00">NC</text>
+</svg>

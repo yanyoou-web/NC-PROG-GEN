@@ -8,8 +8,11 @@
     "format": "prettier package.json eslint.config.mjs .prettierrc.json docs/**/*.md .vscode/**/*.json --write",
     "format:check": "prettier package.json eslint.config.mjs .prettierrc.json docs/**/*.md .vscode/**/*.json --check",
     "test:tube": "node scripts/verify-tube-x6u2.mjs",
+    "test:calc": "node --test scripts/test-calc-functions.mjs",
+    "test": "npm run test:tube && npm run test:calc",
+    "check:templates": "node scripts/check-template-placeholders.mjs",
     "g-press": "node \"scripts/G＞PRESS.mjs\"",
-    "check": "npm run lint && npm run format:check && npm run test:tube"
+    "check": "npm run lint && npm run format:check && npm run test && npm run check:templates"
   },
   "devDependencies": {
     "eslint": "^10.2.1",

@@ -3,8 +3,10 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#1a2030" />
         <title data-i18n="pageTitle">NCプログラム作成</title>
         <link rel="stylesheet" href="assets/style.css" />
+        <link rel="manifest" href="manifest.json" />
     </head>
     <body>
         <div class="container">
@@ -46,190 +48,206 @@
                 </div>
             </div>
 
-            <div class="row ui-lang-row">
+            <div class="row ui-lang-row" style="display:none">
                 <select id="uiLang" class="ui-lang-select enter-target" data-i18n-aria-label="uiLanguage">
                     <option value="ja">日本語</option>
                 </select>
             </div>
 
-            <div
-                class="form-layout-split"
-                data-i18n-aria-label="formAria"
-                aria-label="ファイル情報・機械・ワークと基本入力"
-            >
-                <div class="form-layout-split__col form-layout-split__col--select">
-                    <div class="group group--split">
-                        <h3 data-i18n="machineWorkHeading">機械・ワーク選択</h3>
-                        <div class="row">
-                            <label data-i18n="machineLabel">使用機械</label>
-                            <select id="machineSelect" class="w-long enter-target" onchange="onMachineSelectChange()">
-                                <option value="NCL044">NCL044</option>
-                                <option value="NCL015">NCL015</option>
-                                <option value="NCL085">NCL085</option>
-                                <option value="NCL012">NCL012</option>
-                            </select>
-                        </div>
-                        <div class="row">
-                            <label data-i18n="ateLength">アテ長さ</label>
-                            <span class="nc-input-popover-wrap">
-                                <input
-                                    id="ateLength"
-                                    class="w-long enter-target"
-                                    type="text"
-                                    list="ateLengthList"
-                                    autocomplete="off"
-                                    placeholder="選択または直接入力"
-                                    oninput="onAteLengthSelectChange()"
-                                    onchange="onAteLengthSelectChange()"
-                                    aria-describedby="ateLength-focus-hint"
-                                />
-                                <div
-                                    id="ateLength-focus-hint"
-                                    class="nc-input-focus-popover"
-                                    role="tooltip"
-                                    data-i18n="ateLengthFocusHint"
-                                ></div>
-                            </span>
-                            <datalist id="ateLengthList">
-                                <option value="42.5">15角</option>
-                                <option value="41">18角</option>
-                                <option value="39.5">21角</option>
-                                <option value="37.5">25角</option>
-                                <option value="33.25">33.5角</option>
-                                <option value="28.5">43角</option>
-                                <option value="6.25"></option>
-                                <option value="11.25"></option>
-                                <option value="20"></option>
-                                <option value="24.5"></option>
-                                <option value="31.5"></option>
-                                <option value="36.75"></option>
-                            </datalist>
-                        </div>
-                        <div class="row row--step-worktype reveal-section reveal-section--hidden">
-                            <label data-i18n="templateLabel">テンプレート</label>
-                            <select id="workType" class="w-long enter-target" onchange="updateWorkTypeSettings()">
-                                <option value="" data-i18n="templatePick">-- 選択 --</option>
-                                <option value="M12">M12</option>
-                                <option value="M15">M15</option>
-                                <option value="M18">M18</option>
-                                <option value="M22">M22</option>
-                                <option value="G78">G78</option>
-                                <option value="M40">M40</option>
-                                <option value="M12_MH">M12-MH</option>
-                                <option value="M15_MH">M15-MH</option>
-                                <option value="M18_MH">M18-MH</option>
-                                <option value="M22_MH">M22-MH</option>
-                                <option value="G78_MH">G78-MH</option>
-                                <option value="M40_MH">M40-MH</option>
-                                <option value="M42X3_25175">M42X3 φ25.175(ST)</option>
-                                <option value="M42X3_25175_16">M42X3 φ25.175→φ16</option>
-                                <option value="M42X3_25175_20">M42X3 φ25.175→φ20</option>
-                                <option value="M42X3_25175_22">M42X3 φ25.175→φ22</option>
-                                <option value="M8_21">M8(φ2.1)</option>
-                                <option value="M8_31">M8(φ3.1)</option>
-                                <option value="G18_40">G18(φ4.0)</option>
-                                <option value="G18_42">G18(φ4.2)</option>
-                                <option value="G18_62">G18(φ6.2)</option>
-                                <option value="G18_655">G18(φ6.55)</option>
-                                <option value="G18_6175">G18(φ6.175)</option>
-                                <option value="G18_40_MH">G18(φ4.0)-MH</option>
-                                <option value="G18_42_MH">G18(φ4.2)-MH</option>
-                                <option value="G18_62_MH">G18(φ6.2)-MH</option>
-                                <option value="G18_655_MH">G18(φ6.55)-MH</option>
-                                <option value="G18_6175_MH">G18(φ6.175)-MH</option>
-                                <option value="Tube" data-i18n="workTypeTube">チューブ</option>
-                            </select>
-                        </div>
-                        <div id="mhOdToolRow" class="row" style="display: none">
-                            <label>外径バイト (MH)</label>
-                            <select id="mhOdTool" class="w-long enter-target" onchange="runGeneration()">
-                                <option value="外径荒">外径荒 (T0505系)</option>
-                                <option value="外径溝">外径溝 (T1010系)</option>
-                            </select>
-                        </div>
-                    </div>
+            <!-- ステップ進捗インジケーター (4ステップ) -->
+            <div id="stepProgress" class="step-progress" aria-label="入力ステップ">
+                <div class="step-progress__item step-dot--current" id="stepDot1">
+                    <div class="step-progress__circle"><span>1</span></div>
+                    <div class="step-progress__label">ファイル情報</div>
+                </div>
+                <div class="step-progress__connector" id="stepConn1"></div>
+                <div class="step-progress__item" id="stepDot2">
+                    <div class="step-progress__circle"><span>2</span></div>
+                    <div class="step-progress__label">テンプレート</div>
+                </div>
+                <div class="step-progress__connector" id="stepConn2"></div>
+                <div class="step-progress__item" id="stepDot3">
+                    <div class="step-progress__circle"><span>3</span></div>
+                    <div class="step-progress__label">加工設定</div>
+                </div>
+                <div class="step-progress__connector" id="stepConn3"></div>
+                <div class="step-progress__item" id="stepDot4">
+                    <div class="step-progress__circle"><span>4</span></div>
+                    <div class="step-progress__label">内径スタイル</div>
+                </div>
+            </div>
 
-                    <div id="tubeVariantGroup" class="group group--split" style="display: none">
-                        <h3 data-i18n="tubeSpec">チューブ規格選択</h3>
-                        <div class="row tonbo-variant-row">
-                            <label data-i18n="tubeSpecLabel">チューブ規格</label>
-                            <select id="tubeSpecSelect" class="w-long enter-target" onchange="updateTubeLengths()">
-                                <option value="">-- 規格を選択 --</option>
-                            </select>
-                        </div>
-                        <div class="row tonbo-variant-row tube-variant-length-row">
-                            <label data-i18n="tubeLen">長さ(L)</label>
-                            <select id="tubeLengthSelect" class="w-mid enter-target"></select>
-                        </div>
+            <!-- カード1: ファイル情報・作成者 (常時表示) -->
+            <div class="nc-section-card" id="fileInfoCard">
+                <h3 data-i18n="fileInfo">ファイル情報・作成者</h3>
+                <div class="row nc-fn-row">
+                    <label>図番</label>
+                    <span class="fix-txt">PM-</span>
+                    <input
+                        type="text"
+                        inputmode="decimal"
+                        id="v1a"
+                        placeholder="12345"
+                        class="enter-target"
+                        oninput="formatNum(this)"
+                    />
+                    <span class="fix-txt">-</span>
+                    <input
+                        type="text"
+                        inputmode="decimal"
+                        id="v1b"
+                        value="2"
+                        class="enter-target"
+                        oninput="formatNum(this)"
+                    />
+                    <select id="v1c" class="enter-target">
+                        <option value="NONE" selected>なし</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                        <option value="E">E</option>
+                    </select>
+                    <span class="fix-txt">=No,</span>
+                    <input
+                        type="text"
+                        inputmode="decimal"
+                        id="v2"
+                        placeholder="1"
+                        class="enter-target"
+                        oninput="formatNum(this)"
+                    />
+                </div>
+                <div class="row nc-author-row">
+                    <label data-i18n="author">作成者</label>
+                    <div class="btns nc-btns-inline">
+                        <button type="button" class="qb" onclick="setAuthor('YAMADA', this)">YAMADA</button>
+                        <button type="button" class="qb" onclick="setAuthor('SAWADA', this)">SAWADA</button>
+                        <button type="button" class="qb" onclick="setAuthor('RIN', this)">RIN</button>
+                        <button type="button" class="qb" onclick="setAuthor('REI', this)">REI</button>
+                        <button type="button" class="qb" onclick="setAuthor('TANIGUTI', this)">TANIGUTI</button>
+                        <button type="button" class="qb" onclick="setAuthor('MURAKAMI', this)">MURAKAMI</button>
                     </div>
                 </div>
+                <div class="row">
+                    <span class="nc-label-spacer"></span>
+                    <input
+                        type="text"
+                        id="workerName"
+                        data-i18n-placeholder="phDirect"
+                        placeholder="半角英数字のみ"
+                        class="nc-worker-input enter-target"
+                    />
+                </div>
+            </div>
 
-                <div class="form-layout-split__col form-layout-split__col--input reveal-section reveal-section--hidden">
-                    <div class="group group--split">
-                        <h3 data-i18n="fileInfo">ファイル情報</h3>
-                        <div class="row">
-                            <span class="fix-txt">PM-</span>
-                            <input
-                                type="text"
-                                inputmode="decimal"
-                                id="v1a"
-                                placeholder="12345"
-                                class="enter-target"
-                                oninput="formatNum(this)"
-                            />
-                            <span class="fix-txt">-</span>
-                            <input
-                                type="text"
-                                inputmode="decimal"
-                                id="v1b"
-                                value="2"
-                                class="enter-target"
-                                oninput="formatNum(this)"
-                            />
-                            <select id="v1c" class="enter-target">
-                                <option value="NONE" selected>なし</option>
-                                <option value="A">A</option>
-                                <option value="B">B</option>
-                                <option value="C">C</option>
-                                <option value="D">D</option>
-                                <option value="E">E</option>
-                            </select>
-                            <span class="fix-txt">=No,</span>
-                            <input
-                                type="text"
-                                inputmode="decimal"
-                                id="v2"
-                                placeholder="1"
-                                class="enter-target"
-                                oninput="formatNum(this)"
-                            />
-                        </div>
+            <!-- カード2: 機械・ワーク選択 (ファイル情報入力後に表示) -->
+            <div class="nc-section-card" id="machineWorkCard" style="display:none">
+                <h3 data-i18n="machineWorkHeading">機械・ワーク選択</h3>
+                <div class="row">
+                    <label data-i18n="machineLabel">使用機械</label>
+                    <select id="machineSelect" class="w-long enter-target" onchange="onMachineSelectChange()">
+                        <option value="NCL044">NCL044</option>
+                        <option value="NCL015">NCL015</option>
+                        <option value="NCL085">NCL085</option>
+                        <option value="NCL012">NCL012</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <label data-i18n="ateLength">アテ長さ</label>
+                    <span class="nc-input-popover-wrap">
+                        <input
+                            id="ateLength"
+                            class="w-long enter-target"
+                            type="text"
+                            list="ateLengthList"
+                            autocomplete="off"
+                            placeholder="選択または直接入力"
+                            oninput="onAteLengthSelectChange()"
+                            onchange="onAteLengthSelectChange()"
+                            aria-describedby="ateLength-focus-hint"
+                        />
+                        <div
+                            id="ateLength-focus-hint"
+                            class="nc-input-focus-popover"
+                            role="tooltip"
+                            data-i18n="ateLengthFocusHint"
+                        ></div>
+                    </span>
+                    <datalist id="ateLengthList">
+                        <option value="42.5">15角 (42.5)</option>
+                        <option value="41">18角 (41)</option>
+                        <option value="39.5">21角 (39.5)</option>
+                        <option value="37.5">25角 (37.5)</option>
+                        <option value="33.25">33.5角 (33.25)</option>
+                        <option value="28.5">43角 (28.5)</option>
+                        <option value="6.25">6.25</option>
+                        <option value="11.25">11.25</option>
+                        <option value="20">20</option>
+                        <option value="24.5">24.5</option>
+                        <option value="31.5">31.5</option>
+                        <option value="36.75">36.75</option>
+                    </datalist>
+                </div>
+                <div class="row row--step-worktype reveal-section reveal-section--hidden">
+                    <label data-i18n="templateLabel">テンプレート</label>
+                    <select id="workType" class="w-long enter-target" onchange="updateWorkTypeSettings()">
+                        <option value="" data-i18n="templatePick" title="ワーク種別を選択してください">-- 選択 --</option>
+                        <option value="M12">M12</option>
+                        <option value="M15">M15</option>
+                        <option value="M18">M18</option>
+                        <option value="M22">M22</option>
+                        <option value="G78">G78</option>
+                        <option value="M40">M40</option>
+                        <option value="M12_MH">M12-MH</option>
+                        <option value="M15_MH">M15-MH</option>
+                        <option value="M18_MH">M18-MH</option>
+                        <option value="M22_MH">M22-MH</option>
+                        <option value="G78_MH">G78-MH</option>
+                        <option value="M40_MH">M40-MH</option>
+                        <option value="M42X3_25175">M42X3 φ25.175(ST)</option>
+                        <option value="M42X3_25175_16">M42X3 φ25.175→φ16</option>
+                        <option value="M42X3_25175_20">M42X3 φ25.175→φ20</option>
+                        <option value="M42X3_25175_22">M42X3 φ25.175→φ22</option>
+                        <option value="M8_21">M8(φ2.1)</option>
+                        <option value="M8_31">M8(φ3.1)</option>
+                        <option value="G18_40">G18(φ4.0)</option>
+                        <option value="G18_42">G18(φ4.2)</option>
+                        <option value="G18_62">G18(φ6.2)</option>
+                        <option value="G18_655">G18(φ6.55)</option>
+                        <option value="G18_6175">G18(φ6.175)</option>
+                        <option value="G18_40_MH">G18(φ4.0)-MH</option>
+                        <option value="G18_42_MH">G18(φ4.2)-MH</option>
+                        <option value="G18_62_MH">G18(φ6.2)-MH</option>
+                        <option value="G18_655_MH">G18(φ6.55)-MH</option>
+                        <option value="G18_6175_MH">G18(φ6.175)-MH</option>
+                        <option value="Tube" data-i18n="workTypeTube">チューブ</option>
+                    </select>
+                </div>
+                <div id="workTypeDesc" class="work-type-desc" hidden></div>
+                <div id="mhOdToolRow" class="row" style="display: none">
+                    <label>外径バイト (MH)</label>
+                    <select id="mhOdTool" class="w-long enter-target" onchange="runGeneration()">
+                        <option value="外径荒">外径荒 (T0505系)</option>
+                        <option value="外径溝">外径溝 (T1010系)</option>
+                    </select>
+                </div>
+                <div id="tubeVariantGroup" class="nc-tube-variant" style="display: none">
+                    <h3 data-i18n="tubeSpec">チューブ規格選択</h3>
+                    <div class="row tonbo-variant-row">
+                        <label data-i18n="tubeSpecLabel">チューブ規格</label>
+                        <select id="tubeSpecSelect" class="w-long enter-target" onchange="updateTubeLengths()">
+                            <option value="">-- 規格を選択 --</option>
+                        </select>
                     </div>
-
-                    <div class="group group--split">
-                        <h3 data-i18n="author">作成者</h3>
-                        <div class="btns">
-                            <button type="button" class="qb" onclick="setAuthor('YAMADA', this)">YAMADA</button>
-                            <button type="button" class="qb" onclick="setAuthor('SAWADA', this)">SAWADA</button>
-                            <button type="button" class="qb" onclick="setAuthor('RIN', this)">RIN</button>
-                            <button type="button" class="qb" onclick="setAuthor('REI', this)">REI</button>
-                            <button type="button" class="qb" onclick="setAuthor('TANIGUTI', this)">TANIGUTI</button>
-                            <button type="button" class="qb" onclick="setAuthor('MURAKAMI', this)">MURAKAMI</button>
-                        </div>
-                        <div class="row">
-                            <input
-                                type="text"
-                                id="workerName"
-                                data-i18n-placeholder="phDirect"
-                                placeholder="半角英数字のみ"
-                                class="w-full enter-target"
-                            />
-                        </div>
+                    <div class="row tonbo-variant-row tube-variant-length-row">
+                        <label data-i18n="tubeLen">長さ(L)</label>
+                        <select id="tubeLengthSelect" class="w-mid enter-target"></select>
                     </div>
                 </div>
             </div>
 
-            <div id="machiningSettingsGroup" class="group" style="display: none">
+            <div id="machiningSettingsGroup" class="nc-section-card" style="display: none">
                 <h3 data-i18n="machiningSettings">加工設定</h3>
 
                 <div id="normalProcessArea">
@@ -242,9 +260,10 @@
                                         type="text"
                                         inputmode="decimal"
                                         id="maxOD"
-                                        placeholder="自動計算を使用してください"
-                                        class="w-mid enter-target"
+                                        placeholder="クリックして自動計算を開く ▼"
+                                        class="w-mid enter-target maxod-trigger-input"
                                         aria-describedby="maxOD-focus-hint"
+                                        title="クリックすると自動計算ツールが開きます（直接入力も可）"
                                     />
                                     <div
                                         id="maxOD-focus-hint"
@@ -257,9 +276,8 @@
                             <div class="row machining-m99-row">
                                 <label for="selM99P100" id="lblM99P100">M99P100</label>
                                 <select id="selM99P100" class="w-mid enter-target" onchange="runGeneration()">
-                                    <option value="" selected>未選択</option>
-                                    <option value="off">使用しない</option>
-                                    <option value="on">M99P100</option>
+                                    <option value="off" selected>使用しない</option>
+                                    <option value="on">使用する</option>
                                 </select>
                             </div>
                         </div>
@@ -311,7 +329,7 @@
                             >
                                 <div class="calc-inputs__fields">
                                     <div class="row">
-                                        <label data-i18n="stockA">母材 A</label>
+                                        <label data-i18n="stockA">母材幅A</label>
                                         <span class="nc-input-popover-wrap">
                                             <input
                                                 type="text"
@@ -331,7 +349,7 @@
                                         </span>
                                     </div>
                                     <div class="row">
-                                        <label data-i18n="stockB">母材 B</label>
+                                        <label data-i18n="stockB">母材幅B</label>
                                         <span class="nc-input-popover-wrap">
                                             <input
                                                 type="text"
@@ -459,65 +477,36 @@
                                             ></div>
                                         </span>
                                     </div>
-                                    <div class="machining-field-hint" data-i18n="eccHint">
-                                        ※ 自動計算: √(2A)² + (2B)²
-                                    </div>
+                                    <div class="machining-field-hint" data-i18n="eccHint"></div>
                                 </div>
                                 <div class="mode-diagram mode-diagram--eccentric" aria-hidden="true">
-                                    <svg viewBox="0 0 175 194" width="175" height="194">
+                                    <svg viewBox="-5 -5 225 210" width="225" height="210">
                                         <defs>
-                                            <marker
-                                                id="ec-s"
-                                                orient="auto"
-                                                markerWidth="7"
-                                                markerHeight="7"
-                                                refX="0"
-                                                refY="3.5"
-                                            >
-                                                <path d="M7,0 L0,3.5 L7,7 Z" fill="#888" />
+                                            <marker id="ec-s" orient="auto" markerWidth="9" markerHeight="9" refX="0" refY="4.5">
+                                                <path d="M9,0 L0,4.5 L9,9 Z" fill="#888" />
                                             </marker>
-                                            <marker
-                                                id="ec-e"
-                                                orient="auto"
-                                                markerWidth="7"
-                                                markerHeight="7"
-                                                refX="7"
-                                                refY="3.5"
-                                            >
-                                                <path d="M0,0 L7,3.5 L0,7 Z" fill="#888" />
+                                            <marker id="ec-e" orient="auto" markerWidth="9" markerHeight="9" refX="9" refY="4.5">
+                                                <path d="M0,0 L9,4.5 L0,9 Z" fill="#888" />
                                             </marker>
                                         </defs>
-                                        <rect width="112" height="152" fill="#111" />
-                                        <line x1="1" y1="1" x2="111" y2="151" stroke="white" stroke-width="1.5" />
-                                        <text x="56" y="95" text-anchor="middle" fill="white" font-size="14">
-                                            最大径
-                                        </text>
-                                        <line
-                                            x1="124"
-                                            y1="0"
-                                            x2="124"
-                                            y2="152"
-                                            stroke="#888"
-                                            stroke-width="1.2"
-                                            marker-start="url(#ec-s)"
-                                            marker-end="url(#ec-e)"
-                                        />
-                                        <text x="134" y="79" fill="#888" font-size="11" dominant-baseline="middle">
-                                            距離B
-                                        </text>
-                                        <line
-                                            x1="0"
-                                            y1="164"
-                                            x2="112"
-                                            y2="164"
-                                            stroke="#888"
-                                            stroke-width="1.2"
-                                            marker-start="url(#ec-s)"
-                                            marker-end="url(#ec-e)"
-                                        />
-                                        <text x="56" y="182" text-anchor="middle" fill="#888" font-size="11">
-                                            距離A
-                                        </text>
+                                        <!-- 素材ブロック (160×160) -->
+                                        <rect width="160" height="160" fill="#111" />
+                                        <!-- 赤: 垂直中心線 (x=80) -->
+                                        <line x1="80" y1="-4" x2="80" y2="166" stroke="#ff2020" stroke-width="1.5" />
+                                        <!-- 青: 水平線 (y=96, 中心から下に16ずらし) -->
+                                        <line x1="-4" y1="96" x2="166" y2="96" stroke="#284cff" stroke-width="1.5" />
+                                        <!-- 中心交点ドット (赤×青の交点) -->
+                                        <circle cx="80" cy="96" r="4" fill="white" />
+                                        <!-- 距離A: 左端→中心 (x=0→80), ブロック下 -->
+                                        <line x1="0" y1="163" x2="0" y2="179" stroke="#888" stroke-width="1.0" />
+                                        <line x1="80" y1="163" x2="80" y2="179" stroke="#888" stroke-width="1.0" />
+                                        <line x1="0" y1="174" x2="80" y2="174" stroke="#888" stroke-width="1.5" marker-start="url(#ec-s)" marker-end="url(#ec-e)" />
+                                        <text x="40" y="193" text-anchor="middle" fill="#888" font-size="13">距離A</text>
+                                        <!-- 距離B: 上端→青線 (y=0→96, 20%延長済み), ブロック右 -->
+                                        <line x1="163" y1="0" x2="179" y2="0" stroke="#888" stroke-width="1.0" />
+                                        <line x1="163" y1="96" x2="179" y2="96" stroke="#888" stroke-width="1.0" />
+                                        <line x1="174" y1="0" x2="174" y2="96" stroke="#888" stroke-width="1.5" marker-start="url(#ec-s)" marker-end="url(#ec-e)" />
+                                        <text x="186" y="48" fill="#888" font-size="13" dominant-baseline="middle">距離B</text>
                                     </svg>
                                 </div>
                             </div>
@@ -573,7 +562,7 @@
                                     </div>
                                 </div>
                                 <div class="mode-diagram mode-diagram--corner" aria-hidden="true">
-                                    <svg viewBox="0 0 230 195" width="230" height="195">
+                                    <svg viewBox="0 0 215 200" width="215" height="200">
                                         <defs>
                                             <marker
                                                 id="co-s"
@@ -596,39 +585,39 @@
                                                 <path d="M0,0 L7,3.5 L0,7 Z" fill="#888" />
                                             </marker>
                                         </defs>
-                                        <polygon points="0,0 108,0 108,42 152,42 152,150 0,150" fill="#111" />
-                                        <line x1="1" y1="1" x2="151" y2="149" stroke="white" stroke-width="1.5" />
-                                        <line x1="108" y1="42" x2="151" y2="149" stroke="#4488ff" stroke-width="1.5" />
-                                        <text x="56" y="90" text-anchor="middle" fill="white" font-size="13">
-                                            最大径
-                                        </text>
-                                        <text x="122" y="108" text-anchor="middle" fill="white" font-size="13">
-                                            最大径
-                                        </text>
+                                        <!-- 母材 (130×100) + 中央追加ブロック (75×60) -->
+                                        <polygon points="28,0 103,0 103,60 130,60 130,160 0,160 0,60 28,60" fill="#111" />
+                                        <!-- 追加ブロックと母材の境界線 -->
+                                        <line x1="28" y1="60" x2="103" y2="60" stroke="#444" stroke-width="0.8" />
+                                        <!-- ラベル -->
+                                        <text x="65" y="115" text-anchor="middle" fill="white" font-size="12">母材</text>
+                                        <text x="65" y="35" text-anchor="middle" fill="white" font-size="10">追加</text>
+                                        <!-- 追加高さ: 追加ブロック右横 -->
                                         <line
-                                            x1="164"
+                                            x1="119"
                                             y1="1"
-                                            x2="164"
-                                            y2="41"
+                                            x2="119"
+                                            y2="59"
                                             stroke="#888"
                                             stroke-width="1.2"
                                             marker-start="url(#co-s)"
                                             marker-end="url(#co-e)"
                                         />
-                                        <text x="174" y="24" fill="#888" font-size="11" dominant-baseline="middle">
+                                        <text x="129" y="30" fill="#888" font-size="11" dominant-baseline="middle">
                                             追加高さ
                                         </text>
+                                        <!-- 母材幅: 母材下 -->
                                         <line
-                                            x1="0"
-                                            y1="162"
-                                            x2="152"
-                                            y2="162"
+                                            x1="1"
+                                            y1="173"
+                                            x2="129"
+                                            y2="173"
                                             stroke="#888"
                                             stroke-width="1.2"
                                             marker-start="url(#co-s)"
                                             marker-end="url(#co-e)"
                                         />
-                                        <text x="76" y="180" text-anchor="middle" fill="#888" font-size="11">
+                                        <text x="65" y="188" text-anchor="middle" fill="#888" font-size="11">
                                             母材幅
                                         </text>
                                     </svg>
@@ -673,7 +662,7 @@
                                     <option value="G1">G1 (単動)</option>
                                 </select>
                             </div>
-                            <div class="drill-item">
+                            <div class="drill-item" id="drillDepthRow">
                                 <label id="drillDepthLabel" data-i18n="drillZ">ドリル深さ</label>
                                 <span class="nc-input-popover-wrap">
                                     <input
@@ -704,14 +693,18 @@
                                 <button
                                     type="button"
                                     id="internalStyleDrawerToggle"
-                                    class="btn-style-drawer-toggle enter-target"
+                                    class="btn-style-drawer-toggle btn-style-drawer-toggle--required enter-target"
                                     onclick="toggleInternalStyleDrawer()"
                                     aria-expanded="false"
                                     aria-controls="internalStyleDrawerPanel"
+                                    title="クリックして加工スタイルを選択してください（必須）"
                                 >
                                     <span id="internalStyleCurrentMode" data-i18n="styleUnselected">未選択</span>
                                     <span class="machining-style-drawer__caret" aria-hidden="true">▼</span>
                                 </button>
+                            </div>
+                            <div id="internalStyleHint" class="internal-style-hint">
+                                ↑ クリックして加工スタイルを選択してください（必須）
                             </div>
                             <div
                                 id="internalStyleDrawerPanel"
@@ -1099,6 +1092,34 @@
                 >
                     デスクトップに保存
                 </button>
+                <button
+                    type="button"
+                    id="diffToggleBtn"
+                    class="main-btn main-btn--compact btn-diff"
+                    onclick="toggleDiffView()"
+                    title="前回の生成結果との行差分を表示"
+                >
+                    前回との差分
+                </button>
+                <button
+                    type="button"
+                    class="main-btn main-btn--compact btn-history"
+                    onclick="toggleHistoryPanel()"
+                    title="直近10件の生成履歴から復元"
+                >
+                    ⏱ 履歴
+                </button>
+            </div>
+
+            <!-- F1: 履歴パネル -->
+            <div id="historyPanel" class="history-panel" hidden>
+                <div class="history-panel__header">
+                    <span class="history-panel__title">⏱ 生成履歴 (直近 10 件)</span>
+                    <button type="button" class="history-panel__close" onclick="toggleHistoryPanel()">✕</button>
+                </div>
+                <div id="historyList" class="history-list">
+                    <div class="history-empty">まだ生成履歴はありません</div>
+                </div>
             </div>
 
             <div id="highlightFilterRow" class="highlight-filter-row" style="display: none">
@@ -1110,7 +1131,19 @@
                 >
             </div>
 
-            <div id="resultArea" contenteditable="true" data-i18n="resultPlaceholder">
+            <div class="result-area-header">
+                <span class="result-area-header__label">生成結果</span>
+                <button
+                    type="button"
+                    id="resultLockBtn"
+                    class="btn-result-lock btn-result-lock--locked"
+                    onclick="toggleResultLock()"
+                    title="クリックすると編集モードに切り替わります"
+                >
+                    🔒 編集ロック中
+                </button>
+            </div>
+            <div id="resultArea" contenteditable="false" data-i18n="resultPlaceholder" class="result-locked">
                 ここにGコードが生成されます...
             </div>
 
@@ -1135,8 +1168,11 @@
 
             <div id="debugPanel" class="debug-panel" hidden>
                 <div class="debug-panel__header">
-                    <span class="debug-panel__title">デバッグ: 入力値 / プレースホルダー解決結果</span>
-                    <button type="button" class="debug-panel__close" onclick="closeDebugPanel()">✕</button>
+                    <span class="debug-panel__title">デバッグ: 入力値 / プレースホルダー解決結果 / 算出値 / 計算フロー</span>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <button type="button" class="debug-panel__export" onclick="exportDebugJSON()" title="デバッグ状態をJSONでダウンロード">⬇ debug.json</button>
+                        <button type="button" class="debug-panel__close" onclick="closeDebugPanel()">✕</button>
+                    </div>
                 </div>
                 <div class="debug-panel__body">
                     <div class="debug-pane">
@@ -1150,6 +1186,18 @@
                     <div class="debug-pane">
                         <div class="debug-pane__heading">テンプレート変数カバレッジ</div>
                         <div id="debugCoveragePane" class="debug-pane__content"></div>
+                    </div>
+                    <div class="debug-pane debug-pane--calc">
+                        <div class="debug-pane__heading">算出値 (Computed Values)</div>
+                        <div id="debugCalcPane" class="debug-pane__content"></div>
+                    </div>
+                    <div class="debug-pane debug-pane--flow">
+                        <div class="debug-pane__heading">計算フロー (Data Flow Chart)</div>
+                        <div id="debugFlowPane" class="debug-pane__content"></div>
+                    </div>
+                    <div class="debug-pane debug-pane--machine">
+                        <div class="debug-pane__heading">機械定義 (Machines) — JSON エクスポート/インポート</div>
+                        <div id="debugMachinePane" class="debug-pane__content"></div>
                     </div>
                 </div>
             </div>
@@ -1191,5 +1239,15 @@
         <script src="assets/app.js"></script>
         <script src="assets/preview.js"></script>
         <script src="assets/debug.js"></script>
+        <script>
+            // PWA: Service Worker 登録 (HTTPS / localhost 環境でのみ有効)
+            if ("serviceWorker" in navigator) {
+                window.addEventListener("load", function () {
+                    navigator.serviceWorker.register("./sw.js").catch(function () {
+                        /* file:// 環境では登録失敗するが無害 */
+                    });
+                });
+            }
+        </script>
     </body>
 </html>

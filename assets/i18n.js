@@ -49,7 +49,7 @@
             stockA: "母材 A",
             stockB: "母材 B",
             phEx: "例: 15.0",
-            eccHint: "※ 自動計算: √(2A)² + (2B)²",
+            eccHint: "※ 自動計算: √(2A)² + (2B)²\nA・B は加工中心から素材端面までの距離（遠い側）\nA = 横方向、B = 縦方向",
             normalStockHint: "※ 自動計算: √(A² + B²)",
             stockW: "母材 幅",
             addH: "追加 高さ",
