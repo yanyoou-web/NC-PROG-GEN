@@ -271,12 +271,14 @@ function getDrillShiageBlock_M8(depth) {
  *   machineConfig : 機械定義オブジェクト (M51/M59 取得用)
  *
  *   [depth <= firstStep] 1 発切り:
- *     G1Z-{depth}F.1 / G4U.5 / G1Z3.F1.5 / G0Z30.{M59} / G28U0W0M1
+ *     G1Z-{depth}F.1 / G4U.5 / G1Z3.F1.5
+ *     ※ G0Z30.{M59} / G28U0W0M1 はテンプレート側に記載済みのため出力しない
  *
  *   [depth > firstStep] ステップバック:
  *     初回: G1Z-{firstStep}F.1 → Z30 → M59/M1/M3/M51 → G0Z1. → アプローチ
  *     中間ステップ (5mm ずつ): 切込み → チップクリア(firstStep-0.1) → Z30 → M-codes → アプローチ
- *     最終ステップ: 切込み → G4U.5 → G1Z3.F1.5 → G0Z30.{M59} → G28U0W0M1
+ *     最終ステップ: 切込み → G4U.5 → G1Z3.F1.5
+ *     ※ G0Z30.{M59} / G28U0W0M1 はテンプレート側に記載済みのため出力しない
  */
 function getDrillShiageBlock_ASWD(depth, firstStep, machineConfig) {
     if (isNaN(depth) || depth <= 0) return "";
@@ -290,13 +292,11 @@ function getDrillShiageBlock_ASWD(depth, firstStep, machineConfig) {
         .join("\n");
 
     // 1発切り (depth が firstStep 以下)
+    // G0Z30.M59 / G28U0W0M1 はテンプレート側 ({{DRILL_BLOCK}} の直後) に記載済みのため出力しない
     if (depth <= firstStep) {
         let s = `G1Z-${fmt1(depth)}F.1\n`;
         s += `G4U.5\n`;
-        s += `G1Z3.F1.5\n`;
-        s += `G0Z30.`;
-        if (m59) s += m59;
-        s += `\nG28U0W0M1`;
+        s += `G1Z3.F1.5`;
         return s;
     }
 
@@ -324,12 +324,10 @@ function getDrillShiageBlock_ASWD(depth, firstStep, machineConfig) {
     }
 
     // 最終ステップ
+    // G0Z30.M59 / G28U0W0M1 はテンプレート側 ({{DRILL_BLOCK}} の直後) に記載済みのため出力しない
     s += `Z-${fmt1(depth)}F.1\n`;
     s += `G4U.5\n`;
-    s += `G1Z3.F1.5\n`;
-    s += `G0Z30.`;
-    if (m59) s += m59;
-    s += `\nG28U0W0M1`;
+    s += `G1Z3.F1.5`;
 
     return s;
 }
