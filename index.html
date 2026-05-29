@@ -29,6 +29,7 @@
                     aria-labelledby="helpEasterBtn"
                 >
                     <p class="help-easter-msg" data-i18n="easterFoundMsg"></p>
+                    <p class="help-easter-secret-list" data-i18n="easterSecretList"></p>
                     <p class="help-easter-author" data-i18n="easterAuthorLine"></p>
                     <div class="help-easter-dev-row">
                         <button type="button" id="debugPanelBtn" class="help-easter-dev-btn" onclick="openDebugPanel()">
@@ -118,26 +119,28 @@
                         oninput="formatNum(this)"
                     />
                 </div>
-                <div class="row nc-author-row">
-                    <label data-i18n="author">作成者</label>
-                    <div class="btns nc-btns-inline">
-                        <button type="button" class="qb" onclick="setAuthor('YAMADA', this)">YAMADA</button>
-                        <button type="button" class="qb" onclick="setAuthor('SAWADA', this)">SAWADA</button>
-                        <button type="button" class="qb" onclick="setAuthor('RIN', this)">RIN</button>
-                        <button type="button" class="qb" onclick="setAuthor('REI', this)">REI</button>
-                        <button type="button" class="qb" onclick="setAuthor('TANIGUTI', this)">TANIGUTI</button>
-                        <button type="button" class="qb" onclick="setAuthor('MURAKAMI', this)">MURAKAMI</button>
+                <div class="nc-author-section">
+                    <div class="row nc-author-row">
+                        <label data-i18n="author">作成者</label>
+                        <div class="btns nc-btns-inline">
+                            <button type="button" class="qb" onclick="setAuthor('YAMADA', this)">YAMADA</button>
+                            <button type="button" class="qb" onclick="setAuthor('SAWADA', this)">SAWADA</button>
+                            <button type="button" class="qb" onclick="setAuthor('RIN', this)">RIN</button>
+                            <button type="button" class="qb" onclick="setAuthor('REI', this)">REI</button>
+                            <button type="button" class="qb" onclick="setAuthor('TANIGUTI', this)">TANIGUTI</button>
+                            <button type="button" class="qb" onclick="setAuthor('MURAKAMI', this)">MURAKAMI</button>
+                        </div>
                     </div>
-                </div>
-                <div class="row">
-                    <span class="nc-label-spacer"></span>
-                    <input
-                        type="text"
-                        id="workerName"
-                        data-i18n-placeholder="phDirect"
-                        placeholder="半角英数字のみ"
-                        class="nc-worker-input enter-target"
-                    />
+                    <div class="row">
+                        <span class="nc-label-spacer"></span>
+                        <input
+                            type="text"
+                            id="workerName"
+                            data-i18n-placeholder="phDirect"
+                            placeholder="半角英数字のみ"
+                            class="nc-worker-input enter-target"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -227,7 +230,7 @@
                 <div id="workTypeDesc" class="work-type-desc" hidden></div>
                 <div id="mhOdToolRow" class="row" style="display: none">
                     <label>外径バイト (MH)</label>
-                    <select id="mhOdTool" class="w-long enter-target" onchange="runGeneration()">
+                    <select id="mhOdTool" class="w-long enter-target">
                         <option value="外径荒">外径荒 (T0505系)</option>
                         <option value="外径溝">外径溝 (T1010系)</option>
                     </select>
@@ -275,7 +278,7 @@
                             </div>
                             <div class="row machining-m99-row">
                                 <label for="selM99P100" id="lblM99P100">M99P100</label>
-                                <select id="selM99P100" class="w-mid enter-target" onchange="runGeneration()">
+                                <select id="selM99P100" class="w-mid enter-target">
                                     <option value="off" selected>使用しない</option>
                                     <option value="on">使用する</option>
                                 </select>
@@ -688,7 +691,7 @@
                                 <label
                                     class="machining-section-label machining-style-drawer__label"
                                     data-i18n="internalStyle"
-                                    >内径加工スタイル</label
+                                    >内径スタイル</label
                                 >
                                 <button
                                     type="button"

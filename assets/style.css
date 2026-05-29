@@ -385,6 +385,11 @@ input.input--readonly-computed {
     vertical-align: middle;
     max-width: 100%;
 }
+/* アテ長さ: select と同じ 250px に揃える */
+#ateLength {
+    width: 250px !important;
+    max-width: 100%;
+}
 .nc-input-focus-popover {
     display: none;
     position: absolute;
@@ -916,6 +921,12 @@ button.main-btn.main-btn--compact {
     margin: 0 0 8px 0;
     font-size: 0.78rem;
     line-height: 1.45;
+    color: #b0b8c0;
+}
+.help-easter-secret-list {
+    margin: 0 0 8px 0;
+    font-size: 0.78rem;
+    line-height: 1.6;
     color: #b0b8c0;
 }
 .help-easter-author {
@@ -2074,6 +2085,12 @@ input.input--halfwidth-reject {
 .row--step-worktype.reveal-section--hidden + .work-type-desc {
     display: none !important;
 }
+/* nc-section-card 内の workType 説明: 選択ボックスに揃えてインデント・幅は内容に合わせる */
+.nc-section-card .work-type-desc {
+    margin-left: 160px;
+    width: fit-content;
+    max-width: calc(100% - 160px);
+}
 
 /* ===== F5: リアルタイムバリデーション ===== */
 .field-inline-error {
@@ -2254,11 +2271,17 @@ input.input--halfwidth-reject {
     margin-top: 0;
     margin-bottom: 14px;
 }
+/* カード内 .row を machining-panel に合わせて統一 */
+.nc-section-card .row {
+    padding-left: 10px;
+    gap: 10px;
+    box-sizing: border-box;
+}
 /* カード内の .row ラベル幅を統一 (140px) */
 .nc-section-card .row > label:not(.cb-label):not(.nc-label-spacer) {
-    min-width: 100px;
-    width: 100px;
-    flex: 0 0 100px;
+    min-width: 140px;
+    width: 140px;
+    flex: 0 0 140px;
 }
 /* 図番行: ラベル + インライン入力フォーマット */
 .nc-fn-row {
@@ -2267,9 +2290,9 @@ input.input--halfwidth-reject {
     gap: 6px;
 }
 .nc-fn-row label {
-    min-width: 70px !important;
-    width: 70px !important;
-    flex: 0 0 70px !important;
+    min-width: 140px !important;
+    width: 140px !important;
+    flex: 0 0 140px !important;
 }
 /* 作成者行: ラベルと横並びのクイックボタン */
 .nc-author-row {
@@ -2278,17 +2301,33 @@ input.input--halfwidth-reject {
     margin-bottom: 6px;
 }
 .nc-author-row label {
-    padding-top: 6px;
+    padding-top: 4px;
 }
 .nc-btns-inline {
-    flex: 1;
-    width: auto !important;
+    flex: 0 0 auto;
+    width: calc((100% - 150px) * 0.6);
     margin: 0 !important;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+}
+/* 作成者ボタン: 高さ元通り・幅40%縮小（コンテナ側で制御） */
+.nc-btns-inline .qb {
+    padding: 6px 0;
+    font-size: 0.75rem;
+    min-width: 0;
+}
+/* 作成者セクション: workerName フォーカス時のみボタン行を表示 */
+.nc-author-section .nc-author-row {
+    display: none;
+}
+.nc-author-section:focus-within .nc-author-row {
+    display: flex;
 }
 /* 作成者テキスト入力: ラベル幅分インデント */
 .nc-label-spacer {
-    flex: 0 0 100px;
-    min-width: 100px;
+    flex: 0 0 140px;
+    min-width: 140px;
     display: block;
 }
 .nc-worker-input {
@@ -2449,6 +2488,9 @@ input.input--halfwidth-reject {
     font-size: 0.72rem;
     color: #4da6ff;
     margin-top: 4px;
+    margin-left: 160px;
+    width: fit-content;
+    max-width: calc(100% - 160px);
     padding: 3px 8px;
     background: rgba(77,166,255,0.06);
     border-left: 2px solid #4da6ff;
@@ -2513,3 +2555,118 @@ input.input--halfwidth-reject {
     border-color: #ffb300 !important;
     outline: 2px solid rgba(255,179,0,0.2);
 }
+
+/* ===== 入力クリア(×)ボタン ===== */
+.input-clear-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.input-clear-wrap input {
+    padding-right: 22px !important;
+    box-sizing: border-box;
+    width: 100%;
+}
+.input-clear-btn {
+    position: absolute;
+    right: 3px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0 2px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+    pointer-events: none;
+}
+.input-clear-wrap:hover .input-clear-btn,
+.input-clear-wrap:focus-within .input-clear-btn {
+    opacity: 1;
+    pointer-events: auto;
+}
+.input-clear-btn:hover {
+    color: #ff6666;
+}
+
+/* ===== 保存ボタン ダーティ状態 ===== */
+#saveBtn.btn-save--dirty {
+    opacity: 0.4;
+    position: relative;
+}
+#saveBtn.btn-save--dirty::after {
+    content: "⚠";
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    font-size: 11px;
+    color: #ffaa44;
+}
+
+/* ===== オンスクリーンテンキー ===== */
+.nc-numpad {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #1a2030;
+    border: 1px solid #3a5070;
+    border-radius: 12px;
+    padding: 12px;
+    z-index: 9500;
+    box-shadow: 0 6px 32px rgba(0,0,0,0.7);
+    user-select: none;
+    min-width: 172px;
+}
+.nc-numpad__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2a3550;
+    color: #7ec8e3;
+    font-size: 0.78rem;
+    font-weight: bold;
+}
+.nc-numpad__close {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 15px;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color 0.1s;
+}
+.nc-numpad__close:hover { color: #ff6666; }
+.nc-numpad__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+.nc-numpad__grid button {
+    background: #252e45;
+    border: 1px solid #3a5070;
+    color: #d0dce8;
+    border-radius: 7px;
+    padding: 10px 0;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: background 0.1s;
+    min-width: 40px;
+    font-family: monospace;
+}
+.nc-numpad__grid button:hover { background: #344060; }
+.nc-numpad__grid button:active { background: #4a5f88; }
+.nc-numpad__grid button[data-action="back"]  { color: #ffaa44; }
+.nc-numpad__grid button[data-action="clear"] { color: #ff7777; }
+.nc-numpad__grid button[data-action="enter"],
+.nc-numpad__grid .nc-numpad__enter { color: #6adf6a; background: #0d2010; }
+.nc-numpad__grid button[data-action="enter"]:hover,
+.nc-numpad__grid .nc-numpad__enter:hover { background: #143018; }
+.nc-numpad__grid button[data-action="minus"] { color: #aaccff; }
+.nc-numpad__grid .nc-numpad__op { color: #ffcc66; background: #221a00; border-color: #554400; }
+.nc-numpad__grid .nc-numpad__op:hover { background: #332800; }
