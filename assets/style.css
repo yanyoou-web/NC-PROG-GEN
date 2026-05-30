@@ -1908,11 +1908,6 @@ input.input--halfwidth-reject {
     color: #888;
 }
 
-/* ─── 算出値パネル (debug-pane--calc) ─── */
-.debug-pane--calc {
-    /* row 2, col 1 — auto-placed by grid */
-}
-
 /* ─── フローチャートパネル (debug-pane--flow) ─── */
 .debug-pane--flow {
     grid-column: 2 / 4; /* row 2, col 2-3 */
