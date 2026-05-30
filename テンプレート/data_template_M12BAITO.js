@@ -6,7 +6,7 @@ O{{入力_工程No}}(PM-{{入力_図番}}=No,{{入力_工程No}}=Q)
 {{初期設定ブロック}}
 
 N1(3.3DR){{扉閉じ}}
-G0G40G97S450M3{{ドリルT}}
+G0G40G97S750M3{{ドリルT}}
 X0.Z30.{{M51}}
 Z3.
 {{DRILL_BLOCK}}
@@ -43,10 +43,8 @@ G28U0W0M1
 
 N3(IN-4)
 G0G40G97S500{{内径ダイヤΦ4}}
-X{{BAITO_IN_APX}}Z30.(X{{BAITO_IN_APX}})
-M1
-M3
-Z1.{{M51}}
+X{{BAITO_IN_APX}}Z30.(X{{BAITO_IN_APX}}){{M51}}
+Z1.
 G1Z.3F.2
 X{{BAITO_IN_X}}Z-{{BAITO_IN_CHAMFER_Z}}F.05
 Z-{{BAITO_IN_MID_Z}}F.1
@@ -101,7 +99,7 @@ Z-6.65F.1{{M458}}
 U-.2
 G0Z30.{{M59}}
 {{M459}}
-M1(--KIRIKO-TORU--)
+M1
 X4.Z.5M3{{小溝裏}}
 G1Z-6.F1.{{M51}}
 Z-6.7F.13
