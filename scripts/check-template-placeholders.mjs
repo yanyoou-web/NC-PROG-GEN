@@ -78,6 +78,8 @@ const tubeKeys = new Set([
 
 // MH外径荒
 staticKeys.add("MH外径荒");
+// G12B ノーズR 分岐（workType G12B_G_ST_12175_8 で動的代入）
+["G12B_ノーズRZ", "G12B_ノーズRN22", "G12B_ノーズRX"].forEach((k) => staticKeys.add(k));
 tubeKeys.forEach((k) => staticKeys.add(k));
 machineKeys.forEach((k) => staticKeys.add(k));
 

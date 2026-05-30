@@ -2045,21 +2045,18 @@ function updateG18SubPanels() {
 function onM12DrillTypeChange() {
     updateInternalStyleUI();
     calcDrillDepth();
-    runGeneration();
 }
 
 /** M12: 交差穴加工方法ドロップダウン変更 */
 function onM12CrossMethodChange() {
     updateInternalStyleUI();
     calcDrillDepth();
-    runGeneration();
 }
 
 /** G18_40/42: 交差穴加工方法ドロップダウン変更 */
 function onG18CrossMethodChange() {
     updateInternalStyleUI();
     calcDrillDepth();
-    runGeneration();
 }
 
 /** M8: 6.横穴＆中バリ処理 選択時の加工方法 → {profile} を解決する */
@@ -2088,7 +2085,6 @@ function updateM8SubPanels() {
 function onM8CrossMethodChange() {
     updateInternalStyleUI();
     calcDrillDepth();
-    runGeneration();
 }
 
 /** M12: すべての場合で G1 を返す（G74 プロファイルは廃止） */
@@ -2139,7 +2135,6 @@ function syncMachineSelectOptions() {
 }
 
 function onMachineSelectChange() {
-    runGeneration();
 }
 
 function restrictStyles(workType) {
@@ -3647,9 +3642,12 @@ function runGeneration(fromUserButton = false) {
     if (isGenError) {
         saveBtn.style.display = "none";
         saveBtn.disabled = true;
+        saveBtn.classList.remove("btn-save--dirty");
     } else {
         saveBtn.style.display = "block";
         saveBtn.disabled = false;
+        saveBtn.classList.remove("btn-save--dirty");
+        _ncInputDirty = false;
     }
 
     if (typeof drawPreview === "function") drawPreview(true);
@@ -3843,7 +3841,7 @@ function downloadFile() {
 // ========== F6: workType 説明 ==========
 
 const WORK_TYPE_DESCRIPTIONS = {
-    M12:            "M12 — 内径 Φ4.0 / ドリル φ4.05 / 仕上げ: HSS・HGDR・バイト選択",
+    M12:            "M12 — 内径 Φ4.0 / HGDR φ4.05 / 仕上げ: HSS・HGDR・バイト選択",
     M15:            "M15 — 内径 Φ6.0 / ドリル φ3.3",
     M18:            "M18 — 内径 Φ8.0 / ドリル φ7.0",
     M22:            "M22 — 内径 Φ10.0 / ドリル φ7.0",
@@ -3862,18 +3860,18 @@ const WORK_TYPE_DESCRIPTIONS = {
     M8_21:          "M8(φ2.1) — 内径 Φ2.1 / ドリル φ2.2",
     M8_31:          "M8(φ3.1) — 内径 Φ3.1 / ドリル φ3.2",
     J_M8_300:       "J-M8-ASWD-300 — ドリル φ3.0(ASWD) / スタイル固定: CrossSmall / 深さ自動計算",
-    G18_40:         "G18(φ4.0) — 内径 Φ4.0 / ドリル φ4.05 / G1仕上げ・横穴加工対応",
-    G18_42:         "G18(φ4.2) — 内径 Φ4.2 / ドリル φ4.15 / G1仕上げ・横穴加工対応",
-    G18_62:         "G18(φ6.2) — 内径 Φ6.2 / ドリル φ4.15 / HGDR仕上げ",
-    G18_655:        "G18(φ6.55) — 内径 Φ6.55 / ドリル φ4.15 / HGDR仕上げ",
-    G18_6175:       "G18(φ6.175) — 内径 Φ6.175 / ドリル φ4.15 / HGDR仕上げ",
-    G18_40_MH:      "G18(φ4.0)-MH — 内径 Φ4.0 / ドリル φ4.05 / G1仕上げ・横穴対応・MH外径仕上げ",
-    G18_42_MH:      "G18(φ4.2)-MH — 内径 Φ4.2 / ドリル φ4.15 / G1仕上げ・横穴対応・MH外径仕上げ",
-    G18_62_MH:      "G18(φ6.2)-MH — 内径 Φ6.2 / ドリル φ4.15 / HGDR仕上げ・MH外径仕上げ付き",
-    G18_655_MH:     "G18(φ6.55)-MH — 内径 Φ6.55 / ドリル φ4.15 / HGDR仕上げ・MH外径仕上げ付き",
-    G18_6175_MH:    "G18(φ6.175)-MH — 内径 Φ6.175 / ドリル φ4.15 / HGDR仕上げ・MH外径仕上げ付き",
+    G18_40:         "G18(φ4.0) — 内径 Φ4.0 / HGDR φ4.05 / ",
+    G18_42:         "G18(φ4.2) — 内径 Φ4.2 / HGDR φ4.15 / ",
+    G18_62:         "G18(φ6.2) — 内径 Φ6.2 / HGDR φ4.15 / HGDR下穴",
+    G18_655:        "G18(φ6.55) — 内径 Φ6.55 / HGDRφ4.15 / HGDR下穴",
+    G18_6175:       "G18(φ6.175) — 内径 Φ6.175 / HGDRφ4.15 / HGDR下穴",
+    G18_40_MH:      "G18(φ4.0)-MH — 内径 Φ4.0 / HGDRφ4.05 /",
+    G18_42_MH:      "G18(φ4.2)-MH — 内径 Φ4.2 / HGDRφ4.15 /",
+    G18_62_MH:      "G18(φ6.2)-MH — 内径 Φ6.2 / HGDRφ4.15 /HGDR下穴",
+    G18_655_MH:     "G18(φ6.55)-MH — 内径 Φ6.55 / HGDRφ4.15 /HGDR下穴",
+    G18_6175_MH:    "G18(φ6.175)-MH — 内径 Φ6.175 / HGDRφ4.15 /HGDR下穴",
     G12B_G_ST_12175_8: "G12B-G-ST-12.175-8 — 内径 Φ8 / ドリル φ7.0 / 内径バイト Φ8",
-    Tube:           "チューブ偏心 — 内径・ドリル径は規格依存 / 規格とチューブ長さを選択して使用",
+    Tube:           "チューブ 規格とチューブ長さを選択して使用",
 };
 
 function updateWorkTypeDesc() {
@@ -4165,7 +4163,7 @@ function _renderDiffOrNormal() {
     const diff = _computeLineDiff(_ncPrevPlainGCode, _ncLastPlainGCode);
     if (!diff || !diff.ops) {
         resultArea.innerHTML =
-            '<span style="color:#ffaa44;">差分計算スキップ (行数が多すぎます)</span>\n' +
+            '<span style="color:#ffaa44;">差分計算スキップ (行数が多すぎます)</span>' +
             (_ncLastPlainGCode || "").split("\n").map((l) => escapeHtml(l)).join("\n");
         return;
     }
@@ -4181,11 +4179,11 @@ function _renderDiffOrNormal() {
                 return `<span class="diff-keep">  ${escaped}</span>`;
             }
         })
-        .join("\n");
+        .join("");
 
     const addCount = diff.ops.filter((o) => o.type === "add").length;
     const rmCount = diff.ops.filter((o) => o.type === "remove").length;
-    const header = `<span class="diff-header">差分: +${addCount}行 / -${rmCount}行</span>\n`;
+    const header = `<span class="diff-header">差分: +${addCount}行 / -${rmCount}行</span>`;
     resultArea.innerHTML = header + html;
 }
 
@@ -4194,6 +4192,19 @@ function _renderDiffOrNormal() {
 document.addEventListener("DOMContentLoaded", function () {
     initRealTimeValidation();
     updateWorkTypeDesc();
+    _setupClearButtons();
+    _setupNumpad();
+
+    // ダーティ追跡: フォーム内の任意の入力変化で保存ボタンを無効化
+    const _formRoot = document.querySelector(".nc-container") || document.body;
+    _formRoot.addEventListener("input", function (e) {
+        if (e.target.closest("#resultArea")) return; // 結果エリアの編集は除外
+        _markInputDirty();
+    });
+    _formRoot.addEventListener("change", function (e) {
+        if (e.target.closest("#resultArea")) return;
+        _markInputDirty();
+    });
 });
 
 function setCalcMode(mode) {
@@ -4220,6 +4231,158 @@ function setCalcMode(mode) {
     }
     const hint = $id("ateInputHint");
     if (hint) hint.style.display = "none";
+}
+
+// ===== 入力ダーティ追跡 =====
+var _ncInputDirty = false;
+
+function _markInputDirty() {
+    if (_ncInputDirty) return;
+    const saveBtn = $id("saveBtn");
+    if (!saveBtn || saveBtn.disabled) return; // 未生成・エラー時は何もしない
+    _ncInputDirty = true;
+    saveBtn.disabled = true;
+    saveBtn.classList.add("btn-save--dirty");
+}
+
+// ===== × クリアボタン =====
+function _setupClearButtons() {
+    document.querySelectorAll('input[type="text"]:not([readonly])').forEach(function (input) {
+        if (input.dataset.clearBound) return;
+        input.dataset.clearBound = "1";
+
+        const wrap = document.createElement("span");
+        wrap.className = "input-clear-wrap";
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "input-clear-btn";
+        btn.textContent = "×";
+        btn.setAttribute("tabindex", "-1");
+        btn.setAttribute("aria-label", "クリア");
+        btn.addEventListener("mousedown", function (e) {
+            e.preventDefault(); // フォーカスを奪わない
+        });
+        btn.addEventListener("click", function () {
+            input.value = "";
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            input.focus();
+        });
+        wrap.appendChild(btn);
+    });
+}
+
+// ===== オンスクリーンテンキー =====
+function _setupNumpad() {
+    if ($id("ncNumpad")) return;
+
+    const pad = document.createElement("div");
+    pad.id = "ncNumpad";
+    pad.className = "nc-numpad";
+    pad.style.display = "none";
+    pad.innerHTML =
+        '<div class="nc-numpad__header">' +
+        '  <span>テンキー</span>' +
+        '  <button class="nc-numpad__close" tabindex="-1">✕</button>' +
+        '</div>' +
+        '<div class="nc-numpad__grid">' +
+        '  <button data-val="7" tabindex="-1">7</button>' +
+        '  <button data-val="8" tabindex="-1">8</button>' +
+        '  <button data-val="9" tabindex="-1">9</button>' +
+        '  <button data-val="+" tabindex="-1" class="nc-numpad__op">+</button>' +
+        '  <button data-val="4" tabindex="-1">4</button>' +
+        '  <button data-val="5" tabindex="-1">5</button>' +
+        '  <button data-val="6" tabindex="-1">6</button>' +
+        '  <button data-val="-" tabindex="-1" class="nc-numpad__op">−</button>' +
+        '  <button data-val="1" tabindex="-1">1</button>' +
+        '  <button data-val="2" tabindex="-1">2</button>' +
+        '  <button data-val="3" tabindex="-1">3</button>' +
+        '  <button data-val="*" tabindex="-1" class="nc-numpad__op">×</button>' +
+        '  <button data-val="." tabindex="-1">.</button>' +
+        '  <button data-val="0" tabindex="-1">0</button>' +
+        '  <button data-action="back" tabindex="-1">⌫</button>' +
+        '  <button data-val="/" tabindex="-1" class="nc-numpad__op">÷</button>' +
+        '  <button data-action="minus" tabindex="-1">±</button>' +
+        '  <button data-action="clear" tabindex="-1">C</button>' +
+        '  <button data-action="enter" tabindex="-1" class="nc-numpad__enter">↵</button>' +
+        '</div>';
+    document.body.appendChild(pad);
+
+    var _numpadTarget = null;
+
+    function _numpadShow(input) {
+        _numpadTarget = input;
+        pad.style.display = "block";
+    }
+    function _numpadHide() {
+        pad.style.display = "none";
+        _numpadTarget = null;
+    }
+
+    pad.querySelector(".nc-numpad__grid").addEventListener("mousedown", function (e) {
+        e.preventDefault();
+        const btn = e.target.closest("button");
+        if (!btn || !_numpadTarget) return;
+
+        const start = _numpadTarget.selectionStart;
+        const end   = _numpadTarget.selectionEnd;
+        const val   = _numpadTarget.value;
+
+        if (btn.dataset.val !== undefined) {
+            _numpadTarget.value = val.slice(0, start) + btn.dataset.val + val.slice(end);
+            const pos = start + btn.dataset.val.length;
+            _numpadTarget.setSelectionRange(pos, pos);
+            _numpadTarget.dispatchEvent(new Event("input", { bubbles: true }));
+        } else if (btn.dataset.action === "back") {
+            if (start !== end) {
+                _numpadTarget.value = val.slice(0, start) + val.slice(end);
+                _numpadTarget.setSelectionRange(start, start);
+            } else if (start > 0) {
+                _numpadTarget.value = val.slice(0, start - 1) + val.slice(start);
+                _numpadTarget.setSelectionRange(start - 1, start - 1);
+            }
+            _numpadTarget.dispatchEvent(new Event("input", { bubbles: true }));
+        } else if (btn.dataset.action === "clear") {
+            _numpadTarget.value = "";
+            _numpadTarget.dispatchEvent(new Event("input", { bubbles: true }));
+        } else if (btn.dataset.action === "minus") {
+            _numpadTarget.value = val.startsWith("-") ? val.slice(1) : "-" + val;
+            _numpadTarget.dispatchEvent(new Event("input", { bubbles: true }));
+        } else if (btn.dataset.action === "enter") {
+            _numpadTarget.dispatchEvent(new Event("change", { bubbles: true }));
+            _numpadHide();
+        }
+    });
+
+    pad.querySelector(".nc-numpad__close").addEventListener("mousedown", function (e) {
+        e.preventDefault();
+        _numpadHide();
+    });
+
+    // テンキー対象: inputmode="decimal" の入力欄 + アテ長さ
+    function _bindNumpadInputs() {
+        document.querySelectorAll('input[inputmode="decimal"]:not([readonly]), #ateLength').forEach(function (input) {
+            if (input.dataset.numpadBound) return;
+            input.dataset.numpadBound = "1";
+            input.addEventListener("focus", function () { _numpadShow(input); });
+        });
+    }
+    _bindNumpadInputs();
+
+    // フォーカスが入力欄でもテンキーでもない場所に移ったら閉じる
+    document.addEventListener("focusin", function (e) {
+        if (pad.contains(e.target)) return;
+        if (e.target.matches('input[inputmode="decimal"]:not([readonly]), #ateLength')) return;
+        _numpadHide();
+    });
+
+    // Escape で閉じる
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && pad.style.display !== "none") _numpadHide();
+    });
 }
 
 // ===== resultArea ロック / 編集トグル =====

@@ -38,3 +38,29 @@ $content = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
 $replaced = $content -replace '置換前', '置換後'
 [System.IO.File]::WriteAllText($path, $replaced, [System.Text.Encoding]::UTF8)
 ```
+
+## UI レイアウト（index.html / style.css）
+
+### ラベル幅・インデント基準
+- `nc-section-card` / `machining-panel` 共通ラベル幅: **140px**
+- 図番行 `.nc-fn-row label` も **140px**（`!important`）— PM- が他コントロールと揃う
+- `.nc-label-spacer`（作成者テキスト入力の位置合わせ）: **140px**
+
+### カード行のベース設定
+- `.nc-section-card .row`: `padding-left: 10px; gap: 10px; box-sizing: border-box;`（machining-panel .row と同一）
+- コントロール開始位置: padding-left(10) + ラベル(140) + gap(10) = **160px**
+
+### コントロール幅基準
+- セレクトボックス・テキスト入力の標準幅: **250px**（`select { width:250px !important }` / `.w-long` / 加工設定個別指定で統一）
+- `#ateLength`: `width: 250px !important; max-width: 100%`（datalist input を select と統一）
+- 図番入力テキストボックス（`#v1a`,`#v1b`,`#v1c`,`#v2`）は個別幅固定 — 変更禁止
+
+### 説明テキストのインデント
+- `.nc-section-card .work-type-desc`: `margin-left: 160px; width: fit-content; max-width: calc(100% - 160px)`
+- `.internal-style-hint`: `margin-left: 160px`（machining-panel padding-left 10 + ラベル 140 + gap 10）
+
+### 作成者ボタン
+- HTML: 作成者行とworkerName行を `<div class="nc-author-section">` で包む
+- CSS: `.nc-author-section .nc-author-row { display:none }` / `.nc-author-section:focus-within .nc-author-row { display:flex }` — workerName フォーカス時のみ表示
+- ボタンサイズ: `.nc-btns-inline .qb { padding: 2px 4px; font-size: 0.65rem }`（通常 `.qb` より約40%縮小）
+- グリッド: `grid-template-columns: repeat(3, 1fr)`（3列2段）
