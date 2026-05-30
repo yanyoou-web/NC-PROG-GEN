@@ -87,13 +87,13 @@
             maxOdFocusHint:
                 "※ 図面の外径最大径を半角数値で入力。算出する場合はこの欄をクリックして最大径 計算モードを開いてください。",
             ateLengthFocusHint:
-                "※ チャックのアテ長さ。プリセット（15角=42.5 など）を選ぶか、半角数値で直接入力。最大径計算モード「アテ長さ」選択時に外径最大径の自動算出に使われます。",
+                "※ チャックのアテ長さ。プリセット(15角=42.5 など）を選ぶか、半角数値で直接入力。最大径計算モード「アテ長さ」選択時に外径最大径の自動算出に使われます。",
             valStockAFocusHint:
                 "※ 通常モード: 素材の外径寸法 A を半角 mm で入力。B と合わせて √(A²+B²) で外径最大径を算出します。",
             valStockBFocusHint:
                 "※ 通常モード: 素材の外径寸法 B を半角 mm で入力。A と合わせて √(A²+B²) で外径最大径を算出します。",
-            valAFocusHint: "※ 偏心モード: 軸中心から加工中心までの距離 A（横方向）を半角で入力。",
-            valBFocusHint: "※ 偏心モード: 軸中心から加工中心までの距離 B（縦方向）を半角で入力。",
+            valAFocusHint: "※ 偏心モード: 軸中心から加工中心までの距離 A(横方向)を半角で入力。",
+            valBFocusHint: "※ 偏心モード: 軸中心から加工中心までの距離 B(縦方向)を半角で入力。",
             valCornWFocusHint: "※ 角ありモード: 素材の幅寸法を半角 mm で入力。",
             valCornHFocusHint: "※ 角ありモード: 角の追加高さ寸法を半角 mm で入力。",
             drillDepthFocusHint:
@@ -133,9 +133,9 @@
             previewStickyContainerTitle:
                 "パネル右下の斜線をドラッグしてサイズを変えられます（左上を基準に広がります）。",
             resultPlaceholder: "ここにGコードが生成されます...",
-            easterBtnAria: "ヒント・開発用メニュー",
-            easterFoundMsg: "ひみつの「？」を見つけましたね。おめでとう",
-            easterSecretList: "スーパー\nM8次世代\nNPT R G\nトメセン\nクォーツねじ",
+            easterBtnAria: "開発用メニュー",
+            easterFoundMsg: "秘密の場所です",
+            easterSecretList: "スーパー\nNPT R G\nトメセン\nクォーツねじ\n\nドリル最終深さ切粉り\ngetDrillShiageBlock統合",
             easterAuthorLine: "開発・連絡:山田",
             dbgTest: "[DEBUG] テスト入力",
             dbgTube: "[DEBUG] NCL085・チューブ・偏心",

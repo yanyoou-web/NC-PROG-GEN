@@ -1,4 +1,4 @@
-﻿/* NC Program Generator - app.js
+/* NC Program Generator - app.js
  *
  * セクション構成（上から順に依存関係）:
  *   utils          … 汎用ユーティリティ（文字列・数値フォーマット）
@@ -183,6 +183,9 @@ function getDrillBlock(depth, mode) {
         if (depth <= 30) {
             s += `G74R.5\n`;
             s += `G74Z-${d(depth)}Q8000F.25`;
+            s += `\nG1Z-${d1(depth - 0.1)}F2.5\n`;
+            s += `G4U.3\n`;
+            s += `Z3.F2.5`;
         } else {
             s += `G74R.5\n`;
             s += `G74Z-30.Q3000F.25\n`;
@@ -195,12 +198,13 @@ function getDrillBlock(depth, mode) {
                     s += `Z30.F2.5\n\n`;
                     s += `G1Z-${d(depth - 0.1)}F2.5\n`;
                     s += `G4U.3\n`;
-                    s += `G1Z30.F2.5`;
+                    s += `G1Z3.F2.5`;
                     break;
                 }
                 s += `\nG1Z-${d1(currentZ - 0.1)}F2.5\n`;
                 s += `Z-${d(nextZ)}F.25\n`;
-                s += `Z30.F2.5`;
+                s += `G4U.3\n`;
+                s += `Z3.F2.5`;
                 currentZ = nextZ;
             }
         }
@@ -354,7 +358,7 @@ function getIchimonjiBlock(cpStr, machineConfig) {
     const H = (v) => wrapH(v);
 
     let s = `N102(4.0DR-ICHIMONJI-MENTORI)\n`;
-    s += `G0G97${H(tool)}S500M3\n`;
+    s += `G0G40G97S500M3${H(tool)}\n`;
     s += `X0.Z30.${H(mOn)}\n`;
     s += `Z3.\n`;
     s += `G1Z-${H(zApproach)}(CP-2.)F1.5\n`;
@@ -382,7 +386,7 @@ function getIchimonjiHirazokoBlock(drawDepth, machineConfig) {
     const mOff = machineConfig["M59"] || "";
     const H = (v) => wrapH(v);
     let s = `N102(4.0DR-ICHIMONJI-HIRAZOKO)\n`;
-    s += `G0G97${H(tool)}S500M3\n`;
+    s += `G0G40G97S500M3${H(tool)}\n`;
     s += `X0.Z30.${H(mOn)}\n`;
     s += `Z3.\n`;
     s += `G1Z-${H(zApproach)}(Depth-2.)F1.5\n`;
@@ -417,10 +421,10 @@ function getOkuBiteBlock(cpStr, machineConfig) {
 
     let s = "";
     s += `N102(OKU-BAIT--MENTORI)(CP=${H(cp.toFixed(3))})\n`;
-    s += `G0G97S300${H(tool)}M3\n`;
+    s += `G0G40G97S300M3${H(tool)}\n`;
     s += `X3.7Z30.${wrapH(m51)}\n`;
-    s += `Z2.\n`;
-    s += `G1Z-${H(z1)}(CP-0.3)F1.5\n`;
+    s += `Z1.\n`;
+    s += `G1Z-${H(z1)}(CP-0.3)F2.5\n`;
     s += `X4.Z-${H(z2)}(CP-0.1)F.04\n`;
     s += `Z-${H(z3)}(CP+1.0)\n`;
     s += `X4.45\n`;
@@ -455,10 +459,10 @@ function getOkuBiteBlockG18(cpStr, machineConfig) {
 
     let s = "";
     s += `N102(OKU-BAIT--MENTORI-G18)(CP=${H(cp.toFixed(3))})\n`;
-    s += `G0G97S300${H(tool)}M3\n`;
+    s += `G0G40G97S300M3${H(tool)}\n`;
     s += `X3.7Z30.${wrapH(m51)}\n`;
-    s += `Z2.\n`;
-    s += `G1Z-${H(z1)}(CP-0.3)F1.5\n`;
+    s += `Z1.\n`;
+    s += `G1Z-${H(z1)}(CP-0.3)F2.5\n`;
     s += `X4.1Z-${H(z2)}(CP-0.1)F.04\n`;
     s += `Z-${H(z3)}(CP+1.0)\n`;
     s += `X4.6\n`;
@@ -471,53 +475,7 @@ function getOkuBiteBlockG18(cpStr, machineConfig) {
     return s;
 }
 
-// ★追加: ヨセ生成用関数
-// 戻り値: { path: "...", block: "..." }
-function getYoseStrings(method, angle, d, machineConfig) {
-    // デフォルト戻り値
-    let result = { path: "", block: "" };
 
-    const valD = parseFloat(d);
-    // 相手径が無効なら何もしない、またはエラーを返す
-    if (isNaN(valD)) return result;
-
-    const H = (v) => wrapH(ncFormat(v));
-    const rawD = ncFormat(valD.toFixed(3)); // 整形済み文字列
-
-    // ① 同時加工 (バイト1本) -> {{ヨセパス}} に追記
-    if (method === "1") {
-        // 例: X(相手径) または テーパ動作
-        // 角度(angle)がある場合は A指令等を入れるのが一般的だが
-        // ここでは以前の実装にならい、シンプルに X移動 + コメントを出力
-        // 必要に応じて "A" + angle + "." 等を追加してください
-        result.path = `\nX${H(rawD)}(YOSE-DOUJI A${angle})`;
-        result.block = ""; // ヨセブロックは無し
-    }
-    // ② 別工程 (バイト2本) -> {{ヨセブロック}} に独立ブロック出力
-    else if (method === "2") {
-        result.path = ""; // パスには何も足さない
-
-        // 別工程用のブロック生成
-        // 工具は暫定で T0707 (machineConfigから取得推奨)
-        const tool = machineConfig["内径ダイヤΦ4"];
-        if (!tool) return "(ERROR: 機械定義に '内径ダイヤΦ4' が設定されていません)";
-        const mOn = machineConfig["M51"] || "";
-        const mOff = machineConfig["M59"] || "";
-
-        let s = "\n";
-        s += `N102(YOSE-BETSU-KOUTEI)\n`;
-        s += `G0G97${wrapH(tool)}S500M3\n`;
-        s += `X${H(rawD)}Z30.${wrapH(mOn)}\n`;
-        s += `Z1.\n`;
-        s += `G1Z-...(YOSE-PROG-HERE)\n`; // 具体的な座標計算ロジックが必要ならここへ
-        s += `G0Z30.${wrapH(mOff)}\n`;
-        s += `G28U0W0M1\n`;
-
-        result.block = s;
-    }
-
-    return result;
-}
 
 /**
  * 平底ブロック末尾: 図面内径径 ≒ バイト径なら従来の U-.2(…)、異なるなら X[バイト径].F.03
@@ -1343,8 +1301,8 @@ function generateGCode(input, machineName) {
 
                 // 共通パス
                 const commonPath =
-                    `X${Fmt(xEnd)}(d-0.4)Z-${Fmt(zInter)}F.08\n` +
-                    `Z-${Fmt(zEnd)}F.2\n` +
+                    `X${Fmt(xEnd)}(d-0.4)Z-${Fmt(zInter)}(Zend-0.4)F.08\n` +
+                    `Z-${Fmt(zEnd)}(Zend)F.2\n` +
                     `X${Fmt(bigD)}Z-${H_depth}S250F.03(STRAIGHT)\n` +
                     `W.1`;
 
@@ -1362,8 +1320,8 @@ function generateGCode(input, machineName) {
                     const approachZ = (effectiveDepth - 1.0).toFixed(0) + ".";
 
                     yoseBlock =
-                        `\nN32(IN-OKU)\n` +
-                        `G0G97${toolName}S350M3\n` +
+                        `N102(IN-OKU)\n` +
+                        `G0G40G97S350M3${toolName}\n` +
                         `X${startX}Z30.\n` +
                         `Z1.${m51}\n` +
                         `G1Z-${approachZ}F4.(STRAIGHT-1.0)\n` +
@@ -1395,15 +1353,16 @@ function generateGCode(input, machineName) {
     //    角あり     : 従来どおり2段
     const isCorner = input.calcMode === "corner";
 
-    const drillBlockValue = usesG18DrillShiageG1Block(input.workType)
-        ? getDrillBlock(finalDrillDepth, "G1")
+    const drillBlockValue =
+        usesG18DrillShiageG1Block(input.workType)
+            ? getDrillBlock(finalDrillDepth, "G1")
         : isJM8ASWDWorkType(input.workType)
-          ? getDrillShiageBlock_ASWD(finalDrillDepth, ASWD_FIRST_STEP_MM[input.workType] || 7, machineConfig)
-          : isM8WorkType(input.workType)
+            ? getDrillShiageBlock_ASWD(finalDrillDepth, ASWD_FIRST_STEP_MM[input.workType] || 7, machineConfig)
+        : isM8WorkType(input.workType)
             ? getDrillShiageBlock_M8(finalDrillDepth)
-            : (input.workType === "M12" || input.workType === "M12_MH") && (input.m12FinishType || "hss") === "hss"
-              ? getDrillShiageBlock(finalDrillDepth)
-              : getDrillBlock(finalDrillDepth, input.drillMode);
+        : (input.workType === "M12" || input.workType === "M12_MH") && (input.m12FinishType || "hss") === "hss"
+            ? getDrillShiageBlock(finalDrillDepth)
+        :   getDrillBlock(finalDrillDepth, input.drillMode);
 
     const replaceMap = {
         // ── 入力ヘッダ情報
@@ -1776,21 +1735,6 @@ function closeStyleNormalNote() {
 }
 window.toggleYoseRelayNote = toggleYoseRelayNote;
 window.toggleStyleNormalNote = toggleStyleNormalNote;
-
-/**
- * 全角英数字・全角記号（Unicode 全角形ブロックの主範囲）・和文スペース(U+3000)を検出。
- * 半角カナ(FF65–FF9F)・半角記号(FF61–FF64)は許可。
- */
-function containsFullWidthFormChars(s) {
-    if (!s) return false;
-    for (const ch of s) {
-        const cp = ch.codePointAt(0);
-        if (cp === 0x3000) return true;
-        if (cp >= 0xff01 && cp <= 0xff60) return true;
-        if (cp >= 0xffe0 && cp <= 0xffe6) return true;
-    }
-    return false;
-}
 
 /**
  * 全角英数字・記号・全角スペース → 半角に変換し、
@@ -2925,6 +2869,43 @@ document.addEventListener("DOMContentLoaded", () => {
             lastAppliedCalcMode = "normal";
             currentCalcMode = "normal";
         });
+
+        const _maxOdDrawer = $id("maxOdCalcDrawer");
+        if (_maxOdDrawer) {
+            let _maxOdDrawerMouseDown = false;
+            _maxOdDrawer.addEventListener("mousedown", function () {
+                _maxOdDrawerMouseDown = true;
+                setTimeout(function () { _maxOdDrawerMouseDown = false; }, 200);
+            });
+            maxOdEl.addEventListener("blur", function (e) {
+                if (_maxOdDrawerMouseDown) return;
+                if (_maxOdDrawer.hidden) return;
+                const rt = e.relatedTarget;
+                if (!rt || !_maxOdDrawer.contains(rt)) {
+                    closeMaxOdCalcDrawer();
+                }
+            });
+        }
+    }
+
+    const _styleToggleBtn = $id("internalStyleDrawerToggle");
+    const _styleDrawerHost = $id("internalStyleDrawer");
+    if (_styleToggleBtn && _styleDrawerHost && !_styleToggleBtn.dataset.styleDrawerBlurBound) {
+        _styleToggleBtn.dataset.styleDrawerBlurBound = "1";
+        let _styleDrawerMouseDown = false;
+        _styleDrawerHost.addEventListener("mousedown", function () {
+            _styleDrawerMouseDown = true;
+            setTimeout(function () { _styleDrawerMouseDown = false; }, 200);
+        });
+        _styleToggleBtn.addEventListener("blur", function (e) {
+            if (_styleDrawerMouseDown) return;
+            if (!isInternalStyleDrawerOpen) return;
+            const rt = e.relatedTarget;
+            if (!rt || !_styleDrawerHost.contains(rt)) {
+                isInternalStyleDrawerOpen = false;
+                syncInternalStyleDrawerPanel();
+            }
+        });
     }
 
     setupHelpEasterDropdown();
@@ -2956,6 +2937,18 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.key !== "Escape") return;
         const d = $id("maxOdCalcDrawer");
         if (d && !d.hidden) closeMaxOdCalcDrawer();
+        if (isInternalStyleDrawerOpen) {
+            isInternalStyleDrawerOpen = false;
+            syncInternalStyleDrawerPanel();
+        }
+    });
+
+    document.addEventListener("click", function (e) {
+        if (!isInternalStyleDrawerOpen) return;
+        const host = $id("internalStyleDrawer");
+        if (host && host.contains(e.target)) return;
+        isInternalStyleDrawerOpen = false;
+        syncInternalStyleDrawerPanel();
     });
 
     document.addEventListener("click", function (e) {
@@ -2993,10 +2986,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-function getAteLengthSelectedOption() {
-    // コンボボックス化により廃止。isAteLengthKakuSelection() を使用
-    return null;
-}
 
 function isAteLengthKakuSelection() {
     const el = $id("ateLength");
@@ -3026,20 +3015,6 @@ function setAuthor(name, btn) {
     // クイック選択ボタンはイベントを発火しないため直接呼ぶ
     updateProgressiveReveal();
 }
-function setAteOnly(val) {
-    const sel = $id("ateLength");
-    if (sel) sel.value = String(val);
-    ateLengthFromKaku = false;
-    syncMaxOdAteModeUi();
-    updateProgressiveReveal();
-}
-function setAteCalc(val) {
-    const sel = $id("ateLength");
-    if (sel) sel.value = String(val);
-    /** 上段 15角〜43角 クイック: 外径（アテ長さ）式に利用可 */
-    refreshAteLengthSourceState();
-    updateProgressiveReveal();
-}
 
 function updateMaxOdFromAteButtonActive() {
     const card = $id("modeAte");
@@ -3066,10 +3041,6 @@ function syncMaxOdAteModeUi() {
     }
 }
 
-/** 手入力・下段数値等でアテ欄を書き換えたとき: 上段角と連動しなくなった扱い */
-function onAteLengthFieldInput() {
-    refreshAteLengthSourceState();
-}
 
 function clearMaxOdApplyFromAte() {
     maxOdApplySource = "dimensions";
@@ -3103,20 +3074,6 @@ function selectMaxOdApplyFromAte() {
     if (hint) hint.style.display = "block";
 }
 
-function toggleMaxOdCalcDrawer() {
-    const d = $id("maxOdCalcDrawer");
-    if (!d) return;
-    d.hidden = !d.hidden;
-    if (!d.hidden) {
-        /** 開くとき: アテ式選択中は setCalcMode しない（ dimensions リセットを避ける） */
-        if (maxOdApplySource === "ate" && ateLengthFromKaku) {
-            selectMaxOdApplyFromAte();
-        } else {
-            setCalcMode(currentCalcMode);
-        }
-        syncMaxOdAteModeUi();
-    }
-}
 
 function openMaxOdCalcDrawer() {
     const d = $id("maxOdCalcDrawer");
@@ -3238,13 +3195,6 @@ function applyMaxOdCalcDrawer() {
     updateProgressiveReveal();
 }
 
-function materializeMaxOdFromCurrentDimensionFields() {
-    let s = null;
-    if (currentCalcMode === "normal") s = computeMaxOdFromNormalStockFields();
-    else if (currentCalcMode === "eccentric") s = computeMaxOdFromEccentricFields();
-    else if (currentCalcMode === "corner") s = computeMaxOdFromCornerFields();
-    if (s != null) $id("maxOD").value = s;
-}
 
 /**
  * Enter で次の欄へ進む前の検証。表示中の欄だけ必須とする（非表示はチェックしない）。

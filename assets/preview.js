@@ -663,7 +663,7 @@ function parseGCode(code) {
             lastNComment = "N" + nm[1] + "(" + nm[2].trim() + ")";
         }
 
-        let cleanLine = normalizedLine.split("(")[0].toUpperCase();
+        let cleanLine = normalizedLine.replace(/\([^)]*\)/g, "").toUpperCase();
         const matchT = cleanLine.match(regexT);
         if (matchT) currentTool = "T" + matchT[1];
 
