@@ -446,7 +446,7 @@ function renderDebugFlowPane() {
             rows1.push(flowRow([N("input", "W=" + (inp.valCornW || "?")), N("op", "× √2"), N("result", cv.calcMainMax), N("op", "+ 3"), N("result", cv.calcMax2), N("placeholder", "{{最大径+3}} (角あり)")]));
             rows1.push(flowRow([N("input", "maxOD=" + cv.valMaxOD), N("op", "as-is"), N("result", cv.calcCorner), N("placeholder", "{{最大径+角}} (角あり X+F.3 行)")]));
         } else {
-            rows1.push(flowRow([N("input", "maxOD=" + cv.valMaxOD), N("op", "+ 3"), N("result", cv.calcMax2), N("placeholder", "{{最大径+角}} → X(--X--)")]));
+            rows1.push(flowRow([N("input", "maxOD=" + cv.valMaxOD), N("op", "+ 3"), N("result", cv.calcMax2), N("placeholder", "{{最大径+角}} → X(-X-)")]));
         }
     } else {
         rows1.push(`<div class="dbg-flow-empty">maxOD 未入力 — 外径計算スキップ</div>`);
@@ -478,7 +478,7 @@ function renderDebugFlowPane() {
     // ③ ドリルブロック選択
     const drillModeDisp = inp.drillMode || (inp.m12BaitoDrillMode ? inp.m12BaitoDrillMode : "G74");
     rows3.push(flowRow([N("input", "workType=" + inp.workType), N("input", "m12FinishType=" + (inp.m12FinishType || "hss")), N("op", "種別判定"), N("result", cv.drillBlockKind)]));
-    rows3.push(flowRow([N("result", "depth=" + (cv.finalDrillDepth != null ? cv.finalDrillDepth : "?")), N("input", "drillMode=" + drillModeDisp), N("op", "getDrillBlock"), N("placeholder", "{{DRILL_BLOCK}}")]));
+    rows3.push(flowRow([N("result", "depth=" + (cv.finalDrillDepth != null ? cv.finalDrillDepth : "?")), N("input", "drillMode=" + drillModeDisp), N("op", "getDrillShiageHGDRBlock"), N("placeholder", "{{DRILL_BLOCK}}")]));
 
     // ④ 内バリ処理
     if (style === "Ichimonji") {

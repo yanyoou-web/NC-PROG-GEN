@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>テンプレート追加確認事項</title>
+  <style>
+    :root {
+      --bg:#0f1419; --surface:#1a2332; --surface2:#243044;
+      --border:#3d4f66; --text:#e8eef4; --muted:#8fa3b8;
+      --accent:#4a9eff; --accent-dim:#2d5a8a;
+      --ok:#3dba6d; --warn:#e6a23c; --danger:#f56c6c;
+      --r:8px;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:"Segoe UI","Yu Gothic UI",Meiryo,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;}
+    button{font-family:inherit;cursor:pointer;}
+
+    /* header */
+    .hdr{position:sticky;top:0;z-index:100;background:#1a2332ee;border-bottom:1px solid var(--border);padding:10px 18px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
+    .hdr h1{margin:0;font-size:1.05rem;font-weight:600;flex:1 1 180px;}
+    .hdr .sub{font-size:.7rem;color:var(--muted);}
+    .tbr{display:flex;flex-wrap:wrap;gap:6px;}
+    .btn{border:1px solid var(--border);background:var(--surface2);color:var(--text);padding:6px 12px;border-radius:var(--r);font-size:.78rem;transition:.12s;}
+    .btn:hover{border-color:var(--accent);}
+    .btn:disabled{opacity:.45;cursor:not-allowed;}
+    .btn-p{background:var(--accent-dim);border-color:var(--accent);color:#fff;}
+    .btn-p:hover{background:var(--accent);}
+
+    /* layout */
+    .layout{display:grid;grid-template-columns:1fr minmax(300px,40%);min-height:calc(100vh - 50px);}
+    @media(max-width:900px){.layout{grid-template-columns:1fr;}.outpanel{border-left:none;border-top:1px solid var(--border);}}
+    .formpanel{padding:14px 18px 80px;max-width:740px;}
+    .outpanel{position:sticky;top:50px;height:calc(100vh - 50px);display:flex;flex-direction:column;border-left:1px solid var(--border);background:var(--surface);}
+    .outpanel h2{margin:0;padding:10px 14px;font-size:.85rem;border-bottom:1px solid var(--border);}
+    #briefOut{flex:1;margin:0;padding:10px 14px;font-family:Consolas,"Courier New",monospace;font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-word;background:#0d1117;color:#c9d1d9;border:none;resize:none;overflow:auto;}
+    .outact{padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;}
+
+    /* sections */
+    .sec{margin-bottom:16px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+    .sec-hdr{background:var(--surface2);padding:9px 13px;font-weight:600;font-size:.83rem;cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;}
+    .sec-hdr .badge{font-weight:400;font-size:.67rem;color:var(--muted);}
+    .sec-hdr .arrow{font-size:.7rem;color:var(--muted);transition:.15s;}
+    .sec.closed .sec-body{display:none;}
+    .sec.closed .arrow{transform:rotate(-90deg);}
+    .sec-body{padding:13px;}
+
+    /* fields */
+    .field{margin-bottom:13px;}
+    .field:last-child{margin-bottom:0;}
+    .ql{display:block;font-size:.8rem;margin-bottom:5px;}
+    .ql .hint{display:block;font-weight:400;color:var(--muted);font-size:.7rem;margin-top:2px;}
+    .ql .req{color:var(--warn);}
+    input[type=text],input[type=number],textarea,select{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);background:#0d1117;color:var(--text);font-size:.82rem;font-family:inherit;}
+    textarea{min-height:60px;}
+    input[type=number]{max-width:140px;}
+
+    /* yn buttons */
+    .yn-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+    .yn-btn{padding:7px 18px;border:1px solid var(--border);border-radius:20px;background:var(--surface);color:var(--muted);font-size:.82rem;font-weight:600;min-width:90px;transition:.12s;}
+    .yn-btn.on-y{background:var(--accent-dim);border-color:var(--accent);color:#fff;}
+    .yn-btn.on-n{background:#3d1e1e;border-color:var(--danger);color:#ffc4c4;}
+    /* inline yn (for placeholder rows) */
+    .yn-inline{display:inline-flex;gap:4px;vertical-align:middle;margin-left:6px;}
+    .yn-inline .yn-btn{padding:3px 9px;font-size:.7rem;min-width:2.6rem;}
+
+    /* chip buttons */
+    .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+    .chip{padding:6px 14px;border:1px solid var(--border);border-radius:20px;background:var(--surface);color:var(--muted);font-size:.78rem;transition:.12s;}
+    .chip.on{background:var(--accent-dim);border-color:var(--accent);color:#fff;}
+
+    /* style checkboxes */
+    .style-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:5px;margin-top:4px;}
+    .style-grid label{display:flex;align-items:center;gap:6px;font-size:.77rem;padding:6px 8px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer;}
+    .style-grid input{accent-color:var(--accent);}
+
+    /* impl/post checkboxes */
+    .check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:5px;}
+    .check-grid label{display:flex;align-items:center;gap:6px;font-size:.75rem;padding:5px 7px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer;}
+    .check-grid input{accent-color:var(--accent);}
+
+    /* info / warn boxes */
+    .info{background:#1a2a3d;border:1px solid var(--accent-dim);padding:8px 10px;border-radius:var(--r);font-size:.76rem;color:var(--muted);margin-bottom:10px;}
+    .warn{background:#3d2f12;border:1px solid var(--warn);color:#ffe4b8;padding:8px 10px;border-radius:var(--r);font-size:.76rem;margin-top:6px;white-space:pre-wrap;}
+    .ok-box{background:#12331f;border:1px solid var(--ok);color:#b8ffd4;padding:8px 10px;border-radius:var(--r);font-size:.76rem;margin-top:6px;}
+
+    /* file drop */
+    .drop-zone{border:2px dashed var(--border);border-radius:var(--r);padding:18px;text-align:center;background:#0d1117;cursor:pointer;transition:.12s;}
+    .drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:#111b28;}
+    .drop-zone p{margin:3px 0;font-size:.83rem;}
+    .drop-hint-txt{font-size:.7rem;color:var(--muted);}
+    .file-list{list-style:none;margin:8px 0 0;padding:0;}
+    .file-list li{display:flex;align-items:center;gap:7px;padding:5px 8px;margin-bottom:3px;background:var(--surface2);border-radius:var(--r);font-size:.75rem;}
+    .file-list .fn{flex:1;word-break:break-all;}
+    .file-list .meta{color:var(--muted);font-size:.68rem;}
+    .file-list .f-rm{padding:2px 7px;font-size:.68rem;border:1px solid var(--danger);color:var(--danger);background:transparent;border-radius:4px;}
+    .file-list li.cur{outline:1px solid var(--accent);}
+
+    /* per-file table */
+    .pft{width:100%;border-collapse:collapse;font-size:.72rem;margin-top:6px;}
+    .pft th,.pft td{border:1px solid var(--border);padding:4px 5px;vertical-align:top;}
+    .pft th{background:var(--surface2);white-space:nowrap;}
+    .pft input{width:100%;min-width:3rem;padding:3px 4px;border:1px solid var(--border);border-radius:3px;background:#0d1117;color:var(--text);font-size:inherit;font-family:inherit;}
+
+    /* presets */
+    .presets{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;}
+    .presets .lbl{font-size:.72rem;color:var(--muted);align-self:center;}
+
+    /* status badges (auto-detected items) */
+    .st-badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:.72rem;font-weight:600;vertical-align:middle;}
+    .st-badge.yes{background:#12331f;color:#b8ffd4;border:1px solid var(--ok);}
+    .st-badge.no{background:#2a1515;color:#ffc4c4;border:1px solid var(--danger);}
+    .st-badge.unk{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+
+    /* yn source indicator */
+    .yn-src{display:inline-block;font-size:.62rem;padding:1px 6px;border-radius:8px;margin-left:6px;vertical-align:middle;font-weight:600;}
+    .yn-src-preset{background:#2d2a12;color:var(--warn);border:1px solid #5a4a18;}
+    .yn-src-auto{background:#1a2a3d;color:var(--accent);border:1px solid var(--accent-dim);}
+    .yn-src-user{background:#12331f;color:var(--ok);border:1px solid #1e5c32;}
+
+    /* required marker — ★ for yn fields */
+    .req-yn{color:var(--warn);font-weight:700;margin-left:4px;font-size:.85rem;}
+    .req-label{display:flex;align-items:baseline;gap:4px;margin-bottom:5px;flex-wrap:wrap;}
+
+    /* toast */
+    .toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:7px 16px;border-radius:20px;font-size:.78rem;opacity:0;transition:opacity .25s;pointer-events:none;z-index:999;}
+    .toast.show{opacity:1;}
+  </style>
+</head>
+<body>
+
+<header class="hdr">
+  <h1>テンプレート追加確認事項 <span class="sub">— Agent 実装ブリーフ生成ツール</span></h1>
+  <div class="tbr">
+    <button class="btn" id="btnLoad">下書き読込</button>
+    <button class="btn" id="btnSave">下書き保存</button>
+    <button class="btn btn-p" id="btnGen">ブリーフ生成</button>
+  </div>
+</header>
+
+<div class="layout">
+<main class="formpanel">
+
+  <div class="info">
+    ①〜⑪ の各セクションを回答してください。テンプレート JS を読み込むと 0-H などが<strong>自動推定</strong>されます。
+    「ブリーフ生成」→ 右ペインのテキストをコピーし、<strong>テンプレート JS ファイルと一緒に Agent に送ってください</strong>。
+  </div>
+
+  <div class="presets">
+    <span class="lbl">プリセット:</span>
+    <button class="btn" data-preset="generic">M系汎用（M18/M22等）</button>
+    <button class="btn" data-preset="tomesen">トメセン系（複数）</button>
+    <button class="btn" data-preset="g18">G18系</button>
+    <button class="btn" data-preset="m12hss">M12 HSS</button>
+    <button class="btn" data-preset="g12b">G12B固定形状</button>
+    <button class="btn" data-preset="clear">クリア</button>
+  </div>
+
+  <!-- ① テンプレートファイル -->
+  <section class="sec" id="sec-file">
+    <div class="sec-hdr">① テンプレート JS ファイル読込 <span class="badge">必須</span><span class="arrow">▼</span></div>
+    <div class="sec-body">
+      <div class="field">
+        <div id="dropZone" class="drop-zone">
+          <p><strong>.js ファイルをここにドロップ</strong>（複数可）</p>
+          <p class="drop-hint-txt">または</p>
+          <button type="button" class="btn btn-p" id="btnPick">ファイルを選択…</button>
+          <input type="file" id="filePicker" accept=".js" multiple hidden />
+        </div>
+        <ul class="file-list" id="fileList"></ul>
+        <div id="multiNote" class="info" hidden></div>
+        <div id="consistWarn" class="warn" hidden></div>
+      </div>
+      <div class="field" id="perFileSection" hidden>
+        <label class="ql">ファイル別 加工仕様（読込時に自動推定・修正してください）
+          <span class="hint">★ 内径Φ・ドリルφ・バイトΦ は図面で確認。推測した値は必ず確認してください</span>
+        </label>
+        <label class="ql" style="margin-top:6px;font-weight:400">
+          表示名の共通部分（プレフィックス）
+          <input type="text" id="dispPrefix" placeholder="例: トメセン" style="max-width:180px;margin-top:3px;display:block" />
+        </label>
+        <div id="perFileTableWrap" style="overflow-x:auto;"></div>
+      </div>
+      <div class="field">
+        <label class="ql">配置先フォルダ</label>
+        <select id="folderPrefix">
+          <option value="テンプレート/">テンプレート/（推奨）</option>
+          <option value="">リポジトリ直下（テスト中のみ）</option>
+        </select>
+        <label class="ql" style="margin-top:8px">Agent へ渡すパス（自動生成・手編集可）</label>
+        <textarea id="attachPaths" rows="2" placeholder="ファイル選択で自動入力されます"></textarea>
+      </div>
+      <div class="field" id="previewSection">
+        <label class="ql">プレビューするファイル（内容確認・手修正可）</label>
+        <select id="previewSel" disabled><option value="">（ファイルなし）</option></select>
+        <textarea id="tplContent" rows="6" placeholder="ファイルを読み込むと自動表示されます" style="margin-top:4px;font-family:Consolas,monospace;font-size:.75rem;"></textarea>
+        <button class="btn" id="btnReParse" style="margin-top:5px">このファイルを再解析</button>
+      </div>
+      <div class="field" id="phSection" hidden>
+        <label class="ql" id="phLbl">全ファイル共通プレースホルダー</label>
+        <textarea id="phCommon" rows="3" readonly></textarea>
+        <label class="ql" id="phDiffLbl" hidden style="margin-top:6px;color:var(--warn)">ファイルごとに差異あり（要確認）</label>
+        <textarea id="phDiff" rows="2" readonly hidden></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- ② 基本情報 -->
+  <section class="sec" id="sec-basic">
+    <div class="sec-hdr">② 登録名・バリエーション <span class="badge">必須</span><span class="arrow">▼</span></div>
+    <div class="sec-body">
+      <div class="field" id="singleWtField">
+        <label class="ql">登録コード名<span class="req">*</span>
+          <span class="hint">アプリ内部で使う識別名です。英数字とアンダースコア _ のみ使えます。ファイル名（data_template_〇〇〇.js）の〇〇〇部分と一致させてください</span>
+        </label>
+        <input type="text" id="workType" placeholder="TOMESEN_M18" />
+        <label class="ql" style="margin-top:6px">プルダウンの表示名<span class="req">*</span>
+          <span class="hint">加工者が機種選択時に見るラベルです</span>
+        </label>
+        <input type="text" id="displayName" placeholder="トメセン M18" />
+      </div>
+      <div class="field">
+        <div class="req-label"><label class="ql" style="margin-bottom:0">登録コード名にハイフン（-）・カンマ（,）・小数点（.）が入っていないか確認できましたか？</label><span class="req-yn">★必須</span></div>
+        <div class="yn-row" data-yn="namingOk"></div>
+      </div>
+      <div class="field">
+        <div class="req-label"><label class="ql" style="margin-bottom:0">裏加工（MH）バリエーションはありますか？</label><span class="req-yn">★必須</span></div>
+        <span class="hint" style="display:block;margin-bottom:5px">ある場合は、まず MH なしを実装してから _MH を後追いで追加します</span>
+        <div class="yn-row" data-yn="hasMH"></div>
+        <div id="mhDetail" hidden style="margin-top:6px">
+          <label class="ql">MH 側の登録コード名（1行1件）</label>
+          <textarea id="mhWorkTypes" rows="2" placeholder="TOMESEN_M18_MH"></textarea>
+        </div>
+      </div>
+      <div class="field">
+        <label class="ql">同じ加工方式で複数サイズをまとめて追加しますか？
+          <span class="hint">例: M16・M18・M22・M24・M35 を一度に追加する場合は「はい」。①でファイルを複数読み込むと自動設定されます</span>
+        </label>
+        <div class="yn-row" data-yn="multiVariant"></div>
+        <div id="variantDetail" hidden style="margin-top:6px">
+          <label class="ql">追加する登録コード名（1行1件）</label>
+          <textarea id="variantWts" rows="3"></textarea>
+        </div>
+      </div>
+      <!-- ヘルパー関数は Agent が自動判断。入力欄は内部状態保持のみ -->
+      <input type="hidden" id="helperName" />
+      <span data-yn="needHelper" hidden></span>
+    </div>
+  </section>
+
+  <!-- ③ 加工仕様3点（0-H） -->
+  <section class="sec" id="sec-spec">
+    <div class="sec-hdr">③ 加工寸法3点 <span class="badge">図面で確認 — 推測禁止</span><span class="arrow">▼</span></div>
+    <div class="sec-body">
+      <div class="info">
+        ★ 複数ファイルを読み込んだ場合は ①の表で入力してください（このセクションは1件のみのとき）。<br>
+        テンプレートの X 値コメントや NC ブロック内の値から推測して入力しないでください。必ず図面や工具リストで確認してください。
+      </div>
+      <div id="singleSpecFields">
+        <div class="field">
+          <label class="ql">仕上げ内径 Φ（mm）<span class="req">*</span>
+            <span class="hint">内径の仕上がり径。ヨセ加工の大径計算・深さ制限の基準にもなります</span>
+          </label>
+          <input type="number" id="idDia" step="0.001" min="0" placeholder="例: 8" />
+        </div>
+        <div class="field">
+          <label class="ql">ドリル刃径 φ（mm）<span class="req">*</span>
+            <span class="hint">下穴ドリルの刃径。テンプレートの N1 コメント（DR の後の数字）と一致させてください</span>
+          </label>
+          <input type="number" id="drillDia" step="0.001" min="0" placeholder="例: 7.0" />
+        </div>
+        <div class="field">
+          <label class="ql">内径バイト刃径 Φ（mm）<span class="req">*</span>
+            <span class="hint">内径を仕上げるバイトの刃径。工具リストで確認してください</span>
+          </label>
+          <input type="number" id="toolDia" step="0.001" min="0" placeholder="例: 8" />
+        </div>
+        <div class="field">
+          <label class="ql">内径バイトの種別（テンプレートから自動検出・確認してください）</label>
+          <div class="chip-row" data-chip="toolPh">
+            <button class="chip" data-val="内径ダイヤΦ3">Φ3 バイト</button>
+            <button class="chip" data-val="内径ダイヤΦ4">Φ4 バイト</button>
+            <button class="chip" data-val="内径ダイヤΦ6">Φ6 バイト</button>
+            <button class="chip" data-val="内径ダイヤΦ8">Φ8 バイト</button>
+            <button class="chip" data-val="内径ダイヤΦ16">Φ16 バイト</button>
+            <button class="chip" data-val="other">上記以外（新規種別）</button>
+          </div>
+          <input type="text" id="toolPhOther" placeholder="新規工具種別名（全6機械のデータファイルに追加が必要です）" hidden style="margin-top:5px" />
+        </div>
+        <div id="flatHint" class="warn" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ④ ドリルロジック（0-B） -->
+  <section class="sec" id="sec-drill">
+    <div class="sec-hdr">④ ドリル加工の方式<span class="arrow">▼</span></div>
+    <div class="sec-body">
+      <div class="field">
+        <div class="req-label"><label class="ql" style="margin-bottom:0">このワークのドリル加工方法を選んでください</label><span class="req-yn">★必須</span></div>
+        <span class="hint" style="display:block;margin-bottom:5px">他の同じ機種グループを参考にしてください</span>
+        <div class="chip-row" data-chip="drillLogic">
+          <button class="chip" data-val="hgdr_sel" style="max-width:none">
+            ① ペッキング（G74）または1発（G1）を加工者が都度選べる<br>
+            <span style="font-size:.68rem;color:var(--muted)">M40・M18・M22・M15・G78・G12B・M42X3 系で使用</span>
+          </button>
+          <button class="chip" data-val="step10" style="max-width:none">
+            ② G1送り固定・10mm刻みで自動ステップバック<br>
+            <span style="font-size:.68rem;color:var(--muted)">HSS 刃専用方式 ／ M12 HSS・M8 系・ASWD系で使用</span>
+          </button>
+          <button class="chip" data-val="hgdr_g1fix" style="max-width:none">
+            ③ G1送りで1発貫通・固定（加工者が選択できない）<br>
+            <span style="font-size:.68rem;color:var(--muted)">G18系専用方式 ／ G18_40/42/62/655/6175 で使用</span>
+          </button>
+          <button class="chip" data-val="new">上記以外（新しいドリル方式を追加）</button>
+        </div>
+        <input type="text" id="drillFuncName" placeholder="どのような動作にしたいか Agent に伝えてください（⑨のメモ欄も使用可）" hidden style="margin-top:5px" />
+      </div>
+      <!-- showDrillMode はドリル方式選択①②③で自動決定。ユーザー入力不要 -->
+      <span data-yn="showDrillMode" hidden></span>
+      <!-- hasDrillBlock はファイル読込で自動検出。ユーザー質問不要 -->
+      <span data-yn="hasDrillBlock" hidden></span>
+    </div>
+  </section>
+
+  <!-- ⑤ 内径加工スタイル（0-D） -->
+  <section class="sec" id="sec-style">
+    <div class="sec-hdr">⑤ 内径加工の方式と使用可否<span class="arrow">▼</span></div>
+    <div class="sec-body">
+      <div class="field">
+        <label class="ql">テンプレートが対応している加工切替ポイント
+          <span class="hint">ファイル読込で自動検出されます</span>
+        </label>
+        <div style="display:grid;gap:6px;font-size:.8rem;margin-top:6px">
+          <span>ヨセ加工ブロック　<span class="st-badge" id="st-phYoseBlock">ファイル未読込</span></span>
+          <span>ヨセ加工パス指令　<span class="st-badge" id="st-phYosePath">ファイル未読込</span></span>
+          <span>内径深さ指令　<span class="st-badge" id="st-phIdDepth">ファイル未読込</span></span>
+          <span>平底バイト仕上げ出口指令　<span class="st-badge" id="st-phFlatExit">ファイル未読込</span></span>
+          <span>中バリ取り処理　<span class="st-badge" id="st-phNabari">ファイル未読込</span><span style="color:var(--muted);font-size:.7rem;margin-left:8px">M12系以外はテンプレートに含めない</span></span>
+        </div>
+        <!-- 内部状態保持用（非表示） -->
+        <span data-yn="phYoseBlock" hidden></span>
+        <span data-yn="phYosePath" hidden></span>
+        <span data-yn="phIdDepth" hidden></span>
+        <span data-yn="phFlatExit" hidden></span>
+        <span data-yn="phNabari" hidden></span>
+      </div>
+      <div class="field">
+        <label class="ql">加工者が選択できる内径加工の方式（有効にする項目にチェック）</label>
+        <div class="style-grid" id="styleGrid"></div>
+      </div>
+      <div class="field">
+        <div class="req-label"><label class="ql" style="margin-bottom:0">使えない内径スタイルの制限パターン（既存の機種と同じ制限を選んでください）</label><span class="req-yn">★必須</span></div>
+        <span class="hint" style="display:block;margin-bottom:5px">上のチェックと合わせてアプリが自動でグレーアウト表示します。「どの既存機種と同じか」で選んでください</span>
+        <div class="chip-row" data-chip="restrict">
+          <button class="chip" data-val="else_m">M15/M18/M22/M40/G78 系と同じ<br><span style="font-size:.67rem;color:var(--muted)">一文字DR平底のみ使用不可</span></button>
+          <button class="chip" data-val="m42">M42X3 系と同じ<br><span style="font-size:.67rem;color:var(--muted)">一文字DR平底・交差穴加工が使用不可</span></button>
+          <button class="chip" data-val="g18hgdr">G18 HGDR 系と同じ<br><span style="font-size:.67rem;color:var(--muted)">平底バイト・通常バイト・ヨセ中継の3方式のみ使用可</span></button>
+          <button class="chip" data-val="g18_40">G18_40/42 系と同じ<br><span style="font-size:.67rem;color:var(--muted)">ヨセ中継・交差穴加工（径小）のみ使用可</span></button>
+          <button class="chip" data-val="m12">M12 系と同じ<br><span style="font-size:.67rem;color:var(--muted)">平底バイト・ヨセが使用不可</span></button>
+          <button class="chip" data-val="m8">M8 系と同じ<br><span style="font-size:.67rem;color:var(--muted)">一文字DR平底・通常バイト・ヨセが使用不可</span></button>
+          <button class="chip" data-val="locked">全スタイル固定<br><span style="font-size:.67rem;color:var(--muted)">加工方式が1通りに固定されたテンプレート</span></button>
+          <button class="chip" data-val="tomesen_type">トメセン系と同じ<br><span style="font-size:.67rem;color:var(--muted)">Hirazoko/Ichimonji/Normal のみ可（YoseRelay/Yose/CrossSmall 不可）</span></button>
+          <button class="chip" data-val="custom">上記に該当しない（⑨のメモ欄に詳細を記入）</button>
+        </div>
+        <textarea id="restrictCustom" rows="2" placeholder="どのスタイルが使えてどれが使えないか、具体的に書いてください" hidden style="margin-top:5px"></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑥ 中バリ処理（0-C） -->
+  <section class="sec" id="sec-nabari">
+    <div class="sec-hdr">⑥ 中バリ取りの方式<span class="arrow">▼</span></div>
+    <div class="sec-body">
+      <div class="info">
+        <strong>M12 系以外は「なし」が原則</strong>です。M12 系の場合のみ、以下から加工方法を選んでください。
+      </div>
+      <div class="field">
+        <div class="req-label"><label class="ql" style="margin-bottom:0">内径貫通後の中バリ取り加工をどうしますか？</label><span class="req-yn">★必須</span></div>
+        <div class="chip-row" data-chip="nabari">
+          <button class="chip" data-val="none">中バリ取りなし<br><span style="font-size:.67rem;color:var(--muted)">M12系以外はこれを選んでください</span></button>
+          <button class="chip" data-val="ichi_men">一文字DR で面取り（バリ取り）<br><span style="font-size:.67rem;color:var(--muted)">一文字ドリルでC面を取る</span></button>
+          <button class="chip" data-val="ichi_hira">一文字DR で平底仕上げ<br><span style="font-size:.67rem;color:var(--muted)">一文字ドリルで裏面を平底に仕上げる</span></button>
+          <button class="chip" data-val="oku_m12">奥バイトで面取り（M12版・Φ4バイト使用）<br><span style="font-size:.67rem;color:var(--muted)">内径ダイヤΦ4バイトで貫通穴の裏面を面取り</span></button>
+          <button class="chip" data-val="oku_g18">奥バイトで面取り（G18版）<br><span style="font-size:.67rem;color:var(--muted)">G18系と同じ奥バイト面取り方式</span></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑦ CrossSmall 詳細（0-E） -->
+  <section class="sec" id="sec-cross">
+    <div class="sec-hdr">⑦ 交差穴（径小）の加工条件設定<span class="badge">⑤で「交差穴（径小）」を有効にした場合のみ</span><span class="arrow">▼</span></div>
+    <div class="sec-body">
+      <div class="field">
+        <label class="ql">交差穴の加工条件を入力するパネルを新しく画面に追加しますか？
+          <span class="hint">M12・G18・M8 系のように、交差穴専用の入力エリアが別途必要な場合は「はい」</span>
+        </label>
+        <div class="yn-row" data-yn="crossPanel"></div>
+      </div>
+      <div class="field">
+        <label class="ql">選べる加工方法は何通りありますか？</label>
+        <input type="number" id="crossCount" min="1" max="10" value="2" style="max-width:80px" />
+      </div>
+      <div class="field">
+        <label class="ql">各加工方法の内容（1行1件、コード→説明の形式で書いてください）</label>
+        <textarea id="crossOpts" rows="3" placeholder="hgdr_oku → HGDRドリル + 奥バイト面取り&#10;hgdr_men → HGDRドリル + 一文字面取り"></textarea>
+      </div>
+      <div class="field">
+        <label class="ql">各機械の入力値取得・Gコード出力・プレビュー連動まで一式実装しますか？
+          <span class="hint">既存の交差穴加工と全く同じ流れで動かすなら「はい」。すでに似た実装がある場合は「いいえ」（流用）</span>
+        </label>
+        <div class="yn-row" data-yn="crossFullImpl"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑧ 工具キー（0-F） -->
+  <section class="sec" id="sec-tools">
+    <div class="sec-hdr">⑧ 使用工具の登録<span class="arrow">▼</span></div>
+    <div class="sec-body">
+      <div class="field">
+        <div class="req-label"><label class="ql" style="margin-bottom:0">このワークで使う工具は、すでに他の機種で登録されているものだけで足りますか？</label><span class="req-yn">★必須</span></div>
+        <span class="hint" style="display:block;margin-bottom:5px">外径荒・内径荒・ドリルT・ネジ切り などが該当します。新しい種別のバイトや特殊ドリルを追加で使う場合は「いいえ」</span>
+        <div class="yn-row" data-yn="toolsOk"></div>
+        <div id="newToolsDetail" hidden style="margin-top:6px">
+          <label class="ql">新しく追加が必要な工具の種別名（1行1件）
+            <span class="hint">全6機械のデータファイルへの追加が必要です</span>
+          </label>
+          <textarea id="newToolKeys" rows="2" placeholder="例: 内径ダイヤΦ22"></textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑨ テンプレ構造確認 -->
+  <section class="sec" id="sec-struct">
+    <div class="sec-hdr">⑨ テンプレートのフォーマット確認<span class="arrow">▼</span></div>
+    <div class="sec-body">
+      <div class="field">
+        <label class="ql">テンプレートファイルの先頭行フォーマット（ファイル読込で自動チェック）
+          <span class="hint">先頭行の書き方が正しくないと、生成した NC プログラムの冒頭に余分な空行が入ります</span>
+        </label>
+        <div id="backtickStatus" class="ok-box" style="display:none"></div>
+        <!-- backtickOk はファイル読込で自動チェック。ユーザー入力不要 -->
+        <span data-yn="backtickOk" hidden></span>
+      </div>
+      <div class="field">
+        <div class="req-label"><label class="ql" style="margin-bottom:0">外径加工の入口 X 値をどのように計算しますか？</label><span class="req-yn">★必須</span></div>
+        <span class="hint" style="display:block;margin-bottom:5px">ファイル読込で自動推定されます。内容を確認して変更してください</span>
+        <div class="chip-row" data-chip="n2mode">
+          <button class="chip" data-val="max_minus5">最大径 −5 で計算<br><span style="font-size:.67rem;color:var(--muted)">通常・偏心モードでも入口 X が出力される（標準 M 系）</span></button>
+          <button class="chip" data-val="max_plus3">最大径 +3 で計算（外径「角あり」設定時のみ）<br><span style="font-size:.67rem;color:var(--muted)">トメセン系。通常モードでは入口 X が出ないため要運用注意</span></button>
+          <button class="chip" data-val="fixed">テンプレート内に X 値が固定で書かれている<br><span style="font-size:.67rem;color:var(--muted)">最大径の入力値と連動しない</span></button>
+          <button class="chip" data-val="g71">G71/G70 荒仕上げパス方式<br><span style="font-size:.67rem;color:var(--muted)">M40/M22/M18 等の標準フルパス</span></button>
+        </div>
+        <div id="cornerNote" class="warn" hidden>「最大径 +3（角ありのみ）」を選択しました。<br>通常モードでは外径入口 X が出力されません。現場への周知が必要です：「このワークは外径計算を必ず角ありモードで使用すること」</div>
+      </div>
+      <div class="field">
+        <label class="ql">サブプログラム呼び出し（M99P100）
+          <span class="hint">ファイル読込で自動検出されます</span>
+        </label>
+        <span class="st-badge" id="st-hasM99">ファイル未読込</span>
+        <!-- hasM99 はファイル読込で自動検出。ユーザー入力不要 -->
+        <span data-yn="hasM99" hidden></span>
+      </div>
+      <div class="field">
+        <div class="req-label"><label class="ql" style="margin-bottom:0">既存の M18 などと同じコード名を使わず、別の新しいコード名で登録しますか？</label><span class="req-yn">★必須</span></div>
+        <span class="hint" style="display:block;margin-bottom:5px">同じ名前にすると既存のプログラムと混同するため、別名を強く推奨します</span>
+        <div class="yn-row" data-yn="separateKey"></div>
+      </div>
+      <div class="field">
+        <div class="req-label"><label class="ql" style="margin-bottom:0">このワークの内径深さは常に 7mm より深くなりますか？</label><span class="req-yn">★必須</span></div>
+        <span class="hint" style="display:block;margin-bottom:5px">7mm 以下の入力値をアプリが拒否する仕様です。浅い内径加工には対応していません</span>
+        <div class="yn-row" data-yn="depth7ok"></div>
+      </div>
+      <div class="field">
+        <label class="ql">その他、Agent へ伝えておきたいこと（加工上の注意・特殊な動作・運用ルールなど）</label>
+        <textarea id="opsMemo" rows="3" placeholder="例: ヨセ加工後に外径を追加で1パス入れる、工具補正番号は Txx22 を使う、など"></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑩ 実装スコープ -->
+  <section class="sec closed" id="sec-scope">
+    <div class="sec-hdr">⑩ Agent の作業範囲（通常は変更不要）<span class="badge">必要な場合のみ開く</span><span class="arrow">▼</span></div>
+    <div class="sec-body">
+      <div class="info">基本的にそのままで構いません。特殊な追加作業が必要な場合のみチェックを変更してください。</div>
+      <div class="check-grid" id="scopeGrid"></div>
+    </div>
+  </section>
+
+  <!-- ⑪ 実装後チェック -->
+  <section class="sec closed" id="sec-post">
+    <div class="sec-hdr">⑪ 実装後の動作確認項目（通常は変更不要）<span class="badge">必要な場合のみ開く</span><span class="arrow">▼</span></div>
+    <div class="sec-body">
+      <div class="info">Agent に実装後に確認させる項目です。通常はデフォルトのままで問題ありません。</div>
+      <div class="check-grid" id="postGrid"></div>
+    </div>
+  </section>
+
+</main>
+
+<aside class="outpanel">
+  <h2>Agent 向けブリーフ（コピー用）</h2>
+  <textarea id="briefOut" readonly placeholder="「ブリーフ生成」ボタンを押してください"></textarea>
+  <div class="outact">
+    <button class="btn btn-p" id="btnCopy">コピー</button>
+    <button class="btn" id="btnDl">.txt DL</button>
+  </div>
+</aside>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+"use strict";
+
+// backtick 文字（JS内でバッククォートが巣になるのを防ぐ）
+var BT = String.fromCharCode(96);
+var SKEY = "nc-tmpl-v5";
+
+// ── 状態 ─────────────────────────────────────────
+var files = [];      // TemplateEntry[]
+var prevIdx = 0;
+
+function mkEntry(name, content) {
+  var wt = (name.match(/data_template_([A-Za-z0-9_]+)\.js$/i) || content.match(/const\s+template_([A-Za-z0-9_]+)\s*=/) || ["",""])[1] || "";
+  var ph = extractPH(content);
+  var phSet = new Set(ph);
+  var n1 = (content.match(/N1\s*\(([^)]*DR[^)]*)\)/i) || ["",""])[1];
+  var drillDia = (n1.match(/(\d+(?:\.\d+)?)\s*DR/i) || ["",""])[1];
+  var toolPhM = content.match(/\{\{(内径ダイヤΦ\d+)\}\}/);
+  var toolPh = toolPhM ? toolPhM[1] : "";
+  var toolDia = toolPh ? (toolPh.match(/Φ(\d+)/) || ["",""])[1] : "";
+  var n3in = (content.match(/N3\s*\(IN-([0-9.]+)/i) || ["",""])[1];
+  var n3x = "";
+  if (!n3in) { var m3x = content.match(/N3[^\n]*\n[^\n]*\nX([0-9.]+)\./); if (m3x) n3x = m3x[1]; }
+  var idDia = n3in || n3x;
+  var hdrM = content.match(/O[^\n]+\n\(([^)]+)\)/);
+  var hdrCmt = hdrM ? hdrM[1].trim() : "";
+  var okPat = new RegExp("const\\s+template_[A-Za-z0-9_]+=" + BT + "%");
+  var backtickOk = okPat.test(content);
+  return {
+    name: name, content: content,
+    wt: wt, displayName: "",
+    idDia: idDia, drillDia: drillDia, toolDia: toolDia,
+    toolPh: toolPh, drCmt: n1 ? n1.trim() : "",
+    hdrCmt: hdrCmt, backtickOk: backtickOk,
+    placeholders: ph
+  };
+}
+
+function extractPH(txt) {
+  var out = [], seen = {}, m, re = /\{\{([^}]+)\}\}/g;
+  while ((m = re.exec(txt)) !== null) { if (!seen[m[1]]) { seen[m[1]] = 1; out.push(m[1]); } }
+  return out.sort();
+}
+
+// ── yn / chip / style state ─────────────────────
+var yn = {};       // field -> "Y"|"N"|null
+var ynSource = {}; // field -> "user"|"preset"|"auto"|null
+var chips = {};    // field -> value|null
+var styles = { Hirazoko:false, Ichimonji:false, Normal:false, YoseRelay:false, Yose:false, CrossSmall:false };
+var impl = {};
+var post = {};
+var txts = {};     // textarea/input ids -> saved value
+
+// ── YN buttons ───────────────────────────────────
+function initYN(container, field, inline) {
+  container.innerHTML = "";
+  ["Y","N"].forEach(function(v) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "yn-btn";
+    b.textContent = v === "Y" ? (inline ? "Y" : "はい") : (inline ? "N" : "いいえ");
+    b.addEventListener("click", function(e) {
+      e.preventDefault(); e.stopPropagation();
+      yn[field] = v;
+      ynSource[field] = "user";
+      refreshYN(container, field);
+      onYNChange(field, v);
+      autoBrief();
+    });
+    container.appendChild(b);
+  });
+}
+
+var SRC_LABEL = { preset:"推奨", auto:"自動", user:"入力済" };
+var SRC_CLASS = { preset:"yn-src-preset", auto:"yn-src-auto", user:"yn-src-user" };
+
+function refreshYN(container, field) {
+  var v = yn[field];
+  var src = ynSource[field] || null;
+  // remove existing source badges
+  Array.from(container.querySelectorAll(".yn-src")).forEach(function(el){ el.remove(); });
+  Array.from(container.querySelectorAll(".yn-btn")).forEach(function(b) {
+    b.classList.remove("on-y","on-n");
+    var bv = b.textContent.startsWith("Y") || b.textContent === "はい" ? "Y" : "N";
+    if (bv === v) {
+      b.classList.add(v === "Y" ? "on-y" : "on-n");
+      // show source badge only for preset/auto (not for user — user knows they clicked it)
+      if (src && src !== "user") {
+        var badge = document.createElement("span");
+        badge.className = "yn-src " + (SRC_CLASS[src]||"");
+        badge.textContent = SRC_LABEL[src]||src;
+        container.appendChild(badge);
+      }
+    }
+  });
+}
+
+function setYN(field, v, source) {
+  yn[field] = v;
+  if (source) ynSource[field] = source;
+  document.querySelectorAll("[data-yn='" + field + "']").forEach(function(c) { refreshYN(c, field); });
+  onYNChange(field, v);
+}
+
+function onYNChange(field, v) {
+  var toggle = function(id, show) { var el = document.getElementById(id); if (el) el.hidden = !show; };
+  if (field === "hasMH")        toggle("mhDetail", v === "Y");
+  if (field === "multiVariant") toggle("variantDetail", v === "Y");
+  if (field === "needHelper")   toggle("helperDetail", v === "Y");
+  if (field === "toolsOk")      toggle("newToolsDetail", v === "N");
+}
+
+// ── chip buttons ─────────────────────────────────
+function initChips() {
+  document.querySelectorAll("[data-chip]").forEach(function(row) {
+    var field = row.dataset.chip;
+    row.querySelectorAll(".chip").forEach(function(c) {
+      c.addEventListener("click", function(e) {
+        e.preventDefault(); e.stopPropagation();
+        chips[field] = c.dataset.val;
+        refreshChips(row, field);
+        onChipChange(field, c.dataset.val);
+        autoBrief();
+      });
+    });
+  });
+}
+
+function refreshChips(row, field) {
+  row.querySelectorAll(".chip").forEach(function(c) {
+    c.classList.toggle("on", c.dataset.val === chips[field]);
+  });
+}
+
+function setChip(field, val) {
+  chips[field] = val;
+  document.querySelectorAll("[data-chip='" + field + "']").forEach(function(row) { refreshChips(row, field); });
+  onChipChange(field, val);
+}
+
+function onChipChange(field, val) {
+  if (field === "drillLogic") {
+    var show = val === "new";
+    var df = document.getElementById("drillFuncName"); if (df) df.hidden = !show;
+    if (val === "hgdr_sel") setYN("showDrillMode","Y");
+    if (val === "step10" || val === "hgdr_g1fix") setYN("showDrillMode","N");
+  }
+  if (field === "toolPh") {
+    var oth = document.getElementById("toolPhOther"); if (oth) oth.hidden = val !== "other";
+  }
+  if (field === "restrict") {
+    var rc = document.getElementById("restrictCustom"); if (rc) rc.hidden = val !== "custom";
+    // else_m 以外は restrictStyles 分岐が必要 → restrict_fn を自動チェック
+    if (val && val !== "else_m") { impl.restrict_fn = true; syncCheckGrid("scopeGrid", SCOPE_ITEMS, impl); }
+    else if (val === "else_m") { impl.restrict_fn = false; syncCheckGrid("scopeGrid", SCOPE_ITEMS, impl); }
+  }
+  if (field === "n2mode") {
+    var cn = document.getElementById("cornerNote"); if (cn) cn.hidden = val !== "max_plus3";
+  }
+}
+
+// ── style checkboxes ──────────────────────────────
+var STYLE_DEFS = [
+  { id:"Hirazoko",  lbl:"平底バイト仕上げ" },
+  { id:"Ichimonji", lbl:"一文字DR平底仕上げ" },
+  { id:"Normal",    lbl:"通常バイト加工" },
+  { id:"YoseRelay", lbl:"ヨセ中継" },
+  { id:"Yose",      lbl:"ヨセ加工" },
+  { id:"CrossSmall",lbl:"交差穴加工（径小）" },
+];
+
+function initStyleGrid() {
+  var g = document.getElementById("styleGrid"); if (!g) return;
+  g.innerHTML = "";
+  STYLE_DEFS.forEach(function(s) {
+    var lbl = document.createElement("label");
+    var cb = document.createElement("input"); cb.type = "checkbox";
+    cb.checked = !!styles[s.id];
+    cb.addEventListener("change", function() {
+      styles[s.id] = cb.checked;
+      autoBrief();
+    });
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(" " + s.lbl));
+    g.appendChild(lbl);
+  });
+}
+
+function syncStyleCheckboxes() {
+  var cbs = document.getElementById("styleGrid").querySelectorAll("input");
+  STYLE_DEFS.forEach(function(s,i) { cbs[i].checked = !!styles[s.id]; });
+}
+
+// ── scope / post checkboxes ───────────────────────
+var SCOPE_ITEMS = [
+  { id:"tpl_place",   lbl:"テンプレートを テンプレート/ に配置", def:true },
+  { id:"idx_option",  lbl:"index.html: workType option 追加", def:true },
+  { id:"idx_script",  lbl:"index.html: script タグ（app.js より前）", def:true },
+  { id:"drill_map",   lbl:"app.js: DRILL_DIA_MAP 追加", def:true },
+  { id:"work_id",     lbl:"app.js: WORK_ID_MAP 追加", def:true },
+  { id:"flat_tool",   lbl:"app.js: FLAT_BOTTOM_TOOL_DIA_MM 追加", def:true },
+  { id:"dispatch",    lbl:"app.js: template dispatch 追加", def:true },
+  { id:"desc",        lbl:"app.js: WORK_TYPE_DESCRIPTIONS 追加", def:true },
+  { id:"helper_fn",   lbl:"app.js: isFooWorkType() ヘルパー追加", def:false },
+  { id:"restrict_fn", lbl:"app.js: restrictStyles に分岐追加", def:false },
+  { id:"ui_style",    lbl:"app.js: updateInternalStyleUI 修正", def:false },
+  { id:"rear_chamf",  lbl:"app.js: rearChamferEarly 分岐追加", def:false },
+  { id:"drill_fn",    lbl:"app.js: 新規ドリル関数追加", def:false },
+  { id:"data_tools",  lbl:"data.js: 新規工具キー追加（全6機械）", def:false },
+  { id:"cross_panel", lbl:"index.html + app.js: CrossSmall サブパネル一式", def:false },
+  { id:"sw_cache",    lbl:"sw.js: CACHE_FILES に追加", def:false },
+];
+
+var POST_ITEMS = [
+  { id:"node_check",    lbl:"node --check テンプレート/data_template_XXX.js", def:true },
+  { id:"ph_check",      lbl:"node scripts/check-template-placeholders.mjs", def:true },
+  { id:"ui_select",     lbl:"プルダウン選択 → G コード生成 が成功する", def:true },
+  { id:"style_grey",    lbl:"不可スタイルがグレーアウトされる", def:true },
+  { id:"machines",      lbl:"全機械で T 番号が正しく置換される", def:true },
+  { id:"export_import", lbl:"エクスポート → インポートで全値が復元される", def:false },
+  { id:"debug_cov",     lbl:"デバッグパネルのカバレッジが 100%", def:false },
+  { id:"no_check_str",  lbl:"出力に「check」などの確認メモが出ない", def:true },
+];
+
+function initCheckGrid(gridId, items, stateObj) {
+  var g = document.getElementById(gridId); if (!g) return;
+  g.innerHTML = "";
+  items.forEach(function(item) {
+    stateObj[item.id] = item.def;
+    var lbl = document.createElement("label");
+    var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = item.def;
+    cb.addEventListener("change", function() { stateObj[item.id] = cb.checked; autoBrief(); });
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(" " + item.lbl));
+    g.appendChild(lbl);
+  });
+}
+
+function syncCheckGrid(gridId, items, stateObj) {
+  var cbs = document.getElementById(gridId).querySelectorAll("input");
+  items.forEach(function(item,i) { cbs[i].checked = !!stateObj[item.id]; });
+}
+
+// ── file handling ─────────────────────────────────
+function readFile(f) {
+  return new Promise(function(resolve, reject) {
+    var r = new FileReader();
+    r.onload = function() { resolve(String(r.result || "")); };
+    r.onerror = function() { reject(r.error); };
+    r.readAsText(f, "UTF-8");
+  });
+}
+
+async function ingestFiles(fileList) {
+  var arr = Array.from(fileList).filter(function(f) { return /\.js$/i.test(f.name); });
+  if (!arr.length) { showToast(".js ファイルを選んでください"); return; }
+  for (var i = 0; i < arr.length; i++) {
+    var content = await readFile(arr[i]);
+    var entry = mkEntry(arr[i].name, content);
+    var ei = files.findIndex(function(x) { return x.name === entry.name; });
+    if (ei >= 0) {
+      var prev = files[ei];
+      if (!entry.idDia && prev.idDia) entry.idDia = prev.idDia;
+      if (!entry.drillDia && prev.drillDia) entry.drillDia = prev.drillDia;
+      if (!entry.toolDia && prev.toolDia) entry.toolDia = prev.toolDia;
+      entry.displayName = prev.displayName || entry.displayName;
+      files[ei] = entry;
+    } else {
+      files.push(entry);
+    }
+  }
+  files.sort(function(a,b) { return a.name.localeCompare(b.name); });
+  if (prevIdx >= files.length) prevIdx = 0;
+  applyFilesToForm();
+  showToast(arr.length + " 件を読み込みました");
+}
+
+function applyFilesToForm() {
+  if (!files.length) {
+    renderFileList();
+    document.getElementById("perFileSection").hidden = true;
+    document.getElementById("multiNote").hidden = true;
+    document.getElementById("consistWarn").hidden = true;
+    updateAttachPaths();
+    clearAllStatus();
+    return;
+  }
+
+  // prefix guess
+  var wts = files.map(function(f) { return f.wt; }).filter(Boolean);
+  var guessedPrefix = guessPfx(wts);
+  var pfxEl = document.getElementById("dispPrefix");
+  if (guessedPrefix && !pfxEl.value.trim()) pfxEl.value = guessedPrefix;
+
+  // assign display names
+  var pfx = pfxEl.value.trim();
+  files.forEach(function(f) {
+    if (!f.displayName && f.wt) f.displayName = guessDisp(f.wt, pfx);
+  });
+
+  // single file → fill main form fields
+  var first = files[prevIdx] || files[0];
+  document.getElementById("tplContent").value = first.content;
+  document.getElementById("workType").value = first.wt || "";
+  document.getElementById("displayName").value = first.displayName || "";
+  if (first.idDia)    document.getElementById("idDia").value = first.idDia;
+  if (first.drillDia) document.getElementById("drillDia").value = first.drillDia;
+  if (first.toolDia)  document.getElementById("toolDia").value = first.toolDia;
+  if (first.toolPh)   setChip("toolPh", first.toolPh);
+
+  // multi variant
+  if (files.length > 1) {
+    setYN("multiVariant","Y","auto");
+    document.getElementById("variantWts").value = wts.slice(1).join("\n");
+    var helper = guessHelperName(wts);
+    if (helper && !document.getElementById("helperName").value.trim()) {
+      setYN("needHelper","Y","auto");
+      document.getElementById("helperName").value = helper;
+    }
+    impl.helper_fn = true;
+    syncCheckGrid("scopeGrid", SCOPE_ITEMS, impl);
+  }
+
+  // backtick check
+  var allOk = files.every(function(f) { return f.backtickOk; });
+  setYN("backtickOk", allOk ? "Y" : "N", "auto");
+  var bst = document.getElementById("backtickStatus");
+  if (allOk) {
+    bst.style.display = "block";
+    bst.textContent = "全ファイルOK: 先頭行 const template_XXX=" + BT + "% を確認";
+  } else {
+    bst.style.display = "block";
+    bst.className = "warn";
+    bst.textContent = files.filter(function(f){ return !f.backtickOk; }).map(function(f){ return f.name; }).join(", ") + " — 先頭行の形式を確認してください";
+  }
+
+  // placeholder detection (first file)
+  autoDetectPH(first.placeholders);
+
+  renderFileList();
+  renderPerFileTable();
+  updateMultiNote();
+  updateConsistWarn();
+  updateAttachPaths();
+  updatePHSection();
+  updateFlatHint();
+  autoBrief();
+}
+
+function guessPfx(wts) {
+  if (wts.length < 2) return "";
+  var first = wts[0], idx = first.lastIndexOf("_");
+  if (idx <= 0) return "";
+  var pfx = first.slice(0, idx);
+  if (!wts.every(function(w){ return w.startsWith(pfx + "_"); })) return "";
+  if (pfx === "TOMESEN") return "トメセン";
+  return pfx.replace(/_/g," ");
+}
+
+function guessDisp(wt, pfx) {
+  var suf = wt.includes("_") ? wt.slice(wt.lastIndexOf("_")+1) : wt;
+  return pfx ? pfx + " " + suf : wt;
+}
+
+function guessHelperName(wts) {
+  if (wts.length < 2) return "";
+  var pfx = wts[0].slice(0, wts[0].lastIndexOf("_"));
+  if (!pfx || !wts.every(function(w){ return w.startsWith(pfx+"_"); })) return "";
+  return pfx.charAt(0) + pfx.slice(1).toLowerCase();
+}
+
+function autoDetectPH(phs) {
+  var s = new Set(phs);
+  // 内部状態更新（ブリーフ生成で使用）
+  setYN("hasDrillBlock", s.has("DRILL_BLOCK") ? "Y" : "N");
+  setYN("phYoseBlock",   s.has("ヨセブロック")      ? "Y" : "N");
+  setYN("phYosePath",    s.has("ヨセパス")          ? "Y" : "N");
+  setYN("phIdDepth",     s.has("入力_内径深さ")      ? "Y" : "N");
+  setYN("phFlatExit",    s.has("平底_内径仕上出口")  ? "Y" : "N");
+  setYN("phNabari",      s.has("内バリ処理")         ? "Y" : "N");
+  setYN("hasM99",        s.has("M99P100")           ? "Y" : "N");
+  // バッジ表示更新（ユーザー向け）
+  setStatus("phYoseBlock", s.has("ヨセブロック")     ? "Y" : "N");
+  setStatus("phYosePath",  s.has("ヨセパス")         ? "Y" : "N");
+  setStatus("phIdDepth",   s.has("入力_内径深さ")    ? "Y" : "N");
+  setStatus("phFlatExit",  s.has("平底_内径仕上出口")? "Y" : "N");
+  setStatus("phNabari",    s.has("内バリ処理")       ? "Y" : "N");
+  setStatus("hasM99",      s.has("M99P100")          ? "Y" : "N");
+  // n2mode・工具種別は自動判定してチップ選択
+  if (s.has("最大径+3") && !s.has("最大径-5")) setChip("n2mode","max_plus3");
+  else if (s.has("最大径-5")) setChip("n2mode","max_minus5");
+  var tph = phs.find(function(k){ return /^内径ダイヤΦ/.test(k); });
+  if (tph) setChip("toolPh", ["内径ダイヤΦ3","内径ダイヤΦ4","内径ダイヤΦ6","内径ダイヤΦ8","内径ダイヤΦ16"].includes(tph) ? tph : "other");
+}
+
+function renderFileList() {
+  var ul = document.getElementById("fileList");
+  ul.innerHTML = "";
+  var pfxVal = document.getElementById("folderPrefix").value;
+  files.forEach(function(f, i) {
+    var li = document.createElement("li");
+    if (i === prevIdx) li.classList.add("cur");
+    var info = document.createElement("span");
+    info.className = "fn";
+    info.innerHTML = escH(f.name) + ' <span class="meta">' + escH(pfxVal + f.name) +
+      (f.wt ? " · " + escH(f.wt) : "") +
+      (f.idDia ? " · 内径Φ" + f.idDia : "") +
+      (f.drillDia ? " / ドリルφ" + f.drillDia : "") +
+      "</span>";
+    var rm = document.createElement("button");
+    rm.type = "button"; rm.className = "f-rm btn"; rm.textContent = "削除";
+    rm.onclick = (function(idx){ return function(e){ e.stopPropagation(); files.splice(idx,1); if(prevIdx>=files.length) prevIdx=Math.max(0,files.length-1); applyFilesToForm(); }; })(i);
+    li.appendChild(info); li.appendChild(rm);
+    li.addEventListener("click", function(){ setPreview(i); });
+    ul.appendChild(li);
+  });
+  // previewSel
+  var sel = document.getElementById("previewSel");
+  sel.innerHTML = "";
+  if (!files.length) { sel.disabled=true; var op=document.createElement("option"); op.textContent="（ファイルなし）"; sel.appendChild(op); return; }
+  sel.disabled = false;
+  files.forEach(function(f,i){ var op=document.createElement("option"); op.value=i; op.textContent=f.name+(f.wt?" ("+f.wt+")":""); if(i===prevIdx) op.selected=true; sel.appendChild(op); });
+}
+
+function setPreview(i) {
+  if (i<0||i>=files.length) return;
+  var cur = files[prevIdx];
+  if (cur) cur.content = document.getElementById("tplContent").value;
+  prevIdx = i;
+  document.getElementById("tplContent").value = files[i].content;
+  renderFileList();
+}
+
+function updateAttachPaths() {
+  var pfx = document.getElementById("folderPrefix").value;
+  document.getElementById("attachPaths").value = files.map(function(f){ return pfx+f.name; }).join("\n");
+}
+
+function updateMultiNote() {
+  var n = files.length, el = document.getElementById("multiNote");
+  el.hidden = n===0;
+  if (n>1) el.textContent = n + " 件一括登録モード。Agent には ブリーフ + 全" + n + " ファイルをすべて添付してください。";
+  else if (n===1) el.textContent = "1 件読み込み済み。";
+}
+
+function updateConsistWarn() {
+  var issues = [];
+  files.forEach(function(f) {
+    if (!f.wt) issues.push(f.name + ": 登録コード名を自動判定できません（テンプレートのファイル名・先頭行を確認してください）");
+    if (f.hdrCmt && f.wt && f.hdrCmt !== f.wt) issues.push(f.wt + ": テンプレート2行目のコメント（" + f.hdrCmt + "）とファイル名のコード名が一致しません");
+    if (!f.backtickOk) issues.push(f.name + ": 先頭行のフォーマットが正しくありません（const template_XXX=` で始まっているか確認してください）");
+  });
+  var { diff } = aggregatePH();
+  if (diff.length && files.length>1) issues.push("ファイルによって加工切替ポイントの構成が異なります（後述の差分表を確認してください）");
+  var el = document.getElementById("consistWarn");
+  if (!issues.length) { el.hidden=true; return; }
+  el.hidden=false; el.textContent="⚠ 自動チェック:\n" + issues.map(function(x){ return "• "+x; }).join("\n");
+}
+
+function aggregatePH() {
+  if (!files.length) return { common:[], diff:[] };
+  var sets = files.map(function(f){ return new Set(f.placeholders); });
+  var common = Array.from(sets[0]).filter(function(k){ return sets.every(function(s){ return s.has(k); }); });
+  var union = new Set(); sets.forEach(function(s){ s.forEach(function(k){ union.add(k); }); });
+  var diff = Array.from(union).filter(function(k){ return !common.includes(k); }).sort();
+  return { common:common.sort(), diff:diff };
+}
+
+function updatePHSection() {
+  var sec = document.getElementById("phSection");
+  if (!files.length) { sec.hidden=true; return; }
+  var ag = aggregatePH();
+  if (!ag.common.length && !ag.diff.length) { sec.hidden=true; return; }
+  sec.hidden=false;
+  document.getElementById("phLbl").textContent = files.length>1 ? "全ファイル共通プレースホルダー" : "プレースホルダー一覧";
+  document.getElementById("phCommon").value = ag.common.map(function(k){ return "{{"+k+"}}"; }).join("\n");
+  if (ag.diff.length && files.length>1) {
+    document.getElementById("phDiffLbl").hidden=false;
+    document.getElementById("phDiff").hidden=false;
+    var lines = [];
+    files.forEach(function(f){ var s=new Set(f.placeholders); var only=Array.from(s).filter(function(k){ return !ag.common.includes(k); }); if(only.length) lines.push(f.wt+": "+only.map(function(k){ return "{{"+k+"}}"; }).join(", ")); });
+    document.getElementById("phDiff").value = lines.join("\n");
+  } else {
+    document.getElementById("phDiffLbl").hidden=true;
+    document.getElementById("phDiff").hidden=true;
+  }
+}
+
+function renderPerFileTable() {
+  var sec = document.getElementById("perFileSection");
+  if (files.length===0) { sec.hidden=true; return; }
+  sec.hidden=false;
+  var pfx = document.getElementById("dispPrefix").value.trim();
+  var html = '<table class="pft"><thead><tr>' +
+    '<th>ファイル</th><th>workType</th><th>表示名</th>' +
+    '<th>内径Φ<br><span style="font-weight:400;font-size:.65rem">WORK_ID</span></th>' +
+    '<th>ドリルφ<br><span style="font-weight:400;font-size:.65rem">DRILL_DIA</span></th>' +
+    '<th>バイトΦ<br><span style="font-weight:400;font-size:.65rem">FLAT_BTM</span></th>' +
+    '<th>{{内径ダイヤ}}</th><th>N1 DR</th><th>行3</th><th>先頭`%</th>' +
+    '</tr></thead><tbody>';
+  files.forEach(function(f,i) {
+    if (!f.displayName && f.wt) f.displayName = guessDisp(f.wt, pfx);
+    html += '<tr>' +
+      '<td style="white-space:nowrap;font-size:.68rem">' + escH(f.name) + '</td>' +
+      '<td><input name="pwt" value="' + escA(f.wt) + '" /></td>' +
+      '<td><input name="pdisp" value="' + escA(f.displayName) + '" /></td>' +
+      '<td><input name="pid" type="number" step="0.001" value="' + escA(f.idDia) + '" /></td>' +
+      '<td><input name="pdrill" type="number" step="0.001" value="' + escA(f.drillDia) + '" /></td>' +
+      '<td><input name="ptool" type="number" step="0.001" value="' + escA(f.toolDia) + '" /></td>' +
+      '<td><input name="pph" value="' + escA(f.toolPh) + '" style="min-width:6rem" /></td>' +
+      '<td><input name="pdrcom" value="' + escA(f.drCmt) + '" /></td>' +
+      '<td><input readonly value="' + escA(f.hdrCmt) + '" style="color:' + (f.hdrCmt===f.wt?"var(--ok)":"var(--warn)") + '" /></td>' +
+      '<td style="text-align:center;color:' + (f.backtickOk?"var(--ok)":"var(--danger)") + '">' + (f.backtickOk?"OK":"NG") + '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById("perFileTableWrap").innerHTML = html;
+  document.querySelectorAll("#perFileTableWrap input:not([readonly])").forEach(function(inp) {
+    inp.addEventListener("input", function() { readPerFileTable(); updateConsistWarn(); autoBrief(); });
+  });
+}
+
+function readPerFileTable() {
+  var trs = document.querySelectorAll("#perFileTableWrap tbody tr");
+  trs.forEach(function(tr,i) {
+    var f = files[i]; if (!f) return;
+    f.wt         = (tr.querySelector("[name=pwt]")    ||{}).value||f.wt;
+    f.displayName= (tr.querySelector("[name=pdisp]")  ||{}).value||"";
+    f.idDia      = (tr.querySelector("[name=pid]")    ||{}).value||f.idDia;
+    f.drillDia   = (tr.querySelector("[name=pdrill]") ||{}).value||f.drillDia;
+    f.toolDia    = (tr.querySelector("[name=ptool]")  ||{}).value||f.toolDia;
+    f.toolPh     = (tr.querySelector("[name=pph]")    ||{}).value||f.toolPh;
+    f.drCmt      = (tr.querySelector("[name=pdrcom]") ||{}).value||f.drCmt;
+  });
+}
+
+function specRowsForBrief() {
+  readPerFileTable();
+  if (files.length) return files.map(function(f){ return { wt:f.wt, disp:f.displayName, idDia:f.idDia, drillDia:f.drillDia, toolDia:f.toolDia, toolPh:f.toolPh, drCmt:f.drCmt }; });
+  var wt = document.getElementById("workType").value.trim();
+  if (!wt) return [];
+  return [{ wt:wt, disp:document.getElementById("displayName").value.trim(),
+            idDia:document.getElementById("idDia").value,
+            drillDia:document.getElementById("drillDia").value,
+            toolDia:document.getElementById("toolDia").value,
+            toolPh:chips["toolPh"]||"", drCmt:"" }];
+}
+
+function updateFlatHint() {
+  var id = parseFloat(document.getElementById("idDia").value);
+  var tool = parseFloat(document.getElementById("toolDia").value);
+  var box = document.getElementById("flatHint");
+  if (isNaN(id)||isNaN(tool)) { box.hidden=true; return; }
+  box.hidden=false;
+  if (Math.abs(id-tool)<0.02) box.textContent = "内径Φ＝バイトΦ（同径）→ 平底バイト仕上げ時の出口指令は U-.2 になります";
+  else box.textContent = "内径Φ(" + id + "mm) ≠ バイトΦ(" + tool + "mm)（異径）→ 平底バイト仕上げ時の出口指令は X" + tool + ".F.03 系になります";
+}
+
+// ── brief generation ─────────────────────────────
+function G(id) { return document.getElementById(id); }
+function ynStr(field) { return yn[field]==="Y"?"はい":yn[field]==="N"?"いいえ":"（未回答）"; }
+function chipStr(field) { return chips[field]||"（未選択）"; }
+
+var DRILL_LOGIC_LABELS = {
+  hgdr_sel:  "① G74ペッキング/G1直送り を加工者が都度選択 [getDrillShiageHGDRBlock(drillMode)]",
+  step10:    "② G1固定・10mm刻み自動ステップバック（HSS刃専用）[getDrillShiage10mmStepBlock()]",
+  hgdr_g1fix:"③ G1で1発貫通・固定（G18系専用）[getDrillShiageHGDRBlock(\"G1\") 固定]",
+  new:       "新規ドリル方式: " + (G("drillFuncName")||{value:""}).value,
+};
+var RESTRICT_LABELS = {
+  else_m: "M15/M18/M22/M40/G78 系と同じ — else 分岐で足りる（restrictStyles 追記不要）",
+  m42:    "M42X3_25175 系と同じ — Ichimonji/CrossSmall/CrossBig 不可",
+  g18hgdr:"G18 HGDR 系 — Hirazoko/Normal/YoseRelay のみ可",
+  g18_40: "G18_40/42 系 — YoseRelay/CrossSmall のみ可",
+  m12:    "M12 系 — Hirazoko/Yose 不可",
+  m8:     "M8 系 — Ichimonji/Normal/Yose 不可",
+  locked: "全スタイルロック（固定形状テンプレート）",
+  tomesen_type: "トメセン系 — isTomesenWorkType 分岐で Hirazoko/Ichimonji/Normal のみ有効化",
+  custom: "カスタム: " + ((G("restrictCustom")||{value:""}).value||"（未記入）"),
+};
+var NABARI_LABELS = {
+  none:      "なし（テンプレートに中バリ取り処理を含めない — M12系以外の原則）",
+  ichi_men:  "一文字DR で面取り（バリ取り）[getIchimonjiBlock]",
+  ichi_hira: "一文字DR で平底仕上げ [getIchimonjiHirazokoBlock]",
+  oku_m12:   "奥バイトで面取り・Φ4バイト使用 M12版 [getOkuBiteBlock]",
+  oku_g18:   "奥バイトで面取り G18版 [getOkuBiteBlockG18]",
+};
+var N2_LABELS = {
+  max_minus5:"{{最大径-5}} 使用 — 通常/偏心モードでも入口 X が出る",
+  max_plus3: "{{最大径+3}} のみ — 角ありモード時のみ X+F.3 が出力（通常モードは空白）",
+  fixed:     "テンプレート内に固定 X — maxOD と連動しない",
+  g71:       "G71/G70 荒仕上げ — 標準 M 系フルパス",
+};
+
+function generateBrief() {
+  readPerFileTable();
+  var rows = specRowsForBrief();
+  var now = new Date().toISOString().replace("T"," ").slice(0,19);
+  var fc = files.length;
+  var L = [];
+  var sep = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+  L.push("# テンプレート追加依頼 — Agent 実装ブリーフ");
+  L.push("生成日時: " + now);
+  L.push("参照ファイル: テンプレート追加手順.txt / NC Program Generator 開発ルール");
+  L.push("");
+
+  // warnings
+  var warns = [];
+  if (!rows.length) warns.push("テンプレートファイル未読込 / workType 未入力");
+  if (yn.namingOk !== "Y") warns.push("命名規則OK が未確認");
+  rows.forEach(function(r) {
+    if (!r.idDia||!r.drillDia||!r.toolDia) warns.push(r.wt+": 加工仕様3点に未入力あり（図面で確認してください）");
+  });
+  if (!chips.drillLogic) warns.push("ドリルロジック未選択");
+  if (warns.length) { L.push("## ⚠ 要確認・未入力"); warns.forEach(function(w){ L.push("- "+w); }); L.push(""); }
+
+  if (fc > 1) {
+    L.push(sep);
+    L.push("## ★ 一括登録（" + fc + " 件）");
+    L.push("Agent へ **このブリーフ + 以下 " + fc + " ファイルを全て添付** して実装してください。");
+    L.push("");
+  }
+
+  L.push(sep);
+  L.push("## 添付テンプレートファイル");
+  var paths = (G("attachPaths").value||"").split(/\r?\n/).filter(Boolean);
+  if (paths.length) {
+    paths.forEach(function(p,i){ L.push("  " + (i+1) + ". " + p + (rows[i]?" → "+rows[i].wt:"") ); });
+  } else if (rows.length) {
+    rows.forEach(function(r,i){ L.push("  "+(i+1)+". テンプレート/data_template_"+r.wt+".js"); });
+  } else {
+    L.push("  （未選択）");
+  }
+  if (fc>1) {
+    L.push("");
+    L.push("index.html に追加する script タグ（app.js より前の順番）:");
+    var pfx = G("folderPrefix").value;
+    files.forEach(function(f){ L.push('  <script src="' + pfx + f.name + '"></scr' + 'ipt>'); });
+  }
+  L.push("");
+
+  L.push(sep);
+  L.push("## 基本情報");
+  if (fc>1) {
+    L.push("| workType | 表示名 | ファイル |");
+    L.push("|---|---|---|");
+    files.forEach(function(f){ L.push("| "+f.wt+" | "+(f.displayName||"?")+" | "+f.name+" |"); });
+  } else if (rows.length) {
+    L.push("  workType : " + (rows[0].wt||"?"));
+    L.push("  表示名   : " + (rows[0].disp||"?"));
+  }
+  L.push("  命名規則OK         : " + ynStr("namingOk"));
+  L.push("  MH バリエーション  : " + ynStr("hasMH") + (yn.hasMH==="Y" ? " (" + (G("mhWorkTypes").value.replace(/\n/g,", ")||"要記入") + ")" : ""));
+  L.push("  複数 workType 一括 : " + (fc>1 ? "はい（"+fc+"件）" : ynStr("multiVariant")));
+  L.push("  isFooWorkType()    : " + ynStr("needHelper") + (yn.needHelper==="Y" ? " → is"+(G("helperName").value||"Xxx")+"WorkType(wt)" : ""));
+  L.push("");
+
+  L.push(sep);
+  L.push("## 0-H 加工仕様3点（ユーザー確認済み — 図面コメントから推測しないこと）");
+  L.push("| workType | 内径 Φ | ドリル φ | バイト Φ | {{内径ダイヤ}} | Hirazoko 挙動 |");
+  L.push("|---|---|---|---|---|---|");
+  rows.forEach(function(r) {
+    var id=parseFloat(r.idDia), tl=parseFloat(r.toolDia);
+    var hb = (!isNaN(id)&&!isNaN(tl)) ? (Math.abs(id-tl)<0.02 ? "内径=バイト → U-.2" : "内径≠バイト → X"+r.toolDia+".F.03") : "—";
+    L.push("| "+r.wt+" | "+r.idDia+" | "+r.drillDia+" | "+r.toolDia+" | {{"+r.toolPh+"}} | "+hb+" |");
+  });
+  L.push("");
+
+  L.push(sep);
+  L.push("## 0-B ドリルロジック");
+  var dl = chips.drillLogic;
+  L.push("  関数: " + (DRILL_LOGIC_LABELS[dl] || "（未選択）"));
+  L.push("  drillMode UI 表示: " + ynStr("showDrillMode"));
+  L.push("  {{DRILL_BLOCK}} あり: " + ynStr("hasDrillBlock"));
+  L.push("");
+
+  L.push(sep);
+  L.push("## 0-D 内径加工スタイル");
+  var enabled = STYLE_DEFS.filter(function(s){ return styles[s.id]; }).map(function(s){ return s.lbl; });
+  var disabled = STYLE_DEFS.filter(function(s){ return !styles[s.id]; }).map(function(s){ return s.lbl; });
+  if (enabled.length) { L.push("  使用可能:"); enabled.forEach(function(s){ L.push("    ✅ "+s); }); }
+  if (disabled.length) { L.push("  使用不可:"); disabled.forEach(function(s){ L.push("    ❌ "+s); }); }
+  L.push("  restrictStyles: " + (RESTRICT_LABELS[chips.restrict]||"（未選択）"));
+  L.push("  注入点 — ヨセブロック:" + ynStr("phYoseBlock") +
+    " / ヨセパス:" + ynStr("phYosePath") +
+    " / 内径深さ:" + ynStr("phIdDepth") +
+    " / 平底出口:" + ynStr("phFlatExit"));
+  if (chips.n2mode==="max_plus3") {
+    L.push("");
+    L.push("  ⚠ {{最大径+3}} のみ使用 → 通常モードでは入口 X が出力されません。");
+    L.push("     「外径計算モードは必ず角あり」と現場に周知してください。");
+  }
+  if (yn.phYoseBlock==="Y") {
+    L.push("  ⚠ {{ヨセブロック}} あり → ヨセ方法② は app 標準で内径ダイヤΦ4固定。大径ワークは要確認。");
+  }
+  L.push("");
+
+  L.push(sep);
+  L.push("## 0-C 中バリ処理");
+  L.push("  " + (NABARI_LABELS[chips.nabari] || "（未選択）"));
+  if (yn.phNabari==="Y" && chips.nabari==="none") L.push("  ⚠ テンプレに {{内バリ処理}} があります。「なし」を選んだ場合は削除してください。");
+  L.push("");
+
+  L.push(sep);
+  L.push("## 0-E CrossSmall");
+  if (!styles.CrossSmall) {
+    L.push("  使用不可（スタイル⑤で CrossSmall を有効にしていません）");
+  } else {
+    L.push("  サブパネル新規作成: " + ynStr("crossPanel"));
+    L.push("  択数: " + (G("crossCount").value||"?"));
+    var opts = (G("crossOpts").value||"").trim();
+    if (opts) { L.push("  選択肢:"); opts.split(/\n/).forEach(function(o){ L.push("    - "+o); }); }
+    L.push("  4-10〜4-14 実装: " + ynStr("crossFullImpl"));
+  }
+  L.push("");
+
+  L.push(sep);
+  L.push("## 0-F 工具キー（data.js）");
+  L.push("  既存キーで足りる: " + ynStr("toolsOk"));
+  if (yn.toolsOk==="N") {
+    var nk = (G("newToolKeys").value||"").trim();
+    if (nk) { L.push("  新規キー（全6機械に追加）:"); nk.split(/\n/).forEach(function(k){ L.push("    - "+k); }); }
+  }
+  L.push("");
+
+  L.push(sep);
+  L.push("## テンプレ構造");
+  L.push("  先頭行 const template_XXX=" + BT + "% 形式: " + ynStr("backtickOk"));
+  L.push("  N2 外径入口方式: " + (N2_LABELS[chips.n2mode]||"（未選択）"));
+  L.push("  {{M99P100}}: " + ynStr("hasM99"));
+  L.push("  既存 workType と別キー: " + ynStr("separateKey"));
+  L.push("  内径深さ > 7mm 制約: " + ynStr("depth7ok"));
+  var ag = aggregatePH();
+  if (ag.common.length) {
+    L.push("  全ファイル共通プレースホルダー:");
+    L.push("    " + ag.common.map(function(k){ return "{{"+k+"}}"; }).join("  "));
+  }
+  if (ag.diff.length && fc>1) {
+    L.push("  ファイル間差分プレースホルダー: " + ag.diff.map(function(k){ return "{{"+k+"}}"; }).join("  "));
+  }
+  var memo = (G("opsMemo").value||"").trim();
+  if (memo) { L.push("  その他メモ:"); memo.split(/\n/).forEach(function(m){ L.push("    "+m); }); }
+  L.push("");
+
+  L.push(sep);
+  L.push("## app.js マップ登録値（コピペ用）");
+  L.push("```");
+  L.push("// DRILL_DIA_MAP に追加");
+  rows.forEach(function(r){ if(r.drillDia) L.push(r.wt + ": " + r.drillDia + ","); });
+  L.push("");
+  L.push("// WORK_ID_MAP に追加");
+  rows.forEach(function(r){ if(r.idDia) L.push(r.wt + ": " + r.idDia + ","); });
+  L.push("");
+  L.push("// FLAT_BOTTOM_TOOL_DIA_MM に追加");
+  rows.forEach(function(r){ if(r.toolDia) L.push(r.wt + ": " + r.toolDia + ","); });
+  L.push("```");
+  L.push("");
+  if (rows.length) {
+    L.push("// WORK_TYPE_DESCRIPTIONS に追加:");
+    rows.forEach(function(r){ L.push(r.wt + ': "' + (r.disp||r.wt) + " — 内径 Φ" + r.idDia + " / ドリル φ" + r.drillDia + ' / バイト Φ' + r.toolDia + '",'); });
+    L.push("");
+  }
+
+  L.push(sep);
+  L.push("## 実装スコープ");
+  SCOPE_ITEMS.forEach(function(item){ L.push("  [" + (impl[item.id]?"x":" ") + "] " + item.lbl); });
+  L.push("");
+
+  L.push(sep);
+  L.push("## 実装後チェック");
+  POST_ITEMS.forEach(function(item){ if(post[item.id]) L.push("  [ ] " + item.lbl); });
+  L.push("");
+
+  L.push(sep);
+  L.push("## よくあるミス（手順書より）");
+  L.push("  - {{...}} の }} 閉じ忘れ / テンプレ内に literal M51 等を直書きしない（{{M51}} を使う）");
+  L.push("  - script タグは app.js より前に置く（後ろに置くと template_XXX が undefined）");
+  L.push("  - 新規工具キーは data.js 全6機械に追加（一部だけ追加すると他機械でエラー）");
+  L.push("  - getDrillShiage10mmStepBlock を M12 以外に流用しない（将来の調整で独立が必要）");
+  L.push("  - PowerShell での編集は必ず UTF8: [System.IO.File]::ReadAllText/WriteAllText");
+  L.push("");
+  L.push("以上を確認のうえ実装してください。");
+  L.push("加工仕様3点（内径Φ・ドリルφ・バイトΦ）は上の表の値をそのまま使い、図面から独自に推測しないこと。");
+
+  return L.join("\n");
+}
+
+var briefTimer;
+function autoBrief() {
+  clearTimeout(briefTimer);
+  briefTimer = setTimeout(function(){ G("briefOut").value = generateBrief(); }, 350);
+}
+
+// ── status badges (自動検出項目の表示) ───────────────
+function setStatus(id, val) {
+  var el = document.getElementById("st-" + id);
+  if (!el) return;
+  if (val === "Y") { el.textContent = "✅ あり"; el.className = "st-badge yes"; }
+  else if (val === "N") { el.textContent = "❌ なし"; el.className = "st-badge no"; }
+  else { el.textContent = "—（ファイル未読込）"; el.className = "st-badge unk"; }
+}
+
+function clearAllStatus() {
+  ["phYoseBlock","phYosePath","phIdDepth","phFlatExit","phNabari","hasM99"].forEach(function(id) {
+    setStatus(id, null);
+  });
+  var bst = document.getElementById("backtickStatus");
+  if (bst) { bst.style.display = "none"; bst.textContent = ""; }
+}
+
+// ── helpers ──────────────────────────────────────
+function escH(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;"); }
+function escA(s) { return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+function showToast(msg) {
+  var t = G("toast"); t.textContent=msg; t.classList.add("show");
+  setTimeout(function(){ t.classList.remove("show"); }, 2200);
+}
+
+// ── save / load ───────────────────────────────────
+function collectState() {
+  readPerFileTable();
+  var tvals = {};
+  ["workType","displayName","mhWorkTypes","variantWts","helperName","drillFuncName","crossOpts","newToolKeys","opsMemo","restrictCustom","attachPaths","dispPrefix","idDia","drillDia","toolDia","toolPhOther"].forEach(function(id){ var el=G(id); if(el) tvals[id]=el.value; });
+  return { yn:Object.assign({},yn), chips:Object.assign({},chips), styles:Object.assign({},styles), impl:Object.assign({},impl), post:Object.assign({},post), txts:tvals, files:files.map(function(f){ return Object.assign({},f); }), prevIdx:prevIdx, crossCount:(G("crossCount")||{value:"2"}).value, folderPrefix:G("folderPrefix").value };
+}
+
+function applyState(s) {
+  if (!s) return;
+  if (s.yn) Object.assign(yn, s.yn);
+  if (s.chips) Object.assign(chips, s.chips);
+  if (s.styles) Object.assign(styles, s.styles);
+  if (s.impl) Object.assign(impl, s.impl);
+  if (s.post) Object.assign(post, s.post);
+  if (s.txts) Object.keys(s.txts).forEach(function(id){ var el=G(id); if(el) el.value=s.txts[id]||""; });
+  if (s.crossCount) { var cc=G("crossCount"); if(cc) cc.value=s.crossCount; }
+  if (s.folderPrefix) { var fp=G("folderPrefix"); if(fp) fp.value=s.folderPrefix; }
+  if (s.files&&s.files.length) { files=s.files.map(function(f){ return Object.assign({},f); }); prevIdx=s.prevIdx||0; }
+  // re-render yn/chips
+  document.querySelectorAll("[data-yn]").forEach(function(c){ refreshYN(c, c.dataset.yn); onYNChange(c.dataset.yn, yn[c.dataset.yn]); });
+  document.querySelectorAll("[data-chip]").forEach(function(r){ refreshChips(r, r.dataset.chip); onChipChange(r.dataset.chip, chips[r.dataset.chip]); });
+  syncStyleCheckboxes();
+  syncCheckGrid("scopeGrid", SCOPE_ITEMS, impl);
+  syncCheckGrid("postGrid", POST_ITEMS, post);
+  if (files.length) applyFilesToForm(); else updateFlatHint();
+}
+
+// ── presets ───────────────────────────────────────
+var PRESETS = {
+  generic: function() {
+    var P = "preset";
+    setChip("drillLogic","hgdr_sel"); setYN("showDrillMode","Y",P); setYN("hasDrillBlock","Y",P);
+    setChip("restrict","else_m"); setChip("n2mode","g71");
+    setChip("nabari","none"); setYN("toolsOk","Y",P); setYN("namingOk","Y",P);
+    setYN("hasM99","Y",P); setYN("separateKey","Y",P); setYN("depth7ok","Y",P);
+    ["Hirazoko","Normal","YoseRelay","Yose","CrossSmall"].forEach(function(s){ styles[s]=true; });
+    styles.Ichimonji=false; syncStyleCheckboxes();
+    impl.helper_fn=false; impl.restrict_fn=false; syncCheckGrid("scopeGrid",SCOPE_ITEMS,impl);
+  },
+  tomesen: function() {
+    PRESETS.generic();
+    var P = "preset";
+    setChip("n2mode","max_plus3");
+    setChip("restrict","tomesen_type");
+    G("dispPrefix").value="トメセン";
+    setYN("multiVariant","Y",P); setYN("needHelper","Y",P); G("helperName").value="Tomesen";
+    setYN("hasM99","N",P);
+    ["Hirazoko","Ichimonji","Normal"].forEach(function(s){ styles[s]=true; });
+    ["YoseRelay","Yose","CrossSmall"].forEach(function(s){ styles[s]=false; });
+    syncStyleCheckboxes();
+    impl.helper_fn=true; impl.restrict_fn=true; syncCheckGrid("scopeGrid",SCOPE_ITEMS,impl);
+  },
+  g18: function() {
+    var P = "preset";
+    setChip("drillLogic","hgdr_g1fix"); setYN("showDrillMode","N",P); setYN("hasDrillBlock","Y",P);
+    setChip("restrict","g18_40"); setChip("n2mode","max_minus5");
+    setChip("nabari","none"); setYN("toolsOk","Y",P); setYN("namingOk","Y",P);
+    ["YoseRelay","CrossSmall"].forEach(function(s){ styles[s]=true; });
+    ["Hirazoko","Ichimonji","Normal","Yose"].forEach(function(s){ styles[s]=false; });
+    syncStyleCheckboxes();
+  },
+  m12hss: function() {
+    var P = "preset";
+    setChip("drillLogic","step10"); setYN("showDrillMode","N",P); setYN("hasDrillBlock","Y",P);
+    setChip("restrict","m12"); setChip("n2mode","g71");
+    setChip("nabari","ichi_hira");
+    ["Ichimonji","Normal","YoseRelay","CrossSmall"].forEach(function(s){ styles[s]=true; });
+    styles.Hirazoko=false; styles.Yose=false; syncStyleCheckboxes();
+  },
+  g12b: function() {
+    var P = "preset";
+    setChip("drillLogic","hgdr_sel"); setYN("showDrillMode","Y",P); setYN("hasDrillBlock","Y",P);
+    setChip("restrict","else_m"); setChip("n2mode","max_minus5");
+    setChip("nabari","none"); setYN("hasM99","N",P); setYN("namingOk","Y",P);
+    setYN("toolsOk","Y",P); setYN("separateKey","Y",P); setYN("depth7ok","Y",P);
+    ["Hirazoko","Normal","YoseRelay","Yose","CrossSmall"].forEach(function(s){ styles[s]=true; });
+    styles.Ichimonji=false; syncStyleCheckboxes();
+  },
+  clear: function() { location.reload(); }
+};
+
+// ── init ─────────────────────────────────────────
+// init YN buttons
+document.querySelectorAll("[data-yn]").forEach(function(c) {
+  var field = c.dataset.yn;
+  var isInline = c.classList.contains("yn-inline");
+  initYN(c, field, isInline);
+});
+initChips();
+initStyleGrid();
+initCheckGrid("scopeGrid", SCOPE_ITEMS, impl);
+initCheckGrid("postGrid", POST_ITEMS, post);
+
+// section collapse
+document.querySelectorAll(".sec-hdr").forEach(function(h) {
+  h.addEventListener("click", function() {
+    h.parentElement.classList.toggle("closed");
+  });
+});
+
+// presets
+document.querySelectorAll("[data-preset]").forEach(function(btn) {
+  btn.addEventListener("click", function() {
+    var p = btn.dataset.preset;
+    if (PRESETS[p]) { PRESETS[p](); updateFlatHint(); autoBrief(); showToast("プリセット「"+btn.textContent+"」を適用しました"); }
+  });
+});
+
+// file drop
+var dz = G("dropZone");
+G("btnPick").addEventListener("click", function(e){ e.stopPropagation(); G("filePicker").click(); });
+dz.addEventListener("click", function(e){ if(e.target!==G("btnPick")) G("filePicker").click(); });
+G("filePicker").addEventListener("change", function(e){ if(e.target.files.length) { ingestFiles(e.target.files); e.target.value=""; } });
+["dragenter","dragover"].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add("over"); }); });
+["dragleave","drop"].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.remove("over"); }); });
+dz.addEventListener("drop", function(e){ if(e.dataTransfer.files.length) ingestFiles(e.dataTransfer.files); });
+
+// preview select
+G("previewSel").addEventListener("change", function(e){ var i=parseInt(e.target.value); if(!isNaN(i)) setPreview(i); });
+
+// folder prefix
+G("folderPrefix").addEventListener("change", function(){ renderFileList(); updateAttachPaths(); autoBrief(); });
+
+// displayName prefix
+G("dispPrefix").addEventListener("input", function() {
+  var pfx = G("dispPrefix").value.trim();
+  files.forEach(function(f){ if(f.wt) f.displayName=guessDisp(f.wt,pfx); });
+  renderPerFileTable(); autoBrief();
+});
+
+// re-parse button
+G("btnReParse").addEventListener("click", function() {
+  if (!files[prevIdx]) { showToast("ファイルが読み込まれていません"); return; }
+  files[prevIdx].content = G("tplContent").value;
+  var re = mkEntry(files[prevIdx].name, files[prevIdx].content);
+  re.displayName = files[prevIdx].displayName;
+  files[prevIdx] = re;
+  applyFilesToForm();
+  showToast("再解析しました");
+});
+
+// idDia / toolDia hint
+["idDia","toolDia"].forEach(function(id){ var el=G(id); if(el) el.addEventListener("input", function(){ updateFlatHint(); autoBrief(); }); });
+
+// other inputs → autoBrief
+["workType","displayName","mhWorkTypes","variantWts","helperName","drillFuncName","crossOpts","newToolKeys","opsMemo","restrictCustom","attachPaths","dispPrefix","drillDia","toolPhOther","crossCount"].forEach(function(id) {
+  var el=G(id); if(el) el.addEventListener("input", autoBrief);
+});
+
+// header buttons
+G("btnGen").addEventListener("click", function(){ G("briefOut").value=generateBrief(); showToast("ブリーフを生成しました"); });
+G("btnCopy").addEventListener("click", async function() {
+  var txt = G("briefOut").value;
+  if (!txt) { showToast("先にブリーフを生成してください"); return; }
+  try { await navigator.clipboard.writeText(txt); showToast("コピーしました"); }
+  catch(e) { G("briefOut").select(); document.execCommand("copy"); showToast("コピーしました"); }
+});
+G("btnDl").addEventListener("click", function() {
+  var txt = G("briefOut").value; if(!txt) { showToast("先にブリーフを生成してください"); return; }
+  var wt = (files[0]&&files[0].wt)||G("workType").value||"template";
+  var b = new Blob([txt],{type:"text/plain;charset=utf-8"});
+  var a = document.createElement("a"); a.href=URL.createObjectURL(b);
+  a.download = "テンプレート追加確認_" + wt + "_" + Date.now() + ".txt";
+  a.click(); URL.revokeObjectURL(a.href); showToast("ダウンロード開始");
+});
+G("btnSave").addEventListener("click", function(){
+  try { localStorage.setItem(SKEY, JSON.stringify(collectState())); showToast("下書きを保存しました"); }
+  catch(e) { showToast("保存に失敗しました: " + e.message); }
+});
+G("btnLoad").addEventListener("click", function(){
+  var raw = localStorage.getItem(SKEY);
+  if (!raw) { showToast("保存された下書きがありません"); return; }
+  try { applyState(JSON.parse(raw)); autoBrief(); showToast("下書きを読み込みました"); }
+  catch(e) { showToast("読み込みに失敗しました"); }
+});
+
+// default state
+PRESETS.generic();
+autoBrief();
+
+}); // DOMContentLoaded
+</script>
+</body>
+</html>

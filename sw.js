@@ -44,6 +44,11 @@ const CACHE_FILES = [
     "./テンプレート/data_template_G18_62-MH.js",
     "./テンプレート/data_template_G18_655-MH.js",
     "./テンプレート/data_template_G18_6175-MH.js",
+    "./テンプレート/data_template_TOMESEN_M16.js",
+    "./テンプレート/data_template_TOMESEN_M18.js",
+    "./テンプレート/data_template_TOMESEN_M22.js",
+    "./テンプレート/data_template_TOMESEN_M24.js",
+    "./テンプレート/data_template_TOMESEN_M35.js",
 ];
 
 // インストール: 全静的ファイルをキャッシュ

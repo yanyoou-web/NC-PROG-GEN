@@ -5,6 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="theme-color" content="#1a2030" />
         <title data-i18n="pageTitle">NCプログラム作成</title>
+        <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="assets/icon.svg" />
         <link rel="stylesheet" href="assets/style.css" />
         <link rel="manifest" href="manifest.json" />
     </head>
@@ -53,6 +55,12 @@
                 <select id="uiLang" class="ui-lang-select enter-target" data-i18n-aria-label="uiLanguage">
                     <option value="ja">日本語</option>
                 </select>
+            </div>
+
+            <!-- アプリヘッダー -->
+            <div class="app-header">
+                <img src="assets/icon.svg" alt="NC" class="app-header__icon" />
+                <span class="app-header__title" data-i18n="pageTitle">NCプログラム作成</span>
             </div>
 
             <!-- ステップ進捗インジケーター (4ステップ) -->
@@ -120,8 +128,18 @@
                     />
                 </div>
                 <div class="nc-author-section">
-                    <div class="row nc-author-row">
+                    <div class="row">
                         <label data-i18n="author">作成者</label>
+                        <input
+                            type="text"
+                            id="workerName"
+                            data-i18n-placeholder="phDirect"
+                            placeholder="半角英数字のみ"
+                            class="nc-worker-input enter-target"
+                        />
+                    </div>
+                    <div class="row nc-author-row">
+                        <span class="nc-label-spacer"></span>
                         <div class="btns nc-btns-inline">
                             <button type="button" class="qb" onclick="setAuthor('YAMADA', this)">YAMADA</button>
                             <button type="button" class="qb" onclick="setAuthor('SAWADA', this)">SAWADA</button>
@@ -130,16 +148,6 @@
                             <button type="button" class="qb" onclick="setAuthor('TANIGUTI', this)">TANIGUTI</button>
                             <button type="button" class="qb" onclick="setAuthor('MURAKAMI', this)">MURAKAMI</button>
                         </div>
-                    </div>
-                    <div class="row">
-                        <span class="nc-label-spacer"></span>
-                        <input
-                            type="text"
-                            id="workerName"
-                            data-i18n-placeholder="phDirect"
-                            placeholder="半角英数字のみ"
-                            class="nc-worker-input enter-target"
-                        />
                     </div>
                 </div>
             </div>
@@ -226,6 +234,11 @@
                         <option value="G18_655_MH">G18(φ6.55)-MH</option>
                         <option value="G18_6175_MH">G18(φ6.175)-MH</option>
                         <option value="G12B_G_ST_12175_8">G12B-G-ST-12.175-8</option>
+                        <option value="TOMESEN_M16">トメセン M16</option>
+                        <option value="TOMESEN_M18">トメセン M18</option>
+                        <option value="TOMESEN_M22">トメセン M22</option>
+                        <option value="TOMESEN_M24">トメセン M24</option>
+                        <option value="TOMESEN_M35">トメセン M35</option>
                         <option value="Tube" data-i18n="workTypeTube">チューブ</option>
                     </select>
                 </div>
@@ -674,24 +687,42 @@
                                     <option value="G1">G1 (単動)</option>
                                 </select>
                             </div>
-                            <div class="drill-item" id="drillDepthRow">
-                                <label id="drillDepthLabel" data-i18n="drillZ">ドリル深さ</label>
-                                <span class="nc-input-popover-wrap">
-                                    <input
-                                        type="text"
-                                        inputmode="decimal"
-                                        id="drillDepth"
-                                        placeholder="45.0"
-                                        class="w-mid enter-target"
-                                        aria-describedby="drillDepth-focus-hint"
-                                    />
-                                    <div
-                                        id="drillDepth-focus-hint"
-                                        class="nc-input-focus-popover"
-                                        role="tooltip"
-                                        data-i18n="drillDepthFocusHint"
-                                    ></div>
-                                </span>
+                            <div class="drill-depth-section" id="drillDepthRow">
+                                <div class="drill-item">
+                                    <label id="drillDepthLabel" data-i18n="drillZ">ドリル深さ</label>
+                                    <span class="nc-input-popover-wrap">
+                                        <input
+                                            type="text"
+                                            inputmode="decimal"
+                                            id="drillDepth"
+                                            placeholder="45.0"
+                                            class="w-mid enter-target input--readonly-computed"
+                                            aria-describedby="drillDepth-focus-hint"
+                                            readonly
+                                        />
+                                        <div
+                                            id="drillDepth-focus-hint"
+                                            class="nc-input-focus-popover"
+                                            role="tooltip"
+                                            data-i18n="drillDepthFocusHint"
+                                        ></div>
+                                    </span>
+                                    <label class="drill-depth-manual-toggle" title="手動入力モード（自動計算を無効化）">
+                                        <input type="checkbox" id="drillDepthManualToggle" onchange="onDrillDepthManualToggle()" />
+                                        <span class="drill-depth-manual-toggle__track"></span>
+                                        <span class="drill-depth-manual-toggle__label">手動</span>
+                                    </label>
+                                </div>
+                                <div class="nc-drill-manual-row" id="drillDepthManualBtnsRow">
+                                    <span class="nc-label-spacer"></span>
+                                    <div class="btns nc-btns-inline">
+                                        <button type="button" class="qb" onclick="setDrillDepthQuick('20.4')">20.4<br><small>φ29</small></button>
+                                        <button type="button" class="qb" onclick="setDrillDepthQuick('16.8')">16.8<br><small>φ23</small></button>
+                                        <button type="button" class="qb" onclick="setDrillDepthQuick('14.4')">14.4<br><small>φ19</small></button>
+                                        <button type="button" class="qb" onclick="setDrillDepthQuick('11.4')">11.4<br><small>φ14</small></button>
+                                        <button type="button" class="qb" onclick="setDrillDepthQuick('7.2')">7.2<br><small>φ7</small></button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -1135,7 +1166,6 @@
             </div>
 
             <div id="highlightFilterRow" class="highlight-filter-row" style="display: none">
-                <span class="highlight-filter-row__label">ハイライト表示:</span>
                 <label class="highlight-filter-chip"><input type="checkbox" id="hlCalcToggle" checked /> 計算値</label>
                 <label class="highlight-filter-chip"><input type="checkbox" id="hlInputToggle" checked /> 入力値</label>
                 <label class="highlight-filter-chip"
@@ -1144,7 +1174,7 @@
             </div>
 
             <div class="result-area-header">
-                <span class="result-area-header__label">生成結果</span>
+                <span class="result-area-header__label"></span>
                 <button
                     type="button"
                     id="resultLockBtn"
@@ -1250,6 +1280,11 @@
         <script src="テンプレート/data_template_G18_655-MH.js"></script>
         <script src="テンプレート/data_template_G18_6175-MH.js"></script>
         <script src="テンプレート/data_template_G12B_G_ST_12175_8.js"></script>
+        <script src="テンプレート/data_template_TOMESEN_M16.js"></script>
+        <script src="テンプレート/data_template_TOMESEN_M18.js"></script>
+        <script src="テンプレート/data_template_TOMESEN_M22.js"></script>
+        <script src="テンプレート/data_template_TOMESEN_M24.js"></script>
+        <script src="テンプレート/data_template_TOMESEN_M35.js"></script>
         <script src="assets/app.js"></script>
         <script src="assets/preview.js"></script>
         <script src="assets/debug.js"></script>

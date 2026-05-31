@@ -165,9 +165,10 @@ function parseSimpleNumberOrFormula(str) {
 /**
  * 汎用ドリルブロック — M40 / M22 / M18 / M15 / G78 / G18系 / Tube など共通
  *   mode="G74" : G74 ペックサイクル（深さ≦30: 一発, 深さ>30: 10mm ステップ）
- *   mode="G1"  : G1 単動 1発（全G18 は G1 固定で呼ばれる）
+ *   mode="G1"  : G1 単動 1発
+ *     G18系・M12 HGDR/バイト/YoseRelay・一文字スタイル固定時は "G1" で直接呼ばれる
  */
-function getDrillBlock(depth, mode) {
+function getDrillShiageHGDRBlock(depth, mode) {
     if (isNaN(depth)) return "";
     let s = "";
     const d = (val) => wrapH(ncFormat(val.toFixed(2)));
@@ -213,11 +214,11 @@ function getDrillBlock(depth, mode) {
 }
 
 /**
- * M12 HSS専用 ドリル仕上げブロック
+ * M12 HSS / M8 / ASWD 専用 ドリル仕上げブロック
  *   G1単動 + 10mm刻みステップバック方式 (F.1 で送り、F2.5 で引き戻し)
- *   使用条件: workType=M12 または M12_MH かつ m12FinishType="hss"
+ *   使用条件: M12/M12_MH + hss、または M8_21/M8_31/J_M8_300
  */
-function getDrillShiageBlock(depth) {
+function getDrillShiage10mmStepBlock(depth) {
     if (isNaN(depth) || depth <= 0) return "";
     const d = (val) => wrapH(ncFormat(val.toFixed(2)));
     const d1 = (val) => wrapH(ncFormat(val.toFixed(1)));
@@ -240,101 +241,6 @@ function getDrillShiageBlock(depth) {
     return s;
 }
 
-/**
- * M8 HSS専用 ドリル仕上げブロック
- *   現在は M12HSS ロジックのコピー（F値・ステップ量は実機確認後に調整）
- *   使用条件: workType=M8_21 または M8_31
- */
-function getDrillShiageBlock_M8(depth) {
-    if (isNaN(depth) || depth <= 0) return "";
-    const d = (val) => wrapH(ncFormat(val.toFixed(2)));
-    const d1 = (val) => wrapH(ncFormat(val.toFixed(1)));
-    depth = Math.abs(depth);
-    let s = "";
-    let currentZ = 0;
-    while (currentZ < depth) {
-        const nextZ = currentZ + 10;
-        if (nextZ >= depth) {
-            s += `G1Z-${d(depth)}F.1\n`;
-            s += `G4U.3\n`;
-            s += `G1Z30.F2.5`;
-            break;
-        }
-        s += `G1Z-${d(nextZ)}F.1\n`;
-        s += `G1Z30.F2.5\n`;
-        s += `G1Z-${d1(nextZ - 1)}F2.5\n`;
-        currentZ = nextZ;
-    }
-    return s;
-}
-
-/**
- * ASWD ドリル専用ステップバックサイクル (J_M8_300 系)
- *   depth     : 最終ドリル深さ (mm, 正値)
- *   firstStep : 初回固定切込み深さ (mm) — J_M8_300=7, J_M8_200=TBD
- *   machineConfig : 機械定義オブジェクト (M51/M59 取得用)
- *
- *   [depth <= firstStep] 1 発切り:
- *     G1Z-{depth}F.1 / G4U.5 / G1Z3.F1.5
- *     ※ G0Z30.{M59} / G28U0W0M1 はテンプレート側に記載済みのため出力しない
- *
- *   [depth > firstStep] ステップバック:
- *     初回: G1Z-{firstStep}F.1 → Z30 → M59/M1/M3/M51 → G0Z1. → アプローチ
- *     中間ステップ (5mm ずつ): 切込み → チップクリア(firstStep-0.1) → Z30 → M-codes → アプローチ
- *     最終ステップ: 切込み → G4U.5 → G1Z3.F1.5
- *     ※ G0Z30.{M59} / G28U0W0M1 はテンプレート側に記載済みのため出力しない
- */
-function getDrillShiageBlock_ASWD(depth, firstStep, machineConfig) {
-    if (isNaN(depth) || depth <= 0) return "";
-    depth = Math.abs(depth);
-    const STEP = 5;
-    const fmt1 = (val) => wrapH(ncFormat(val.toFixed(1)));
-    const m51 = (machineConfig && machineConfig["M51"]) || "";
-    const m59 = (machineConfig && machineConfig["M59"]) || "";
-    const mCodes = [m59 ? m59 : null, "M1", "M3", m51 ? m51 : null]
-        .filter(Boolean)
-        .join("\n");
-
-    // 1発切り (depth が firstStep 以下)
-    // G0Z30.M59 / G28U0W0M1 はテンプレート側 ({{DRILL_BLOCK}} の直後) に記載済みのため出力しない
-    if (depth <= firstStep) {
-        let s = `G1Z-${fmt1(depth)}F.1\n`;
-        s += `G4U.5\n`;
-        s += `G1Z3.F1.5`;
-        return s;
-    }
-
-    let s = "";
-    const chipClearZ = firstStep - 0.1; // チップクリア部分戻し位置 (例: 7 → 6.9)
-
-    // 初回切込み
-    s += `G1Z-${fmt1(firstStep)}F.1\n`;
-    s += `Z30.F1.5\n`;
-    s += mCodes + "\n";
-    s += `G0Z1.\n`;
-    s += `G1Z-${fmt1(chipClearZ)}F1.5\n`;
-
-    // 中間ステップ
-    let currentDepth = firstStep;
-    while (currentDepth + STEP < depth) {
-        const nextDepth = currentDepth + STEP;
-        s += `Z-${fmt1(nextDepth)}F.1\n`;
-        s += `Z-${fmt1(chipClearZ)}\n`; // チップクリア部分戻し
-        s += `Z30.F1.5\n`;
-        s += mCodes + "\n";
-        s += `G0Z1.\n`;
-        s += `G1Z-${fmt1(nextDepth - 0.1)}F1.5\n`;
-        currentDepth = nextDepth;
-    }
-
-    // 最終ステップ
-    // G0Z30.M59 / G28U0W0M1 はテンプレート側 ({{DRILL_BLOCK}} の直後) に記載済みのため出力しない
-    s += `Z-${fmt1(depth)}F.1\n`;
-    s += `G4U.5\n`;
-    s += `G1Z3.F1.5`;
-
-    return s;
-}
 
 /**
  * 一文字ドリル 面取り(バリ取り)ブロック — CP ± 2mm でZ軸貫通
@@ -576,6 +482,11 @@ const WORK_ID_MAP = {
     M42X3_25175_22: 22.0,
     M42X3_25175_16: 16.0,
     G12B_G_ST_12175_8: 8.0,
+    TOMESEN_M16: 8.0,
+    TOMESEN_M18: 10,
+    TOMESEN_M22: 12,
+    TOMESEN_M24: 16,
+    TOMESEN_M35: 22,
 };
 
 /** G18 HGDR 系（φ6.2 / φ6.55 / φ6.175）：同一のスタイル制限・DRILLSHIAGE（G74 仕上げブロック） */
@@ -590,7 +501,7 @@ function isG18HgdrSeriesWorkType(wt) {
     );
 }
 
-/** 全G18: {{DRILL_BLOCK}} は G1 ドリル仕上げ（G74 ステップ仕上げなし）で統一 */
+/** G18系全種: {{DRILL_BLOCK}} を getDrillShiageHGDRBlock("G1") で固定（G74 ステップなし） */
 function usesG18DrillShiageG1Block(wt) {
     return (
         wt === "G18_40" || wt === "G18_42" || wt === "G18_40_MH" || wt === "G18_42_MH" || isG18HgdrSeriesWorkType(wt)
@@ -607,11 +518,25 @@ function isG12BWorkType(wt) {
     return wt === "G12B_G_ST_12175_8";
 }
 
-/** M8 HSS 系（φ2.1 / φ3.1）: 固定テンプレート・内径スタイル不使用 */
+/** トメセン系（M16/M18/M22/M24/M35）: 使用可スタイル = Hirazoko / Ichimonji / Normal */
+function isTomesenWorkType(wt) {
+    return (
+        wt === "TOMESEN_M16" ||
+        wt === "TOMESEN_M18" ||
+        wt === "TOMESEN_M22" ||
+        wt === "TOMESEN_M24" ||
+        wt === "TOMESEN_M35"
+    );
+}
+
+/** M8 HSS 系（内径 φ2.1 / φ3.1）: ドリルロジック = getDrillShiage10mmStepBlock
+ *  使用可スタイル: 2(一文字DR平底) / 4(ヨセ中継) / 6(交差穴加工径小) */
 function isM8WorkType(wt) {
     return wt === "M8_21" || wt === "M8_31";
 }
 
+/** J_M8_300 (ASWD系): ドリルロジック = getDrillShiage10mmStepBlock
+ *  ドリル深さは ASWD_SHOULDER_MM + CP + 1 で自動計算。CrossSmall スタイル固定 */
 function isJM8ASWDWorkType(wt) {
     return wt === "J_M8_300"; // J_M8_200 追加予定
 }
@@ -637,6 +562,12 @@ const FLAT_BOTTOM_TOOL_DIA_MM = {
     M42X3_25175_22: 16,
     M42X3_25175_16: 16,
     G12B_G_ST_12175_8: 8,
+    // トメセン系: M16/M18/M22 → Φ8バイト、M24/M35 → Φ16バイト
+    TOMESEN_M16: 8,
+    TOMESEN_M18: 8,
+    TOMESEN_M22: 8,
+    TOMESEN_M24: 16,
+    TOMESEN_M35: 16,
 };
 
 // ドリル径データベース
@@ -671,14 +602,17 @@ const DRILL_DIA_MAP = {
     M8_31: 3.2,
     J_M8_300: 3.0,
     G12B_G_ST_12175_8: 7.0,
+    TOMESEN_M16: 7.0,
+    TOMESEN_M18: 7,
+    TOMESEN_M22: 10.7,
+    TOMESEN_M24: 14,
+    TOMESEN_M35: 14,
     Tube: null,
 };
 
 /** ASWD ドリル肩の高さ (mm) — ドリル公称径をキーとする */
 const ASWD_SHOULDER_MM = { 4.0: 0.96, 3.0: 0.70, 2.1: 0.50, 2.0: 0.50 };
 
-/** ASWD 専用: テンプレートごとの固定初回切込み深さ (mm) */
-const ASWD_FIRST_STEP_MM = { J_M8_300: 7 }; // J_M8_200 追加予定
 
 // --- スタイル判定 ---
 
@@ -754,9 +688,8 @@ function calcYoseRelayMetrics(input) {
     const partnerDia = parseFloat(input.yoseD);
     const machinedDia = resolveWorkBigDiameter(input);
     const angleDeg = parseFloat(input.yoseAngle);
-    // YoseRelay では、M12のみ実加工の前提径(φ3.3)で先端長を計算する
-    // それ以外のワーク種別は従来どおり DRILL_DIA_MAP を使う
-    const drillDia = input.workType === "M12" || input.workType === "M12_MH" ? 3.3 : resolveDrillDia(input);
+    // YoseRelay では DRILL_DIA_MAP の実ドリル径で先端長を計算する（M12 は HGDR φ4.05 固定）
+    const drillDia = resolveDrillDia(input);
     if (
         [totalLength, partnerDepth, partnerDia, machinedDia, angleDeg].some(function (n) {
             return isNaN(n) || !isFinite(n);
@@ -1259,7 +1192,7 @@ function generateGCode(input, machineName) {
                 // 一文字面取り → 一文字バリ取りブロック
                 rearChamferEarly = getIchimonjiBlock(input.cpVal, machineConfig);
             } else {
-                // hss_oku → 奥バイトブロック（M8専用版は後で追加）
+                // hss_oku (奥バイト面取り) は M8 では使用不可 — resolveM8CrossFinishAndProfile が常に drill_ichi_men を返すため到達しない (予約)
                 rearChamferEarly = getOkuBiteBlock(input.cpVal, machineConfig);
             }
         }
@@ -1349,20 +1282,23 @@ function generateGCode(input, machineName) {
     //    - *_ZNEG: Zマイナス方向が確定した値（例: -31.0）
     // 3) 既存の互換キー（L, L-R, L-0.5 など）は当面維持し、新規テンプレから本規約を適用する。
     // ── 外径仕上ブロック（M12/M15/M18/M22/M40/G78/Tube 共通）
-    //    通常・偏心 : X…(--X--) の1行のみ（F.3 行は省略）
+    //    通常・偏心 : X…(-X-) の1行のみ（F.3 行は省略）
     //    角あり     : 従来どおり2段
     const isCorner = input.calcMode === "corner";
 
+    // ── ドリルブロック選択チェーン
+    //   1) G18系            → getDrillShiageHGDRBlock("G1")  [G74 なし固定]
+    //   2) ASWD / M8系      → getDrillShiage10mmStepBlock()  [10mm 刻みステップ]
+    //   3) M12/M12_MH × HSS → getDrillShiage10mmStepBlock()  [10mm 刻みステップ]
+    //   4) それ以外          → getDrillShiageHGDRBlock(drillMode) [G74/G1 ユーザー選択]
     const drillBlockValue =
         usesG18DrillShiageG1Block(input.workType)
-            ? getDrillBlock(finalDrillDepth, "G1")
-        : isJM8ASWDWorkType(input.workType)
-            ? getDrillShiageBlock_ASWD(finalDrillDepth, ASWD_FIRST_STEP_MM[input.workType] || 7, machineConfig)
-        : isM8WorkType(input.workType)
-            ? getDrillShiageBlock_M8(finalDrillDepth)
+            ? getDrillShiageHGDRBlock(finalDrillDepth, "G1")
+        : isJM8ASWDWorkType(input.workType) || isM8WorkType(input.workType)
+            ? getDrillShiage10mmStepBlock(finalDrillDepth)
         : (input.workType === "M12" || input.workType === "M12_MH") && (input.m12FinishType || "hss") === "hss"
-            ? getDrillShiageBlock(finalDrillDepth)
-        :   getDrillBlock(finalDrillDepth, input.drillMode);
+            ? getDrillShiage10mmStepBlock(finalDrillDepth)
+        :   getDrillShiageHGDRBlock(finalDrillDepth, input.drillMode);
 
     const replaceMap = {
         // ── 入力ヘッダ情報
@@ -1374,7 +1310,7 @@ function generateGCode(input, machineName) {
 
         // ── 外径仕上
         "最大径-5": wrapHCalc(ncFormat(calcMax1)),
-        "最大径+角": isCorner ? "X" + wrapHCalc(ncFormat(calcCorner)) : "X" + wrapHCalc(ncFormat(calcMax2)) + "(--X--)",
+        "最大径+角": isCorner ? "X" + wrapHCalc(ncFormat(calcCorner)) : "X" + wrapHCalc(ncFormat(calcMax2)) + "(-X-)",
         "最大径+3": isCorner ? "X" + wrapHCalc(ncFormat(calcMax2)) + "F.3\n" : "",
         最大径50: "",
 
@@ -1556,6 +1492,16 @@ function generateGCode(input, machineName) {
         if (typeof template_M42X3_25175_22 !== "undefined") finalCode = template_M42X3_25175_22;
     } else if (input.workType === "M42X3_25175_16") {
         if (typeof template_M42X3_25175_16 !== "undefined") finalCode = template_M42X3_25175_16;
+    } else if (input.workType === "TOMESEN_M16") {
+        if (typeof template_TOMESEN_M16 !== "undefined") finalCode = template_TOMESEN_M16;
+    } else if (input.workType === "TOMESEN_M18") {
+        if (typeof template_TOMESEN_M18 !== "undefined") finalCode = template_TOMESEN_M18;
+    } else if (input.workType === "TOMESEN_M22") {
+        if (typeof template_TOMESEN_M22 !== "undefined") finalCode = template_TOMESEN_M22;
+    } else if (input.workType === "TOMESEN_M24") {
+        if (typeof template_TOMESEN_M24 !== "undefined") finalCode = template_TOMESEN_M24;
+    } else if (input.workType === "TOMESEN_M35") {
+        if (typeof template_TOMESEN_M35 !== "undefined") finalCode = template_TOMESEN_M35;
     } else {
         if (typeof template_G78 !== "undefined") finalCode = template_G78;
     }
@@ -1647,12 +1593,12 @@ function generateGCode(input, machineName) {
             _templateName = "template_M12" + (_ft === "baito" ? "BAITO" : _ft === "hss" ? "HSS" : "HGDR") + "_MH";
         }
         const _drillBlockKind = usesG18DrillShiageG1Block(input.workType)
-            ? "G1仕上げ(G18)"
-            : isM8WorkType(input.workType)
-              ? "M8専用ドリル仕上げ"
-              : (input.workType === "M12" || input.workType === "M12_MH") && _ft === "hss"
-                ? "HSS仕上げブロック"
-                : "getDrillBlock(" + (input.drillMode || "G74") + ")";
+            ? "getDrillShiageHGDRBlock(G1)"
+            : isJM8ASWDWorkType(input.workType) || isM8WorkType(input.workType)
+                ? "getDrillShiage10mmStepBlock"
+            : (input.workType === "M12" || input.workType === "M12_MH") && _ft === "hss"
+                ? "getDrillShiage10mmStepBlock"
+                : "getDrillShiageHGDRBlock(" + (input.drillMode || "G74") + ")";
         _ncDebugLastCalcValues = {
             machineName,
             style,
@@ -1819,6 +1765,7 @@ const ATE_LENGTH_KAKU_VALUES = new Set(["42.5", "41", "39.5", "37.5", "33.25", "
 
 function updateWorkTypeSettings() {
     updateWorkTypeDesc();
+    resetDrillDepthManualToggle();
     const type = $id("workType").value;
     const normalArea = $id("normalProcessArea");
     const drillMode = $id("drillMode");
@@ -1925,6 +1872,10 @@ function resolveM12FinishAndProfile() {
     if (style === "Normal") {
         return { finishType: "baito", profile: "baito_no" };
     }
+    if (style === "YoseRelay") {
+        // ヨセ中継は HGDR 固定（G1 一発、戻りステップなし）
+        return { finishType: "halfmoon", profile: "drill_ichi_hira" };
+    }
     if (style === "CrossSmall") {
         const cm = ($id("m12CrossMethod") && $id("m12CrossMethod").value) || "hss_oku";
         const map = {
@@ -1941,12 +1892,13 @@ function resolveM12FinishAndProfile() {
 
 /** M12 サブパネルをスタイル選択に応じて表示切替 */
 function updateM12SubPanels() {
+    const _dbg = typeof isDebugModeOn === "function" && isDebugModeOn();
     const wt = $id("workType") ? $id("workType").value : "";
     const isM12 = wt === "M12" || wt === "M12_MH";
     const ichiPanel = $id("m12IchiPanel");
     const crossPanel = $id("m12CrossPanel");
-    const showIchi = isM12 && currentInternalStyle === "Ichimonji";
-    const showCross = isM12 && currentInternalStyle === "CrossSmall";
+    const showIchi = isM12 && (currentInternalStyle === "Ichimonji" || _dbg);
+    const showCross = isM12 && (currentInternalStyle === "CrossSmall" || _dbg);
     if (ichiPanel) {
         ichiPanel.style.display = showIchi ? "" : "none";
         ichiPanel.setAttribute("aria-hidden", showIchi ? "false" : "true");
@@ -1975,10 +1927,11 @@ function resolveG18CrossFinishAndProfile() {
 
 /** G18_40/G18_42 サブパネルをスタイル選択に応じて表示切替 */
 function updateG18SubPanels() {
+    const _dbg = typeof isDebugModeOn === "function" && isDebugModeOn();
     const wt = $id("workType") ? $id("workType").value : "";
     const isG18Small = wt === "G18_40" || wt === "G18_42" || wt === "G18_40_MH" || wt === "G18_42_MH";
     const crossPanel = $id("g18CrossPanel");
-    const showCross = isG18Small && currentInternalStyle === "CrossSmall";
+    const showCross = isG18Small && (currentInternalStyle === "CrossSmall" || _dbg);
     if (crossPanel) {
         crossPanel.style.display = showCross ? "" : "none";
         crossPanel.setAttribute("aria-hidden", showCross ? "false" : "true");
@@ -2015,10 +1968,11 @@ function resolveM8CrossFinishAndProfile() {
 
 /** M8 サブパネルをスタイル選択に応じて表示切替 */
 function updateM8SubPanels() {
+    const _dbg = typeof isDebugModeOn === "function" && isDebugModeOn();
     const wt = $id("workType") ? $id("workType").value : "";
     const isM8 = isM8WorkType(wt);
     const crossPanel = $id("m8CrossPanel");
-    const showCross = isM8 && currentInternalStyle === "CrossSmall";
+    const showCross = isM8 && (currentInternalStyle === "CrossSmall" || _dbg);
     if (crossPanel) {
         crossPanel.style.display = showCross ? "" : "none";
         crossPanel.setAttribute("aria-hidden", showCross ? "false" : "true");
@@ -2107,7 +2061,11 @@ function restrictStyles(workType) {
         });
     }
 
-    setInternalStyleCardsLocked(false);
+    // デバッグモード時はすべてのスタイルカードを制限なしで有効化
+    if (typeof isDebugModeOn === "function" && isDebugModeOn()) {
+        setInternalStyleCardsLocked(false);
+        return;
+    }
 
     const styleHirazoko = $id("styleHirazoko");
     const styleIchimonji = $id("styleIchimonji");
@@ -2203,6 +2161,19 @@ function restrictStyles(workType) {
         } else if (currentInternalStyle === "CrossBig") {
             setInternalStyle("CrossSmall");
         }
+    } else if (isTomesenWorkType(workType)) {
+        // 使用可能: Hirazoko / Ichimonji / Normal
+        // 使用不可: YoseRelay / Yose / CrossSmall
+        ["styleYoseRelay", "styleYose", "styleCrossSmall"].forEach((id) => {
+            const el = $id(id);
+            if (el) {
+                el.style.pointerEvents = "none";
+                el.style.opacity = "0.3";
+            }
+        });
+        if (!["Hirazoko", "Ichimonji", "Normal"].includes(currentInternalStyle)) {
+            setInternalStyle("Hirazoko");
+        }
     } else {
         if (styleIchimonji) {
             styleIchimonji.style.pointerEvents = "none";
@@ -2291,6 +2262,7 @@ function setInternalStyle(style) {
     if (style !== currentInternalStyle) {
         closeYoseRelayNote();
         closeStyleNormalNote();
+        resetDrillDepthManualToggle();
     }
     currentInternalStyle = style;
     const styles = ["Hirazoko", "Ichimonji", "Normal", "YoseRelay", "Yose", "CrossSmall"];
@@ -2331,6 +2303,9 @@ function setInternalStyle(style) {
  * Step 4 (既存)  : internalStyle 選択後 → style 固有フィールドを表示
  */
 function updateProgressiveReveal() {
+    // デバッグモード ON 時はすべての隠れているドロワーを強制表示する
+    const _dbg = typeof isDebugModeOn === "function" && isDebugModeOn();
+
     const wtVal     = ($id("workType")    || {}).value || "";
     const ateVal    = (($id("ateLength")  || {}).value || "").trim();
     const ateFilled = ateVal !== "" && !isNaN(parseFloat(ateVal));
@@ -2344,17 +2319,17 @@ function updateProgressiveReveal() {
     // --- Step1完了: 図番(v1a) + 作成者 → 機械・ワーク選択カードを解禁 ---
     const fileInfoFilled = v1aFilled && wnFilled;
     const machineCard = $id("machineWorkCard");
-    if (machineCard) machineCard.style.display = fileInfoFilled ? "" : "none";
+    if (machineCard) machineCard.style.display = (fileInfoFilled || _dbg) ? "" : "none";
 
     // --- workType 行はアテ長さ入力後に解禁 ---
     const wtEl  = $id("workType");
     const wtRow = wtEl && wtEl.closest(".row");
     if (wtRow) {
-        wtRow.classList.toggle("reveal-section--hidden", !ateFilled);
+        wtRow.classList.toggle("reveal-section--hidden", !ateFilled && !_dbg);
     }
 
     // --- 加工設定は Step1完了 + ateLength + workType 入力後 ---
-    const showMachining = !!(fileInfoFilled && ateFilled && wtVal);
+    const showMachining = !!(fileInfoFilled && ateFilled && wtVal) || _dbg;
     const machGrp = $id("machiningSettingsGroup");
     const mainActionRow = $id("mainActionRow");
     const hlFilterRow   = $id("highlightFilterRow");
@@ -2363,7 +2338,7 @@ function updateProgressiveReveal() {
     if (hlFilterRow)   hlFilterRow.style.display    = showMachining ? "flex" : "none";
 
     // --- internalStyleDrawer は maxOD + selM99P100 入力後 (ASWD系は非表示・CrossSmall 強制) ---
-    const showDrawer = !!(wtVal && maxODFilled && m99Filled) && !isJM8ASWDWorkType(wtVal);
+    const showDrawer = (!!(wtVal && maxODFilled && m99Filled) && !isJM8ASWDWorkType(wtVal)) || _dbg;
     const styleDrawer = $id("internalStyleDrawer");
     if (styleDrawer) {
         styleDrawer.style.display = showDrawer ? "block" : "none";
@@ -2403,6 +2378,7 @@ function _syncStepProgress(currentStep) {
  * 内径加工スタイル・ワーク種別に応じたブロック表示（Enterキーのナビとは独立）
  */
 function updateInternalStyleUI() {
+    const _dbg = typeof isDebugModeOn === "function" && isDebugModeOn();
     const drillMode = $id("drillMode");
     const cpArea = $id("cpCalcArea");
     const yoseDiv = $id("yoseSettings");
@@ -2440,25 +2416,21 @@ function updateInternalStyleUI() {
     const drillDepthInput = $id("drillDepth");
     const drillDepthLabel = $id("drillDepthLabel");
     const drillDepthContainer = $id("drillDepthRow");
-    const idDepthFilled = (($id("idDepth") || {}).value || "").trim() !== "";
     if (isJM8ASWDWorkType(workType)) {
         // ASWD: ドリル深さは CP から自動計算するためユーザー入力不要 → 非表示
         if (drillDepthContainer) drillDepthContainer.style.display = "none";
-    } else if (isM8WorkType(workType)) {
-        // M8: スタイル選択なし・idDepth 不使用 → 常時表示
+    } else if ((isTemplateSelected && !!currentInternalStyle) || _dbg) {
+        // 内径スタイル選択後に表示（デバッグ時は未選択でも表示）
         if (drillDepthContainer) drillDepthContainer.style.display = "flex";
-    } else if (!currentInternalStyle || currentInternalStyle === "Hirazoko" || currentInternalStyle === "Ichimonji") {
-        if (drillDepthContainer) drillDepthContainer.style.display = "none";
     } else {
-        // 内径深さ入力後にドリル深さを表示
-        if (drillDepthContainer) drillDepthContainer.style.display = idDepthFilled ? "flex" : "none";
+        if (drillDepthContainer) drillDepthContainer.style.display = "none";
     }
     if (idDepthRow) {
         // 6.交差穴加工径小では、見落とし防止のため常に表示を優先
         if (currentInternalStyle === "CrossSmall") {
             idDepthRow.style.display = "flex";
         } else {
-            idDepthRow.style.display = isTemplateSelected && !!currentInternalStyle ? "flex" : "none";
+            idDepthRow.style.display = isTemplateSelected && (!!currentInternalStyle || _dbg) ? "flex" : "none";
         }
     }
 
@@ -2486,23 +2458,31 @@ function updateInternalStyleUI() {
             currentInternalStyle === "CrossSmall"
         ) {
             drillDepthLabel.setAttribute("data-i18n", "drillDepthHangetsu");
-            drillDepthInput.readOnly = true;
-            drillDepthInput.classList.add("input--readonly-computed");
+            if (!isDrillDepthManual()) {
+                drillDepthInput.readOnly = true;
+                drillDepthInput.classList.add("input--readonly-computed");
+            }
         } else if ((workType === "M12" || workType === "M12_MH") && currentInternalStyle === "CrossSmall") {
             drillDepthLabel.setAttribute("data-i18n", "drillZ");
-            drillDepthInput.readOnly = true;
-            drillDepthInput.classList.add("input--readonly-computed");
+            if (!isDrillDepthManual()) {
+                drillDepthInput.readOnly = true;
+                drillDepthInput.classList.add("input--readonly-computed");
+            }
         } else if (
             (workType === "G18_40" || workType === "G18_42" || workType === "G18_40_MH" || workType === "G18_42_MH") &&
             currentInternalStyle === "CrossSmall"
         ) {
             drillDepthLabel.setAttribute("data-i18n", "drillZ");
-            drillDepthInput.readOnly = true;
-            drillDepthInput.classList.add("input--readonly-computed");
+            if (!isDrillDepthManual()) {
+                drillDepthInput.readOnly = true;
+                drillDepthInput.classList.add("input--readonly-computed");
+            }
         } else {
             drillDepthLabel.setAttribute("data-i18n", "drillZ");
-            drillDepthInput.readOnly = false;
-            drillDepthInput.classList.remove("input--readonly-computed");
+            if (!isDrillDepthManual()) {
+                drillDepthInput.readOnly = true;
+                drillDepthInput.classList.add("input--readonly-computed");
+            }
         }
     }
 
@@ -2520,7 +2500,7 @@ function updateInternalStyleUI() {
     const drillModeRow = $id("drillModeRow");
     if (drillModeRow) {
         const shouldHideDrillMode =
-            workType === "M12" || workType === "M12_MH" || usesG18DrillShiageG1Block(workType) || isM8WorkType(workType) || isJM8ASWDWorkType(workType) || !currentInternalStyle;
+            workType === "M12" || workType === "M12_MH" || usesG18DrillShiageG1Block(workType) || isM8WorkType(workType) || isJM8ASWDWorkType(workType) || (!currentInternalStyle && !_dbg);
         drillModeRow.style.display = shouldHideDrillMode ? "none" : "flex";
     }
 
@@ -2540,6 +2520,15 @@ function updateInternalStyleUI() {
             yoseOpposedDistanceRow.style.display = isYoseRelayStyle(currentInternalStyle) ? "flex" : "none";
         if (yoseLengthRow) yoseLengthRow.style.display = isYoseRelayStyle(currentInternalStyle) ? "flex" : "none";
         if (yoseTaiLengthRow) yoseTaiLengthRow.style.display = isYoseRelayStyle(currentInternalStyle) ? "flex" : "none";
+    } else if (_dbg) {
+        // デバッグ時はヨセ系フィールドを全表示
+        yoseDiv.style.display = "block";
+        if (yoseMethodRow)          yoseMethodRow.style.display = "flex";
+        if (yoseTotalLengthRow)     yoseTotalLengthRow.style.display = "flex";
+        if (yosePartnerDepthRow)    yosePartnerDepthRow.style.display = "flex";
+        if (yoseOpposedDistanceRow) yoseOpposedDistanceRow.style.display = "flex";
+        if (yoseLengthRow)          yoseLengthRow.style.display = "flex";
+        if (yoseTaiLengthRow)       yoseTaiLengthRow.style.display = "flex";
     } else {
         yoseDiv.style.display = "none";
         if (yoseMethodRow) yoseMethodRow.style.display = "none";
@@ -2580,7 +2569,7 @@ function updateInternalStyleUI() {
         currentInternalStyle === "CrossBig" ||
         currentInternalStyle === "CrossSmall" ||
         (currentInternalStyle === "Ichimonji" && workType !== "M12" && workType !== "M12_MH");
-    cpArea.style.display = showCpArea ? "block" : "none";
+    cpArea.style.display = (showCpArea || _dbg) ? "block" : "none";
 
     // 奥バイト面取りの有無は M12 の加工プロファイルで決める（チェック欄は使わない）
     if (okuBiteArea) okuBiteArea.style.display = "none";
@@ -2594,7 +2583,7 @@ function updateInternalStyleUI() {
     // 交差穴加工径小: 計算済み内径深さ表示行
     const crossSmallFinishRow = $id("crossSmallFinishDepthRow");
     if (crossSmallFinishRow) {
-        crossSmallFinishRow.style.display = currentInternalStyle === "CrossSmall" ? "block" : "none";
+        crossSmallFinishRow.style.display = (currentInternalStyle === "CrossSmall" || _dbg) ? "block" : "none";
     }
 
     if (window.NC_I18N && typeof window.NC_I18N.applyI18n === "function") {
@@ -2631,21 +2620,25 @@ function recalcYoseRelayComputedFields() {
         yoseLenEl.value = "";
         taiEl.value = "";
         idDepthEl.value = "";
-        drillDepthEl.value = "";
+        if (!isDrillDepthManual()) drillDepthEl.value = "";
         return;
     }
     opposedEl.value = metrics.opposedDistance.toFixed(3);
     yoseLenEl.value = metrics.yoseLength.toFixed(3);
     taiEl.value = metrics.taiYoseLength.toFixed(3);
     idDepthEl.value = metrics.relayIdDepth.toFixed(3);
-    if (!isNaN(metrics.relayDrillDepth) && isFinite(metrics.relayDrillDepth)) {
-        drillDepthEl.value = metrics.relayDrillDepth.toFixed(3);
-    } else {
-        drillDepthEl.value = "";
+    if (!isDrillDepthManual()) {
+        if (!isNaN(metrics.relayDrillDepth) && isFinite(metrics.relayDrillDepth)) {
+            drillDepthEl.value = metrics.relayDrillDepth.toFixed(3);
+        } else {
+            drillDepthEl.value = "";
+        }
     }
 }
 
 function calcDrillDepth() {
+    // 手動入力モード中は自動計算を行わない
+    if (isDrillDepthManual()) return;
     const workType = $id("workType").value;
     const style = currentInternalStyle;
     const idDepthVal = parseFloat($id("idDepth").value);
@@ -2653,7 +2646,7 @@ function calcDrillDepth() {
     const drillDepthInput = $id("drillDepth");
 
     if (isYoseRelayStyle(style)) {
-        if (drillDepthInput) {
+        if (drillDepthInput && !isDrillDepthManual()) {
             drillDepthInput.readOnly = true;
             drillDepthInput.classList.add("input--readonly-computed");
         }
@@ -2671,12 +2664,14 @@ function calcDrillDepth() {
         style === "CrossSmall"
     ) {
         if (drillDepthInput) {
-            drillDepthInput.readOnly = true;
-            drillDepthInput.classList.add("input--readonly-computed");
-            if (!isNaN(cpVal)) {
-                drillDepthInput.value = (cpVal + 1.2 + 1).toFixed(3);
-            } else {
-                drillDepthInput.value = "";
+            if (!isDrillDepthManual()) {
+                drillDepthInput.readOnly = true;
+                drillDepthInput.classList.add("input--readonly-computed");
+                if (!isNaN(cpVal)) {
+                    drillDepthInput.value = (cpVal + 1.2 + 1).toFixed(3);
+                } else {
+                    drillDepthInput.value = "";
+                }
             }
         }
         return;
@@ -2708,6 +2703,11 @@ function calcDrillDepth() {
 
     if (calcZ) {
         drillDepthInput.value = calcZ;
+    }
+    // 手動モード OFF の場合は常に readonly を保証（updateInternalStyleUI 呼び出し前の保険）
+    if (!isDrillDepthManual()) {
+        drillDepthInput.readOnly = true;
+        drillDepthInput.classList.add("input--readonly-computed");
     }
 }
 
@@ -2917,8 +2917,9 @@ document.addEventListener("DOMContentLoaded", () => {
         { id: "workType",    events: ["change"] },
         { id: "v2",          events: ["input", "change"] },
         { id: "workerName",  events: ["input", "change"] },
-        { id: "maxOD",       events: ["input", "change"] },
-        { id: "selM99P100",  events: ["change"] },
+        { id: "maxOD",          events: ["input", "change"] },
+        { id: "selM99P100",     events: ["change"] },
+        { id: "debugModeToggle", events: ["change"] },
     ].forEach(function (cfg) {
         const el = $id(cfg.id);
         if (!el) return;
@@ -2926,6 +2927,19 @@ document.addEventListener("DOMContentLoaded", () => {
             el.addEventListener(evtName, updateProgressiveReveal);
         });
     });
+
+    // デバッグトグル変更時: スタイルカード制限 + サブパネルも再評価
+    const _dbgToggleEl = $id("debugModeToggle");
+    if (_dbgToggleEl) {
+        _dbgToggleEl.addEventListener("change", function () {
+            const wt = ($id("workType") || {}).value || "";
+            if (wt) restrictStyles(wt);
+            updateM12SubPanels();
+            updateG18SubPanels();
+            updateM8SubPanels();
+            updateInternalStyleUI();
+        });
+    }
 
     updateWorkTypeSettings();
     setCalcMode(currentCalcMode);
@@ -3014,6 +3028,51 @@ function setAuthor(name, btn) {
     setActiveBtn(btn);
     // クイック選択ボタンはイベントを発火しないため直接呼ぶ
     updateProgressiveReveal();
+}
+
+/** ドリル深さ手動入力モード判定 */
+function isDrillDepthManual() {
+    const el = $id("drillDepthManualToggle");
+    return el ? el.checked : false;
+}
+
+/** ドリル深さ手動トグルをリセット（ワーク種別・スタイル変更時に呼ぶ） */
+function resetDrillDepthManualToggle() {
+    const toggle = $id("drillDepthManualToggle");
+    const drillInput = $id("drillDepth");
+    const btnsRow = $id("drillDepthManualBtnsRow");
+    if (toggle) toggle.checked = false;
+    if (drillInput) {
+        drillInput.value = "";
+        drillInput.readOnly = true;
+        drillInput.classList.add("input--readonly-computed");
+    }
+    if (btnsRow) btnsRow.style.display = "none";
+}
+
+/** ドリル深さ手動トグル ON/OFF ハンドラ */
+function onDrillDepthManualToggle() {
+    const isManual = isDrillDepthManual();
+    const drillInput = $id("drillDepth");
+    const btnsRow = $id("drillDepthManualBtnsRow");
+    if (drillInput) {
+        drillInput.readOnly = !isManual;
+        drillInput.classList.toggle("input--readonly-computed", !isManual);
+        if (isManual) drillInput.focus();
+    }
+    if (btnsRow) {
+        btnsRow.style.display = isManual ? "flex" : "none";
+    }
+    // 手動オフ時は自動計算を再実行
+    if (!isManual) calcDrillDepth();
+}
+
+/** ドリル深さ クイック入力 */
+function setDrillDepthQuick(val) {
+    const el = $id("drillDepth");
+    if (!el) return;
+    el.value = val;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 function updateMaxOdFromAteButtonActive() {
@@ -3821,6 +3880,11 @@ const WORK_TYPE_DESCRIPTIONS = {
     G18_655_MH:     "G18(φ6.55)-MH — 内径 Φ6.55 / HGDRφ4.15 /HGDR下穴",
     G18_6175_MH:    "G18(φ6.175)-MH — 内径 Φ6.175 / HGDRφ4.15 /HGDR下穴",
     G12B_G_ST_12175_8: "G12B-G-ST-12.175-8 — 内径 Φ8 / ドリル φ7.0 / 内径バイト Φ8",
+    TOMESEN_M16: "トメセン M16 — 内径 Φ8.0 / ドリル φ7.0 / バイト Φ8",
+    TOMESEN_M18: "トメセン M18 — 内径 Φ10 / ドリル φ7 / バイト Φ8",
+    TOMESEN_M22: "トメセン M22 — 内径 Φ12 / ドリル φ10.7 / バイト Φ8",
+    TOMESEN_M24: "トメセン M24 — 内径 Φ16 / ドリル φ14 / バイト Φ16",
+    TOMESEN_M35: "トメセン M35 — 内径 Φ22 / ドリル φ14 / バイト Φ16",
     Tube:           "チューブ 規格とチューブ長さを選択して使用",
 };
 

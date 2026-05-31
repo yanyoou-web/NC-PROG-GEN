@@ -15,6 +15,28 @@ body {
     position: relative;
 }
 
+/* アプリヘッダー */
+.app-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #2a3540;
+}
+.app-header__icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border-radius: 3px;
+}
+.app-header__title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #7ec8e3;
+    letter-spacing: 0.03em;
+}
+
 /* 言語（ラベルなし・左寄せ・コンパクト） */
 .ui-lang-row {
     margin-bottom: 8px;
@@ -2080,6 +2102,10 @@ input.input--halfwidth-reject {
 .row--step-worktype.reveal-section--hidden + .work-type-desc {
     display: none !important;
 }
+/* hidden 属性を flex が上書きしないよう強制（テンプレート未選択時に ℹ が見えるバグ対策） */
+.work-type-desc[hidden] {
+    display: none !important;
+}
 /* nc-section-card 内の workType 説明: 選択ボックスに揃えてインデント・幅は内容に合わせる */
 .nc-section-card .work-type-desc {
     margin-left: 160px;
@@ -2289,14 +2315,12 @@ input.input--halfwidth-reject {
     width: 140px !important;
     flex: 0 0 140px !important;
 }
-/* 作成者行: ラベルと横並びのクイックボタン */
+/* 作成者行: ボタン群（テキストボックス下） */
 .nc-author-row {
     flex-wrap: wrap;
     align-items: flex-start;
-    margin-bottom: 6px;
-}
-.nc-author-row label {
-    padding-top: 4px;
+    margin-top: 2px;
+    margin-bottom: 0;
 }
 .nc-btns-inline {
     flex: 0 0 auto;
@@ -2329,6 +2353,86 @@ input.input--halfwidth-reject {
     flex: 1;
     min-width: 150px;
     width: auto !important;
+}
+/* ドリル深さ 手動入力トグル + クイック入力ボタン */
+.drill-depth-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+}
+.drill-depth-section .drill-item {
+    padding-left: 10px;
+}
+.drill-depth-manual-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+    margin-left: 4px;
+}
+.drill-depth-manual-toggle input[type="checkbox"] {
+    display: none;
+}
+.drill-depth-manual-toggle__track {
+    flex-shrink: 0;
+    display: inline-block;
+    width: 26px;
+    height: 14px;
+    background: #555;
+    border-radius: 7px;
+    position: relative;
+    transition: background 0.2s;
+}
+.drill-depth-manual-toggle__track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 10px;
+    height: 10px;
+    background: #aaa;
+    border-radius: 50%;
+    transition: left 0.2s, background 0.2s;
+}
+.drill-depth-manual-toggle input:checked ~ .drill-depth-manual-toggle__track {
+    background: #2e7d32;
+}
+.drill-depth-manual-toggle input:checked ~ .drill-depth-manual-toggle__track::after {
+    left: 14px;
+    background: #81c784;
+}
+.drill-depth-manual-toggle__label {
+    font-size: 0.7rem;
+    color: #9aa5b0;
+}
+.drill-depth-manual-toggle input:checked ~ .drill-depth-manual-toggle__label {
+    color: #81c784;
+}
+/* ドリル深さ クイック入力ボタン行（手動モード ON 時のみ表示） */
+.nc-drill-manual-row {
+    display: none;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding-left: 10px;
+    gap: 10px;
+    margin-top: 3px;
+    margin-bottom: 2px;
+}
+.nc-drill-manual-row .nc-btns-inline {
+    width: 250px;
+    grid-template-columns: repeat(3, 1fr);
+}
+.nc-drill-manual-row .nc-btns-inline .qb {
+    line-height: 1.2;
+    padding: 4px 2px;
+    font-size: 0.72rem;
+}
+.nc-drill-manual-row .nc-btns-inline .qb small {
+    font-size: 0.65rem;
+    opacity: 0.75;
 }
 /* 機械カード内チューブ規格 */
 .nc-tube-variant {
