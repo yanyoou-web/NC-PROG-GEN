@@ -7,17 +7,40 @@ alwaysApply: true
 - G/M code roles differ by machine; do not assume standard behavior
 
 ## Shell / Git
-- Shell is **PowerShell**. Bash heredoc (`cat <<'EOF'`) does NOT work.
+- Shell is **PowerShell 5.1**. Bash heredoc (`cat <<'EOF'`) does NOT work.
+- `&&` はサポートされない。複数コマンドは `;` で連結するか、`working_directory` パラメータで対処する。
 - For `git commit`, always use the temp-file pattern below (single command, no &&):
 
 ```powershell
 $msg = "subject`n`nbody line 1`nbody line 2"; $msg | Out-File -Encoding utf8 "$env:TEMP\commitmsg.txt"; git commit -F "$env:TEMP\commitmsg.txt"
 ```
 
+- `git add` 時に日本語ファイル名は `\343\203\206...` のような octal エスケープで表示される — 正常動作。文字化けではない。
+- 新規 JS テンプレートファイルを PowerShell で書き出す場合は **LF のみ（CRLF 禁止）**。`New-Object System.Text.UTF8Encoding $false` を使う（BOM なし UTF-8 + LF）。CRLF のまま add すると git が `CRLF will be replaced by LF` 警告を出す。
+
+  > **【一般向け補足】改行コードとは何か**
+  > テキストファイルの「行の終わり」を表す記号には2種類ある。
+  > - **CRLF**（`\r\n`）… Windows 標準。メモ帳で保存すると自動的にこれになる。
+  > - **LF**（`\n`）… Mac / Linux / Web 標準。
+  >
+  > PowerShell でファイルを書き出すとデフォルトで Windows 式（CRLF）になる。
+  > しかし Git / GitHub や Web のコードは LF を標準としているため、
+  > CRLF のファイルを `git add` すると「LF に自動変換した」という警告が出る。
+  > コミット自体は成功するが毎回警告が出て紛らわしい。
+  > → 書き出し時に最初から LF にしておけば警告が出ない。
+  > → それが下記コードの `New-Object System.Text.UTF8Encoding $false` の役割。
+
+```powershell
+# JSファイル書き出し推奨パターン（BOMなし・LFのみ）
+[System.IO.File]::WriteAllText($dst, $content, (New-Object System.Text.UTF8Encoding $false))
+```
+
 ## ファイル読み書き（PowerShell）
 - テキストファイルの読み書きは必ず `[System.IO.File]::ReadAllText` / `WriteAllText` と `[System.Text.Encoding]::UTF8` を使う（`Get-Content` / `Set-Content` はエンコーディング未指定だと Shift-JIS になり全角文字が壊れる）
 - `Get-Content` / `Set-Content` を使う場合も **両方に** `-Encoding UTF8` を付ける
 - 一括置換は対象ファイルを事前に絞り込んでから行う（無関係なファイルを上書きしない）
+- **PowerShell 5.1 の正規表現に日本語を含めない**。日本語文字列が含まれるパターンは `-replace` / `[regex]::Replace` で文字化けする。日本語を含む置換は必ず `String.Replace()` を使う。やむを得ずバイトレベル操作が必要な場合は `[System.IO.File]::ReadAllBytes` を使う。
+- **行末は LF に統一してから正規表現を使う**。`\r\n` 混在は `.*` が `\r` を取り込んでバグになる。処理前に `$c = $c.Replace("`r`n", "`n").Replace("`r", "`n")` を必ず実行する。
 
 ## テンプレート追加手順
 - 新規テンプレートを追加するときは `テンプレート追加確認事項.html` でブリーフを生成し、テンプレート JS ファイルと一緒に Agent に送ること。
