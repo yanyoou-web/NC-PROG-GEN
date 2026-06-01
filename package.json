@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "eslint \"assets/**/*.js\" \"scripts/**/*.mjs\"",
-    "lint:fix": "eslint \"assets/**/*.js\" \"scripts/**/*.mjs\" --fix",
+    "lint": "eslint \"Gコードジェネレータ/assets/**/*.js\" \"scripts/**/*.mjs\"",
+    "lint:fix": "eslint \"Gコードジェネレータ/assets/**/*.js\" \"scripts/**/*.mjs\" --fix",
     "format": "prettier package.json eslint.config.mjs .prettierrc.json docs/**/*.md .vscode/**/*.json --write",
     "format:check": "prettier package.json eslint.config.mjs .prettierrc.json docs/**/*.md .vscode/**/*.json --check",
     "test:tube": "node scripts/verify-tube-x6u2.mjs",

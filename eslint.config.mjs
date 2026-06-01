@@ -14,7 +14,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
  * - テンプレートを追加しても eslint.config.mjs の手動更新は不要。
  */
 function buildTemplateGlobals() {
-  const templateDir = join(__dirname, 'テンプレート');
+  const templateDir = join(__dirname, 'Gコードジェネレータ', 'テンプレート');
   const globals = {};
   const files = readdirSync(templateDir).filter((f) => f.endsWith('.js'));
   for (const file of files) {
@@ -35,7 +35,7 @@ export default [
     ignores: ['参考フォルダ/**', 'node_modules/**']
   },
   {
-    files: ['assets/**/*.js'],
+    files: ['Gコードジェネレータ/assets/**/*.js'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'script',
@@ -89,7 +89,7 @@ export default [
     }
   },
   {
-    files: ['assets/data.js'],
+    files: ['Gコードジェネレータ/assets/data.js'],
     rules: {
       'no-redeclare': 'off'
     }

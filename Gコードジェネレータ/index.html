@@ -8,7 +8,6 @@
         <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="assets/icon.svg" />
         <link rel="stylesheet" href="assets/style.css" />
-        <link rel="manifest" href="manifest.json" />
     </head>
     <body>
         <div class="container">
@@ -697,15 +696,8 @@
                                             id="drillDepth"
                                             placeholder="45.0"
                                             class="w-mid enter-target input--readonly-computed"
-                                            aria-describedby="drillDepth-focus-hint"
                                             readonly
                                         />
-                                        <div
-                                            id="drillDepth-focus-hint"
-                                            class="nc-input-focus-popover"
-                                            role="tooltip"
-                                            data-i18n="drillDepthFocusHint"
-                                        ></div>
                                     </span>
                                     <label class="drill-depth-manual-toggle" title="手動入力モード（自動計算を無効化）">
                                         <input type="checkbox" id="drillDepthManualToggle" onchange="onDrillDepthManualToggle()" />
@@ -1290,15 +1282,5 @@
         <script src="assets/app.js"></script>
         <script src="assets/preview.js"></script>
         <script src="assets/debug.js"></script>
-        <script>
-            // PWA: Service Worker 登録 (HTTPS / localhost 環境でのみ有効)
-            if ("serviceWorker" in navigator) {
-                window.addEventListener("load", function () {
-                    navigator.serviceWorker.register("./sw.js").catch(function () {
-                        /* file:// 環境では登録失敗するが無害 */
-                    });
-                });
-            }
-        </script>
     </body>
 </html>

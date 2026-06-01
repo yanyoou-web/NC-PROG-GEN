@@ -699,16 +699,14 @@ function restrictStyles(workType) {
             setInternalStyle("CrossSmall");
         }
     } else if (isTomesenWorkType(workType)) {
-        // 使用可能: Hirazoko / Ichimonji / Normal
-        // 使用不可: YoseRelay / Yose / CrossSmall
-        ["styleYoseRelay", "styleYose", "styleCrossSmall"].forEach((id) => {
-            const el = $id(id);
-            if (el) {
-                el.style.pointerEvents = "none";
-                el.style.opacity = "0.3";
-            }
-        });
-        if (!["Hirazoko", "Ichimonji", "Normal"].includes(currentInternalStyle)) {
+        // 使用可能: Hirazoko / Ichimonji / Normal / YoseRelay / Yose
+        // 使用不可: CrossSmall のみ
+        const elCross = $id("styleCrossSmall");
+        if (elCross) {
+            elCross.style.pointerEvents = "none";
+            elCross.style.opacity = "0.3";
+        }
+        if (currentInternalStyle === "CrossSmall") {
             setInternalStyle("Hirazoko");
         }
     } else {
@@ -750,6 +748,7 @@ function updateTubeLengths() {
 }
 
 let isInternalStyleDrawerOpen = false;
+let _prevShowDrawer = false;
 
 function getInternalStyleI18nKey(style) {
     const map = {
@@ -813,16 +812,26 @@ function setInternalStyle(style) {
     updateInternalStyleDrawerLabel();
     updateInternalStyleUI();
     calcDrillDepth();
-    // スタイルカード選択後にドロワーを閉じる
-    if (isInternalStyleDrawerOpen) {
-        isInternalStyleDrawerOpen = false;
-        syncInternalStyleDrawerPanel();
+    if (style) {
+        // スタイル確定: ドロワーを閉じてボタン・ヒントを選択済み表示にする
+        if (isInternalStyleDrawerOpen) {
+            isInternalStyleDrawerOpen = false;
+            syncInternalStyleDrawerPanel();
+        }
+        const toggleBtn = $id("internalStyleDrawerToggle");
+        if (toggleBtn) toggleBtn.classList.add("style-selected");
+        const hint = $id("internalStyleHint");
+        if (hint) hint.classList.add("hint-hidden");
+    } else {
+        // スタイルリセット: ドロワーコンテナが表示中なら自動展開して再選択を促す
+        const host = $id("internalStyleDrawer");
+        if (host && host.style.display !== "none" && !isInternalStyleDrawerOpen) {
+            isInternalStyleDrawerOpen = true;
+            syncInternalStyleDrawerPanel();
+        }
+        // _prevShowDrawer をリセットして次の出現時も自動展開できるようにする
+        _prevShowDrawer = false;
     }
-    // 選択済みになったらボタンのスタイルとヒントを更新
-    const toggleBtn = $id("internalStyleDrawerToggle");
-    if (toggleBtn) toggleBtn.classList.add("style-selected");
-    const hint = $id("internalStyleHint");
-    if (hint) hint.classList.add("hint-hidden");
 }
 
 // ========== プログレッシブ・リビール ==========
@@ -885,7 +894,15 @@ function updateProgressiveReveal() {
                 syncInternalStyleDrawerPanel();
             }
         }
+        // ドロワーが新たに表示された（false→true）かつスタイル未選択なら自動展開
+        if (showDrawer && !_prevShowDrawer && !currentInternalStyle) {
+            isInternalStyleDrawerOpen = true;
+            if (typeof syncInternalStyleDrawerPanel === "function") {
+                syncInternalStyleDrawerPanel();
+            }
+        }
     }
+    _prevShowDrawer = showDrawer;
 
     // --- ステップ進捗インジケーター同期 (4ステップ) ---
     // 1:ファイル情報  2:機械・ワーク選択  3:加工設定  4:内径スタイル
@@ -1940,15 +1957,23 @@ function validateEnterNavField(el) {
  * 非表示の欄は isEnterNavVisible でスキップされる
  */
 var ENTER_NAV_ORDER = [
-    // ── ユーザー指定順 ──────────────────────
+    // ── 視覚レイアウト順（カード表示順）──────────────────────
+    // カード1: ファイル情報（常時表示）
+    "v1a", // 図番
+    "v1b", // 枝番
+    "v1c", // 改訂
+    "v2", // 工程No
+    "workerName", // 作成者
+    // カード2: 機械・ワーク選択（ファイル情報入力後に表示）
     "machineSelect", // 使用機械
     "ateLength", // アテ長さ
     "workType", // テンプレート
-    "v1a", // ファイル情報: 図番
-    "v1b", //             枝番
-    "v1c", //             改訂
-    "v2", //             工程No
-    "workerName", // 作成者
+    // カード2 オプション行（テンプレートに応じて表示）
+    "mhOdTool", // MH外径バイト
+    "g12bNoseRSelect", // G12B: 根本ノーズR
+    "tubeSpecSelect", // チューブ規格
+    "tubeLengthSelect", //         長さ
+    // カード3: 加工設定（テンプレート選択後に表示）
     "maxOD", // 外径最大径
     "selM99P100", // M99P100モード
     "internalStyleDrawerToggle", // 内径加工スタイル（ドロワー切替）
@@ -1968,13 +1993,10 @@ var ENTER_NAV_ORDER = [
     "yosePartnerDepth", //       相手径深さ
     "drillMode", // ドリルモード
     "drillDepth", // ドリル深さ
-    "tubeSpecSelect", // チューブ規格
-    "tubeLengthSelect", //         長さ
     "m12DrillType", // M12: ドリル種別
     "m12CrossMethod", //      交差穴方法
-    "g18CrossMethod",   // G18_40/42: 交差穴方法
-    "m8CrossMethod",    // M8: 横穴＆中バリ処理 方法
-    "g12bNoseRSelect",  // G12B: 根本ノーズR あり/なし
+    "g18CrossMethod", // G18_40/42: 交差穴方法
+    "m8CrossMethod", // M8: 横穴＆中バリ処理 方法
 ];
 
 function isEnterNavVisible(el) {

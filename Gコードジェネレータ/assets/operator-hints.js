@@ -18,7 +18,6 @@
  *  valBFocusHint           最大径計算モード「偏心」距離 B
  *  valCornWFocusHint       最大径計算モード「角あり」母材 幅
  *  valCornHFocusHint       最大径計算モード「角あり」追加 高さ
- *  drillDepthFocusHint     ドリル深さ入力欄
  *  idDepthFocusHint        内径深さ入力欄
  *  cpUsesIdDepthHint       CP計算 相手径 (Φ) 入力欄
  *  yoseDFocusHint          ヨセ 相手径 (Φd) 入力欄
@@ -56,11 +55,6 @@
         /** 最大径計算モード「角あり」追加 高さ */
         valCornHFocusHint:
             "※ 角ありモード: 角の追加高さ寸法を半角 mm で入力。" + "追加高さ分は計算され送りF.3で荒仕上げされます",
-
-        /** ドリル深さ（#drillDepth） */
-        drillDepthFocusHint:
-            "※ ドリル深さを半角 mm で入力。" +
-            "平底・一文字DR スタイルでは内径深さから自動計算されるため、通常は内径深さのみ入力してください。",
 
         /** 内径深さ（#idDepth） */
         idDepthFocusHint:

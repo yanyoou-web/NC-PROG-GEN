@@ -96,8 +96,6 @@
             valBFocusHint: "※ 偏心モード: 軸中心から加工中心までの距離 B(縦方向)を半角で入力。",
             valCornWFocusHint: "※ 角ありモード: 素材の幅寸法を半角 mm で入力。",
             valCornHFocusHint: "※ 角ありモード: 角の追加高さ寸法を半角 mm で入力。",
-            drillDepthFocusHint:
-                "※ ドリル深さを半角 mm で入力。",
             idDepthFocusHint:
                 "※ 図面の内径深さ（穴の深さ）を半角 mm で入力。交差穴（加工径小）スタイルでは穴交差点の距離 IP を入力してください。",
             yoseDFocusHint:

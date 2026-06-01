@@ -2,21 +2,64 @@
 description: Lean rules for NC Program Generator app development
 alwaysApply: true
 ---
-# NC Program Generator — Development Rules
-- Safety first. Treat every G/M code related change as machine-impacting.
-- G/M code roles differ by machine; do not assume standard behavior
+# NC Program Generator — 開発ルール
+
+> **このルールファイルについて**
+> NCプログラム作成ツールの開発・修正作業を行う際に守るべき取り決めをまとめています。
+> 技術的な専門用語には平易な説明を添えているため、プログラマー以外の方も参照できます。
+
+---
+
+## このアプリが何をしているか（概要）
+
+- ユーザーがフォームに加工条件（機械・ワーク種別・寸法など）を入力すると、**NC旋盤向けのGコード（工作機械への命令文）を自動生成する**Webアプリです。
+- 生成されたGコードは、NC旋盤（NCL044・NCL015 等）に直接送り込んで使用します。
+- 入力値が一文字でも間違っていると**機械が誤動作する危険がある**ため、コードへの変更はすべて慎重に扱います。
+
+---
+
+## 変更してはいけないファイル
+
+> **安全の大原則：**
+> - GコードやMコードへのあらゆる変更は「機械への直接指示の変更」として扱うこと。
+> - 機械ごとにGコード・Mコードの役割が異なるため、他機種での動作を前提にしないこと。
+> - 以下のファイルを誤って書き換えると工作機械が誤動作し、機械・工具・製品の損傷や事故につながる可能性があります。
+
+| ファイル・フォルダ | 役割のひとこと説明 | 変更可否 |
+|---|---|---|
+| `Gコードジェネレータ/テンプレート/` 内 全42ファイル | Gコードのひな形。`{{}}` の部分に後から実際の数値が埋め込まれる | **変更禁止**（新規追加のみ可） |
+| `Gコードジェネレータ/assets/logic.js` | Gコード生成の計算ロジック本体。ワーク種別ごとの計算・検証を担当 | **原則変更禁止**（機能追加時のみ慎重に） |
+| `Gコードジェネレータ/assets/blocks.js` | ドリル仕上げ・一文字・奥バイトなどの加工ブロック文字列を組み立てる | 数値調整のみ可（構造変更禁止） |
+| `Gコードジェネレータ/assets/data.js` | 機械ごとのMコード・工具オフセット・チューブ規格の定義一覧 | **変更禁止**（機械追加時のみ） |
+| `Gコードジェネレータ/index.html` | 現在稼働中の入力画面。GUI v2 開発中は手を加えない | **変更禁止**（GUI v2 完成後に判断） |
+| `Gコードジェネレータ/assets/style.css` | 現行画面のデザイン定義 | 変更禁止（gui-v2.css で新規作成） |
+
+### テンプレートフォルダについて
+
+`Gコードジェネレータ/テンプレート/` に入っているファイルは、**ワーク種別1つにつき1ファイル**で構成されています。
+例：`data_template_M18.js` ＝「M18サイズの部品を加工するためのGコードひな形」
+
+- ファイル内の `{{変数名}}` の部分は、アプリが実行時に実際の数値に置き換えます。
+- ひな形のGコード本文を書き換えると機械への指示内容が変わるため、**新しいワーク種別を追加するとき以外は触らない**。
+- 既存テンプレートへの行追加・削除は `dev/テンプレート追加確認事項.html` で事前検証してから行うこと。
+- `data_template_S_G12_PP.js` / `S_G38_PP.js` / `S_G78_PP.js` / `S_M12_PP.js` / `S_M15_PP.js` の5ファイルはフォルダ内に存在するが、現時点では `index.html` の `<script>` タグに未登録のため動作しない。これらを有効化するには `index.html` への登録作業が別途必要。
+
+---
 
 ## Shell / Git
-- Shell is **PowerShell 5.1**. Bash heredoc (`cat <<'EOF'`) does NOT work.
-- `&&` はサポートされない。複数コマンドは `;` で連結するか、`working_directory` パラメータで対処する。
-- For `git commit`, always use the temp-file pattern below (single command, no &&):
+
+> **Shellとは：** コンピュータへの命令を文字で打ち込む操作画面のことです。このプロジェクトでは Windows の「PowerShell 5.1」を使います。Mac/Linux の書き方（Bash）とは一部文法が異なるため注意が必要です。
+
+- Shell は **PowerShell 5.1**。Bash heredoc（`cat <<'EOF'`）は使えない。
+- `&&` は PowerShell では動かない。複数コマンドを続けて実行するときは `;` で区切るか、`working_directory` パラメータで対処する。
+- コミット（変更の記録保存）するときは必ず下記のパターンを使う（一行で書くこと。`&&` は使わない）：
 
 ```powershell
 $msg = "subject`n`nbody line 1`nbody line 2"; $msg | Out-File -Encoding utf8 "$env:TEMP\commitmsg.txt"; git commit -F "$env:TEMP\commitmsg.txt"
 ```
 
-- `git add` 時に日本語ファイル名は `\343\203\206...` のような octal エスケープで表示される — 正常動作。文字化けではない。
-- 新規 JS テンプレートファイルを PowerShell で書き出す場合は **LF のみ（CRLF 禁止）**。`New-Object System.Text.UTF8Encoding $false` を使う（BOM なし UTF-8 + LF）。CRLF のまま add すると git が `CRLF will be replaced by LF` 警告を出す。
+- `git add` するとき、日本語のファイル名が `\343\203\206...` のような記号の羅列で表示されることがある。これは文字化けではなく、Git が日本語ファイル名を内部形式で表示している正常な動作。
+- 新しくJSテンプレートファイルを PowerShell で書き出す場合は **LF のみ（CRLF 禁止）**。`New-Object System.Text.UTF8Encoding $false` を使う（BOM なし UTF-8 + LF）。CRLF のまま add すると git が `CRLF will be replaced by LF` 警告を出す。
 
   > **【一般向け補足】改行コードとは何か**
   > テキストファイルの「行の終わり」を表す記号には2種類ある。
@@ -35,22 +78,17 @@ $msg = "subject`n`nbody line 1`nbody line 2"; $msg | Out-File -Encoding utf8 "$e
 [System.IO.File]::WriteAllText($dst, $content, (New-Object System.Text.UTF8Encoding $false))
 ```
 
+---
+
 ## ファイル読み書き（PowerShell）
+
+> **なぜ専用の書き方が必要か：** PowerShell のデフォルト設定は「日本語の文字コードが古い形式（Shift-JIS）」になっているため、そのまま読み書きすると日本語が文字化けします。以下の方法で必ず UTF-8 を明示してください。
+
 - テキストファイルの読み書きは必ず `[System.IO.File]::ReadAllText` / `WriteAllText` と `[System.Text.Encoding]::UTF8` を使う（`Get-Content` / `Set-Content` はエンコーディング未指定だと Shift-JIS になり全角文字が壊れる）
 - `Get-Content` / `Set-Content` を使う場合も **両方に** `-Encoding UTF8` を付ける
 - 一括置換は対象ファイルを事前に絞り込んでから行う（無関係なファイルを上書きしない）
 - **PowerShell 5.1 の正規表現に日本語を含めない**。日本語文字列が含まれるパターンは `-replace` / `[regex]::Replace` で文字化けする。日本語を含む置換は必ず `String.Replace()` を使う。やむを得ずバイトレベル操作が必要な場合は `[System.IO.File]::ReadAllBytes` を使う。
 - **行末は LF に統一してから正規表現を使う**。`\r\n` 混在は `.*` が `\r` を取り込んでバグになる。処理前に `$c = $c.Replace("`r`n", "`n").Replace("`r", "`n")` を必ず実行する。
-
-## テンプレート追加手順
-- 新規テンプレートを追加するときは `テンプレート追加確認事項.html` でブリーフを生成し、テンプレート JS ファイルと一緒に Agent に送ること。
-- ブリーフに加工仕様3点（内径Φ・ドリルφ・バイトΦ）が明記されていれば Agent は再確認せず実装してよい（ブリーフがない場合のみ確認すること）。
-- 内径Φ＝バイトΦ（同径）時の `{{平底_内径仕上出口}}` は `U-.2`、異径時は `X{toolDia}.F.03`（`computeFlatBottomExitLine` の仕様）。
-
-## isXxxWorkType ヘルパーパターン
-- 複数 workType を束ねる場合は `isXxxWorkType(wt)` を `FLAT_BOTTOM_TOOL_DIA_MM` 定義の直後に追加する。
-- `restrictStyles` で `else_m` デフォルト分岐（Ichimonji のみ無効）では足りない場合は専用分岐を追加し、ブリーフのスコープ `restrict_fn` を true にする。
-- `テンプレート追加確認事項.html` の restrict チップで `else_m` 以外を選択すると `restrict_fn` が自動チェックされる。
 
 ```powershell
 # 推奨パターン
@@ -59,7 +97,65 @@ $replaced = $content -replace '置換前', '置換後'
 [System.IO.File]::WriteAllText($path, $replaced, [System.Text.Encoding]::UTF8)
 ```
 
+---
+
+## テンプレート追加手順
+
+- 新規テンプレートを追加するときは `dev/テンプレート追加確認事項.html` でブリーフ（作業指示書）を生成し、テンプレートJSファイルと一緒に Agent に送ること。
+- ブリーフに加工仕様3点（内径Φ・ドリルφ・バイトΦ）が明記されていれば Agent は再確認せず実装してよい（ブリーフがない場合のみ確認すること）。
+- 内径Φ＝バイトΦ（同径）時の `{{平底_内径仕上出口}}` は `U-.2`、異径時は `X{toolDia}.F.03`（`computeFlatBottomExitLine` の仕様）。
+
+---
+
+## isXxxWorkType ヘルパーパターン
+
+> **これは何か：** 「このワーク種別はこのグループに属するか？」という Yes/No を返す小さな判定処理です。たとえば「M16・M18・M22・M24・M35 はどれも『トメセン系』として同じルールで扱う」といった場合に使います。ワーク種別が増えたときにも一か所を修正するだけで対応できる仕組みです。
+
+- 複数 workType を束ねる場合は `isXxxWorkType(wt)` を `FLAT_BOTTOM_TOOL_DIA_MM` 定義の直後に追加する。
+- `restrictStyles`（`app.js` 内）で `else_m` デフォルト分岐（Ichimonji のみ無効）では足りない場合は専用分岐を追加し、ブリーフのスコープ `restrict_fn` を true にする。GUI v2 では対応する処理は `gui-v2.js` 内の `getAvailableStyles(workType)` になる。
+- `dev/テンプレート追加確認事項.html` の restrict チップで `else_m` 以外を選択すると `restrict_fn` が自動チェックされる。
+
+---
+
+## GUI v2 開発ルール
+
+> **GUI v2 とは：** 現行の入力画面（`index.html`）を将来的に置き換える、新しい「一問一答形式」の操作画面です。現行画面を守りながら、新しいファイルだけで並行開発を進めます。問題が起きたときはブランチを切り替えるだけで元の画面に即座に戻せます。
+
+### 基本方針
+- 新しく作るファイルは `gui-v2.html`・`assets/gui-v2.css`・`assets/gui-v2.js` の3つのみ。
+- **既存ファイル（`index.html`・`app.js`・`logic.js`・`style.css` など）には一切手を加えない。**
+- `gui-v2.html` では `app.js` と `operator-hints.js` を読み込まない。代わりに `gui-v2.js` の冒頭に必要な補助関数を定義しておく（`logic.js` が起動時に補助関数を必要とするため、先に読み込む順番を守る）。
+
+### ファイルの読み込み順（重要）
+
+> **なぜ順番が重要か：** ブラウザはファイルを書かれた順番に読み込みます。「後で使う道具を先に準備しておく」ルールがあるため、依存関係の順番を守らないとエラーになります。
+
+`gui-v2.html` でのスクリプト読み込み順は以下を守ること：
+
+```
+data.js → i18n.js → テンプレート群（42本）→ blocks.js → gui-v2.js → logic.js → preview.js → debug.js
+```
+
+`gui-v2.js` を `logic.js` より**先に**読み込むことで、`logic.js` が必要とする補助関数（数値の整形・文字のエスケープ処理など）を事前に準備しておく。
+
+### Gコード生成の呼び出し方
+
+> **`generateGCode` とは：** `logic.js` に定義されている「入力値を受け取ってGコード文字列を返す」中心的な処理です。GUI v2 はこの処理をそのまま再利用するため、ロジックを二重に書く必要がありません。
+
+- `gui-v2.js` からは `generateGCode(inputObject, machineName)` を直接呼び出す。
+- 呼び出す直前に `currentInternalStyle = state.internalStyle;` で加工スタイルの値を同期させること（`logic.js` が内部でこの値を参照するため）。
+- 戻り値は `{ displayHtml: "...", plainText: "..." }` の形式。`plainText` がコピー・保存に使う純粋なGコード文字列。
+- `restrictStyles`（現行 `app.js` でスタイル選択を制限する処理）の代わりに、`gui-v2.js` 内で `getAvailableStyles(workType)` という純粋な関数として再実装し、ウィザード画面の選択肢の絞り込みに使う。
+
+### 作業ブランチ
+- GUI v2 の開発は `refactor/gui-v2` ブランチで行う。
+- `main` ブランチには動作確認済みのものだけをマージする。
+
+---
+
 ## UI レイアウト（index.html / style.css）
+
+> **この節は現行画面（`Gコードジェネレータ/index.html`）に変更を加える場合のみ参照してください。GUI v2 の開発中は基本的に不要です。**
 
 ### ラベル幅・インデント基準
 - `nc-section-card` / `machining-panel` 共通ラベル幅: **140px**

@@ -1,4 +1,7 @@
 {
+  "files.associations": {
+    "*.mdc": "plaintext"
+  },
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.codeActionsOnSave": {

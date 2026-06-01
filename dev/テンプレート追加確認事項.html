@@ -360,7 +360,7 @@
           <button class="chip" data-val="m12">M12 系と同じ<br><span style="font-size:.67rem;color:var(--muted)">平底バイト・ヨセが使用不可</span></button>
           <button class="chip" data-val="m8">M8 系と同じ<br><span style="font-size:.67rem;color:var(--muted)">一文字DR平底・通常バイト・ヨセが使用不可</span></button>
           <button class="chip" data-val="locked">全スタイル固定<br><span style="font-size:.67rem;color:var(--muted)">加工方式が1通りに固定されたテンプレート</span></button>
-          <button class="chip" data-val="tomesen_type">トメセン系と同じ<br><span style="font-size:.67rem;color:var(--muted)">Hirazoko/Ichimonji/Normal のみ可（YoseRelay/Yose/CrossSmall 不可）</span></button>
+          <button class="chip" data-val="tomesen_type">トメセン系と同じ<br><span style="font-size:.67rem;color:var(--muted)">CrossSmall のみ不可（Hirazoko/Ichimonji/Normal/YoseRelay/Yose 使用可）</span></button>
           <button class="chip" data-val="custom">上記に該当しない（⑨のメモ欄に詳細を記入）</button>
         </div>
         <textarea id="restrictCustom" rows="2" placeholder="どのスタイルが使えてどれが使えないか、具体的に書いてください" hidden style="margin-top:5px"></textarea>
@@ -1091,7 +1091,7 @@ var RESTRICT_LABELS = {
   m12:    "M12 系 — Hirazoko/Yose 不可",
   m8:     "M8 系 — Ichimonji/Normal/Yose 不可",
   locked: "全スタイルロック（固定形状テンプレート）",
-  tomesen_type: "トメセン系 — isTomesenWorkType 分岐で Hirazoko/Ichimonji/Normal のみ有効化",
+  tomesen_type: "トメセン系 — isTomesenWorkType 分岐で CrossSmall のみ無効（Hirazoko/Ichimonji/Normal/YoseRelay/Yose 使用可）",
   custom: "カスタム: " + ((G("restrictCustom")||{value:""}).value||"（未記入）"),
 };
 var NABARI_LABELS = {
@@ -1381,8 +1381,8 @@ var PRESETS = {
     G("dispPrefix").value="トメセン";
     setYN("multiVariant","Y",P); setYN("needHelper","Y",P); G("helperName").value="Tomesen";
     setYN("hasM99","N",P);
-    ["Hirazoko","Ichimonji","Normal"].forEach(function(s){ styles[s]=true; });
-    ["YoseRelay","Yose","CrossSmall"].forEach(function(s){ styles[s]=false; });
+    ["Hirazoko","Ichimonji","Normal","YoseRelay","Yose"].forEach(function(s){ styles[s]=true; });
+    styles.CrossSmall=false;
     syncStyleCheckboxes();
     impl.helper_fn=true; impl.restrict_fn=true; syncCheckGrid("scopeGrid",SCOPE_ITEMS,impl);
   },
