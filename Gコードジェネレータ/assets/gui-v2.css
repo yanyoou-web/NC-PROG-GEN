@@ -1,0 +1,522 @@
+/* =========================================================
+   gui-v2.css — NCプログラム作成 ウィザード専用スタイル
+   style.css に依存しない独立設計。
+   ========================================================= */
+
+/* ---------- CSS カスタムプロパティ（テーマカラー） ---------- */
+:root {
+    --bg-page:    #0e1118;
+    --bg-card:    #161c28;
+    --bg-card-h:  #1c2438;
+    --bg-input:   #1a2030;
+    --border:     #2a3550;
+    --border-sel: #4a9eff;
+    --accent:     #4a9eff;
+    --accent-dk:  #3a7fd8;
+    --text:       #dde4f0;
+    --text-sub:   #7a8fa8;
+    --text-num:   #4a9eff;
+    --danger:     #e05555;
+    --radius:     10px;
+    --radius-sm:  6px;
+    --trans:      0.15s ease;
+}
+
+/* ---------- リセット & ベース ---------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: "Hiragino Sans", "Yu Gothic UI", sans-serif;
+    background: var(--bg-page);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+/* ---------- ルートコンテナ ---------- */
+#wiz-root {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0 12px 80px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---------- ヘッダー ---------- */
+.wiz-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 0 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+}
+.wiz-header__icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border-radius: 4px;
+}
+.wiz-header__title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    flex: 1;
+}
+.wiz-header__classic {
+    font-size: 0.75rem;
+    color: var(--text-sub);
+    text-decoration: none;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    transition: color var(--trans), border-color var(--trans);
+}
+.wiz-header__classic:hover {
+    color: var(--text);
+    border-color: var(--text-sub);
+}
+
+/* ---------- 進捗バー ---------- */
+#wiz-progress-bar {
+    padding: 14px 0 6px;
+}
+.wiz-prog-steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 6px;
+}
+.wiz-prog-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+    transition: background var(--trans), transform var(--trans);
+}
+.wiz-prog-dot.done   { background: var(--accent-dk); }
+.wiz-prog-dot.active { background: var(--accent); transform: scale(1.35); }
+.wiz-prog-line {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+    transition: background var(--trans);
+}
+.wiz-prog-line.done { background: var(--accent-dk); }
+.wiz-prog-label {
+    font-size: 0.72rem;
+    color: var(--text-sub);
+    letter-spacing: 0.03em;
+}
+
+/* ---------- メインコンテンツ（画面切替アニメーション） ---------- */
+#wiz-main {
+    flex: 1;
+    padding-top: 24px;
+    transition: opacity var(--trans), transform var(--trans);
+}
+#wiz-main.wiz-exit {
+    opacity: 0;
+    transform: translateX(-18px);
+}
+#wiz-main.wiz-enter {
+    opacity: 0;
+    transform: translateX(18px);
+    transition: none;
+}
+
+/* ---------- フッター（戻るボタン） ---------- */
+#wiz-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, var(--bg-page) 70%, transparent);
+    padding: 12px 16px 16px;
+    display: flex;
+    justify-content: flex-start;
+    z-index: 100;
+}
+.wiz-back-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-sub);
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: color var(--trans), border-color var(--trans);
+}
+.wiz-back-btn:hover {
+    color: var(--text);
+    border-color: var(--text-sub);
+}
+
+/* ---------- スタート画面 ---------- */
+.wiz-start {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    text-align: center;
+    gap: 16px;
+}
+.wiz-start__icon {
+    width: 64px;
+    height: 64px;
+    opacity: 0.9;
+}
+.wiz-start__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+}
+.wiz-start__desc {
+    font-size: 0.92rem;
+    color: var(--text-sub);
+    line-height: 1.7;
+}
+.wiz-start__btn {
+    margin-top: 8px;
+    font-size: 1rem;
+    padding: 14px 40px;
+}
+
+/* ---------- 質問共通 ---------- */
+.wiz-question {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+.wiz-q-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.4;
+}
+.wiz-q-sub {
+    font-size: 0.82rem;
+    color: var(--text-sub);
+    margin-top: -10px;
+}
+
+/* ---------- グリッド ---------- */
+.wiz-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+}
+.wiz-grid--4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+.wiz-grid--2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+@media (max-width: 480px) {
+    .wiz-grid--4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---------- カード ---------- */
+.wiz-card {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    text-align: center;
+    transition: background var(--trans), border-color var(--trans), transform var(--trans);
+    min-height: 64px;
+}
+.wiz-card:hover {
+    background: var(--bg-card-h);
+    border-color: var(--text-sub);
+    transform: translateY(-2px);
+}
+.wiz-card.selected {
+    border-color: var(--border-sel);
+    background: rgba(74, 158, 255, 0.1);
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.18);
+}
+.wiz-card--sm {
+    padding: 10px 8px;
+    min-height: 48px;
+}
+.wiz-card--style {
+    min-height: 72px;
+}
+.wiz-card__num {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-num);
+    line-height: 1;
+}
+.wiz-card__label {
+    font-size: 0.82rem;
+    color: var(--text);
+    line-height: 1.3;
+    word-break: break-all;
+}
+.wiz-card.selected .wiz-card__label { color: var(--accent); }
+
+/* ---------- グループ ---------- */
+.wiz-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.wiz-group__lbl {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-sub);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-left: 2px;
+}
+
+/* ---------- フォーム ---------- */
+.wiz-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.wiz-lbl {
+    font-size: 0.82rem;
+    color: var(--text-sub);
+    margin-bottom: -4px;
+}
+.wiz-input {
+    background: var(--bg-input);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 0.95rem;
+    padding: 10px 12px;
+    width: 100%;
+    transition: border-color var(--trans);
+    outline: none;
+    -webkit-appearance: none;
+}
+.wiz-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.18);
+}
+.wiz-input--lg   { font-size: 1.1rem; padding: 12px 14px; }
+.wiz-input--hero { font-size: 1.4rem; padding: 16px 18px; text-align: center; }
+.wiz-input--sm   { width: 7ch; text-align: center; }
+.wiz-input--xs   { width: 4ch; text-align: center; }
+
+.wiz-select {
+    background: var(--bg-input);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 0.88rem;
+    padding: 8px 6px;
+    cursor: pointer;
+    outline: none;
+}
+.wiz-select:focus { border-color: var(--accent); }
+
+/* 図番行 */
+.wiz-drawnum-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.wiz-fix {
+    font-size: 0.88rem;
+    color: var(--text-sub);
+    white-space: nowrap;
+}
+
+/* 作成者クイック選択 */
+.wiz-author-presets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+.wiz-author-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-sub);
+    font-size: 0.78rem;
+    padding: 7px 4px;
+    cursor: pointer;
+    transition: color var(--trans), border-color var(--trans), background var(--trans);
+}
+.wiz-author-btn:hover {
+    color: var(--text);
+    background: var(--bg-card-h);
+    border-color: var(--text-sub);
+}
+
+/* プリセットボタン（アテ長さ） */
+.wiz-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.wiz-preset {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-sub);
+    font-size: 0.8rem;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: color var(--trans), border-color var(--trans), background var(--trans);
+    white-space: nowrap;
+}
+.wiz-preset:hover { color: var(--text); background: var(--bg-card-h); }
+.wiz-preset.selected {
+    border-color: var(--border-sel);
+    color: var(--accent);
+    background: rgba(74, 158, 255, 0.1);
+}
+
+/* ---------- ボタン ---------- */
+.wiz-btn-primary {
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 14px 28px;
+    cursor: pointer;
+    transition: background var(--trans), transform var(--trans);
+    width: 100%;
+    letter-spacing: 0.02em;
+}
+.wiz-btn-primary:hover   { background: var(--accent-dk); transform: translateY(-1px); }
+.wiz-btn-primary:active  { transform: translateY(0); }
+
+.wiz-btn-secondary {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-sel);
+    border-radius: var(--radius-sm);
+    color: var(--accent);
+    font-size: 0.88rem;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background var(--trans);
+}
+.wiz-btn-secondary:hover { background: var(--bg-card-h); }
+
+.wiz-btn-outline {
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-sub);
+    font-size: 0.88rem;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: color var(--trans), border-color var(--trans);
+}
+.wiz-btn-outline:hover { color: var(--text); border-color: var(--text-sub); }
+
+/* ---------- 結果画面 ---------- */
+.wiz-generating {
+    text-align: center;
+    color: var(--text-sub);
+    padding: 40px 0;
+    font-size: 0.9rem;
+}
+
+.wiz-summary {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+.wiz-summary summary {
+    cursor: pointer;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--text-sub);
+    background: var(--bg-card);
+    user-select: none;
+    list-style: none;
+}
+.wiz-summary summary::-webkit-details-marker { display: none; }
+.wiz-summary summary::before { content: "▶ "; font-size: 0.7em; }
+.wiz-summary[open] summary::before { content: "▼ "; }
+
+.wiz-sum-row {
+    display: flex;
+    padding: 7px 14px;
+    border-top: 1px solid var(--border);
+    font-size: 0.82rem;
+    gap: 12px;
+}
+.wiz-sum-key { color: var(--text-sub); min-width: 90px; flex-shrink: 0; }
+.wiz-sum-val { color: var(--text); word-break: break-all; }
+
+.wiz-gcode-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    max-height: 55vh;
+    margin-bottom: 14px;
+}
+.wiz-gcode {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 0.8rem;
+    color: var(--text);
+    padding: 14px 16px;
+    white-space: pre;
+    line-height: 1.55;
+    min-width: max-content;
+}
+/* Gコードハイライト（logic.js が出力するspanに対応） */
+.wiz-gcode .h-val--calc    { color: #7ecfa0; }
+.wiz-gcode .h-val--input   { color: #7ec8e3; }
+.wiz-gcode .h-val--machine { color: #c0a06a; }
+
+.wiz-result-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* ---------- トースト通知 ---------- */
+.wiz-toast {
+    position: fixed;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #2a3550;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 9px 20px;
+    font-size: 0.85rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 200;
+    white-space: nowrap;
+}
+.wiz-toast--show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ---------- スクロールバー ---------- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-page); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>NCプログラム作成 v2</title>
+        <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+        <link rel="stylesheet" href="assets/gui-v2.css" />
+    </head>
+    <body>
+        <div id="wiz-root">
+            <!-- ヘッダー -->
+            <header class="wiz-header">
+                <img src="assets/icon.svg" alt="NC" class="wiz-header__icon" />
+                <span class="wiz-header__title">NCプログラム作成</span>
+                <a href="index.html" class="wiz-header__classic">従来版へ</a>
+            </header>
+
+            <!-- 進捗バー（ステップ表示） -->
+            <div id="wiz-progress-bar" hidden></div>
+
+            <!-- メインコンテンツ（ウィザードが各画面を描画する） -->
+            <main id="wiz-main"></main>
+
+            <!-- フッター（戻るボタン） -->
+            <footer id="wiz-footer" hidden>
+                <button id="wiz-back-btn" type="button" class="wiz-back-btn">← 戻る</button>
+            </footer>
+        </div>
+
+        <!--
+            スクリプト読み込み順（重要）:
+            1. data.js       … 機械定義・チューブ規格データ
+            2. i18n.js       … 多言語文字列（logic.js が内部で参照）
+            3. テンプレート群 … 各ワーク種別のGコードひな形
+            4. blocks.js     … Gコードブロック生成関数
+            5. gui-v2.js     … utils定義 + ウィザードコントローラー
+                               ★ logic.js より先に読む必要がある
+                               　（logic.js が ncFormat 等の utils を使用するため）
+            6. logic.js      … Gコード生成ロジック本体（generateGCode）
+            7. preview.js    … ツールパスプレビュー（将来利用）
+            8. debug.js      … デバッグパネル（将来利用）
+        -->
+        <script src="assets/data.js"></script>
+        <script src="assets/i18n.js"></script>
+        <script src="テンプレート/data_template_G78.js"></script>
+        <script src="テンプレート/data_template_M40.js"></script>
+        <script src="テンプレート/data_template_M22.js"></script>
+        <script src="テンプレート/data_template_M18.js"></script>
+        <script src="テンプレート/data_template_M15.js"></script>
+        <script src="テンプレート/data_template_G78_MH.js"></script>
+        <script src="テンプレート/data_template_M40_MH.js"></script>
+        <script src="テンプレート/data_template_M22_MH.js"></script>
+        <script src="テンプレート/data_template_M18_MH.js"></script>
+        <script src="テンプレート/data_template_M15_MH.js"></script>
+        <script src="テンプレート/data_template_M12HGDR_MH.js"></script>
+        <script src="テンプレート/data_template_M12HSS_MH.js"></script>
+        <script src="テンプレート/data_template_M12BAITO_MH.js"></script>
+        <script src="テンプレート/data_template_M12HGDR.js"></script>
+        <script src="テンプレート/data_template_M12HSS.js"></script>
+        <script src="テンプレート/data_template_M12BAITO.js"></script>
+        <script src="テンプレート/data_template_Tube.js"></script>
+        <script src="テンプレート/data_template_M42X3_25175.js"></script>
+        <script src="テンプレート/data_template_M8_21.js"></script>
+        <script src="テンプレート/data_template_M8_31.js"></script>
+        <script src="テンプレート/data_template_J_M8_300.js"></script>
+        <script src="テンプレート/data_template_G18_40.js"></script>
+        <script src="テンプレート/data_template_G18_42.js"></script>
+        <script src="テンプレート/data_template_G18_62.js"></script>
+        <script src="テンプレート/data_template_G18_655.js"></script>
+        <script src="テンプレート/data_template_G18_6175.js"></script>
+        <script src="テンプレート/data_template_G18_40-MH.js"></script>
+        <script src="テンプレート/data_template_G18_42-MH.js"></script>
+        <script src="テンプレート/data_template_G18_62-MH.js"></script>
+        <script src="テンプレート/data_template_G18_655-MH.js"></script>
+        <script src="テンプレート/data_template_G18_6175-MH.js"></script>
+        <script src="テンプレート/data_template_G12B_G_ST_12175_8.js"></script>
+        <script src="テンプレート/data_template_TOMESEN_M16.js"></script>
+        <script src="テンプレート/data_template_TOMESEN_M18.js"></script>
+        <script src="テンプレート/data_template_TOMESEN_M22.js"></script>
+        <script src="テンプレート/data_template_TOMESEN_M24.js"></script>
+        <script src="テンプレート/data_template_TOMESEN_M35.js"></script>
+        <script src="assets/blocks.js"></script>
+        <script src="assets/gui-v2.js"></script>
+        <script src="assets/logic.js"></script>
+        <script src="assets/preview.js"></script>
+        <script src="assets/debug.js"></script>
+    </body>
+</html>
