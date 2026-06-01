@@ -229,7 +229,7 @@ function buildStartScreen() {
     return '<div class="wiz-start">'
         +'<img src="assets/icon.svg" alt="NC" class="wiz-start__icon" />'
         +'<h1 class="wiz-start__title">NCプログラム作成</h1>'
-        +'<p class="wiz-start__desc">加工条件を順番に選んで<br>Gコードを自動生成します</p>'
+        +''
         +'<button class="wiz-btn-primary wiz-start__btn" data-action="start">開始する</button>'
         +'<button class="wiz-btn-outline wiz-start__import" data-action="import-json">前回の入力を読み込む (JSON)</button>'
         +'</div>';
