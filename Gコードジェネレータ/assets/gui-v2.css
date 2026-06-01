@@ -635,6 +635,12 @@ body {
     margin-top: -4px;
     padding-left: 2px;
 }
+.depth-ip-hint {
+    font-size: 0.72rem;
+    color: var(--text-sub);
+    font-weight: normal;
+    margin-left: 4px;
+}
 .depth-info-note {
     font-size: 0.80rem;
     color: var(--text-sub);

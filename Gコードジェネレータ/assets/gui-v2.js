@@ -394,19 +394,22 @@ function buildDepthsScreen() {
             +(autoVal!==null?'<button class="depth-manual-link" data-action="toggle-drill-manual">自動計算に戻す（'+escapeHtml(autoVal)+'mm）</button>':"");
     }
 
-    // 内径深さ（ヨセ中継は自動）
+    // 内径深さ / IP（ヨセ中継は自動。交差穴では「IP = 原点〜穴中心距離」として使用）
     var idAutoVal=isRelay?computeIdDepthForRelay():null;
+    var idLabel = isCross
+        ? 'IP（原点〜穴中心距離）(mm)<span class="depth-ip-hint"> ← CP = IP − 相手径/2</span>'
+        : '内径深さ (mm)';
     var idHtml;
     if (idAutoVal!==null) {
         idHtml='<label class="wiz-lbl">内径深さ</label>'
             +'<div class="depth-auto-row"><span class="depth-auto-val">'+escapeHtml(idAutoVal)+' mm <span class="depth-auto-badge">自動計算</span></span></div>';
     } else {
-        idHtml='<label class="wiz-lbl" for="id-depth">内径深さ (mm)</label>'
+        idHtml='<label class="wiz-lbl" for="id-depth">'+idLabel+'</label>'
             +'<input class="wiz-input depth-cross-field" id="id-depth" type="text" inputmode="decimal"'
-            +' value="'+escapeHtml(wizardState.idDepth)+'" placeholder="例: 15.0" />';
+            +' value="'+escapeHtml(wizardState.idDepth)+'" placeholder="'+(isCross?"例: 20.0 (IP)":"例: 15.0")+'" />';
     }
 
-    // 交差穴: 相手径 + CP表示 + CrossSmall仕上げ深さ参考値
+    // 交差穴: IP（内径交差点）+ 相手径 + CP表示 + CrossSmall仕上げ深さ参考値
     var cpHtml="";
     if (isCross) {
         var cpComp=computeCP(wizardState.idDepth,wizardState.valPartnerD);
@@ -417,9 +420,9 @@ function buildDepthsScreen() {
         }
         cpHtml='<label class="wiz-lbl" for="depth-partner-d">相手径 Φ (mm)</label>'
             +'<input class="wiz-input depth-cross-field" id="depth-partner-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valPartnerD)+'" placeholder="例: 6.0" />'
-            +'<label class="wiz-lbl">CP値（自動計算: 内径深さ − 相手径/2）</label>'
+            +'<label class="wiz-lbl">CP値 = IP − 相手径/2（自動計算）</label>'
             +'<input class="wiz-input" id="depth-cp-display" type="text" readonly value="'+escapeHtml(cpComp)+'"'
-            +' placeholder="内径深さ・相手径を入力すると自動計算" style="background:#1a2030;color:#7ec8e3;font-weight:bold;" />'
+            +' placeholder="IP・相手径を入力すると自動計算" style="background:#1a2030;color:#7ec8e3;font-weight:bold;" />'
             +finishDepthHint;
     }
 
@@ -445,13 +448,12 @@ function buildDepthsScreen() {
         m12Html+='<p class="depth-info-note">M8 交差穴: HSSドリル + 一文字面取り（固定）</p>';
     }
 
-    // 奥バイト
+    // 奥バイト: M12の交差穴加工方法から自動判定（チェックボックス廃止）
+    // hss_oku / hgdr_oku / baito_oku → 奥バイトあり（情報表示のみ）
     var okuHtml="";
-    if (isM12) {
-        okuHtml='<div class="wiz-checkbox-row"><input type="checkbox" id="chk-oku-bite" class="wiz-checkbox"'
-            +(wizardState.okuBiteEnabled?" checked":"")
-            +' data-action="toggle-oku-bite" />'
-            +'<label for="chk-oku-bite" class="wiz-checkbox-lbl">奥バイト面取りを行う（相手径 6.0mm以上時のみ出力）</label></div>';
+    if (isM12 && st==="CrossSmall") {
+        var okuActive = wizardState.m12CrossMethod==="hss_oku"||wizardState.m12CrossMethod==="hgdr_oku"||wizardState.m12CrossMethod==="baito_oku";
+        okuHtml='<p class="depth-info-note">奥バイト面取り: '+(okuActive?"<strong>あり</strong>（相手径 6.0mm以上時のみ出力）":"なし")+'</p>';
     }
 
     return '<div class="wiz-question"><h2 class="wiz-q-title">加工深さを入力してください</h2>'
@@ -743,7 +745,7 @@ function handleAction(action, value) {
             wizardState.idDepth=(document.getElementById("id-depth")||{value:wizardState.idDepth}).value||wizardState.idDepth;
             wizardState.valPartnerD=(document.getElementById("depth-partner-d")||{value:""}).value.trim();
             wizardState.cpVal=computeCP(wizardState.idDepth,wizardState.valPartnerD);
-            var chkOku=document.getElementById("chk-oku-bite"); if(chkOku) wizardState.okuBiteEnabled=chkOku.checked;
+            // 奥バイトは m12CrossMethod から自動判定 - ここでは何もしない
             advance("q-depths"); break;
         case "set-author":
             wizardState.workerName=value;
@@ -835,7 +837,11 @@ function buildInputFromState() {
         g18FinishType:isG18Small(wizardState.workType)?g18r.finishType:"halfmoon",
         g18Profile:isG18Small(wizardState.workType)?g18r.profile:"cross_oku",
         m8Profile:isM8?"drill_ichi_men":"hss_oku",
-        cpVal:wizardState.cpVal, valPartnerD:wizardState.valPartnerD, okuBiteEnabled:wizardState.okuBiteEnabled,
+        cpVal:wizardState.cpVal, valPartnerD:wizardState.valPartnerD,
+        // 奥バイトは加工方法から自動判定（cross_oku または baito_oku なら true）
+        okuBiteEnabled: isM12Like(wizardState.workType)
+            ? (wizardState.m12CrossMethod==="hss_oku"||wizardState.m12CrossMethod==="hgdr_oku"||wizardState.m12CrossMethod==="baito_oku")
+            : false,
         yoseMethod:wizardState.yoseMethod, yoseAngle:wizardState.yoseAngle, yoseD:wizardState.yoseD,
         yoseTotalLength:wizardState.yoseTotalLength, yosePartnerDepth:wizardState.yosePartnerDepth,
         tubeSpec:wizardState.tubeSpec, tubeLength:wizardState.tubeLength,
@@ -860,8 +866,8 @@ function runGeneration() {
         ["機械",wizardState.machine],["ワーク種別",wizardState.workType],
         ["加工スタイル",wizardState.workType==="Tube"?"（チューブ）":(STYLE_LABELS[wizardState.internalStyle]||wizardState.internalStyle||"")],
         ["M99P100",wizardState.m99Mode],["アテ長さ",wizardState.ateLength+" mm"],
-        ["外径最大径",wizardState.maxOD+" mm"],["ドリル深さ",wizardState.drillDepth+" mm"],
-        ["内径深さ",wizardState.idDepth+" mm"],
+        ["外径最大径",wizardState.maxOD+" mm"],        ["ドリル深さ",wizardState.drillDepth+" mm"],
+        [isCrossStyle(wizardState.internalStyle)?"IP（穴中心距離）":"内径深さ", wizardState.idDepth+" mm"],
         ["図番","PM-"+(wizardState.drawNumA||"")+"-"+(wizardState.drawNumB||"")+(wizardState.drawRev!=="NONE"?wizardState.drawRev:"")+" =No,"+(wizardState.processNum||"")],
         ["作成者",wizardState.workerName],
     ].map(function(r){return '<div class="wiz-sum-row"><span class="wiz-sum-key">'+escapeHtml(r[0])+'</span><span class="wiz-sum-val">'+escapeHtml(r[1]||"")+'</span></div>';}).join("");
@@ -873,7 +879,6 @@ function runGeneration() {
         +'<button class="wiz-btn-secondary" data-action="copy-gcode">コピー</button>'
         +'<button class="wiz-btn-secondary" data-action="save-gcode">Gコード保存</button>'
         +'<button class="wiz-btn-secondary" data-action="export-json">入力値保存 (JSON)</button>'
-        +'<button class="wiz-btn-outline"   data-action="open-debug">🔍 デバッグ</button>'
         +'<button class="wiz-btn-outline"   data-action="restart">最初からやり直す</button>'
         +'</div>';
 }
@@ -885,9 +890,6 @@ document.addEventListener("DOMContentLoaded", function() {
     document.addEventListener("click", function(e) {
         var btn=e.target.closest("[data-action]"); if(!btn) return;
         handleAction(btn.dataset.action,btn.dataset.value);
-    });
-    document.addEventListener("change", function(e) {
-        if (e.target.id==="chk-oku-bite") wizardState.okuBiteEnabled=e.target.checked;
     });
     renderScreen("start");
 });
