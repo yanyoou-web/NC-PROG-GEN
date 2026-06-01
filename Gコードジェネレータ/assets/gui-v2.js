@@ -9,7 +9,13 @@
 /* global isM8WorkType, isYoseMachiningStyle, isYoseRelayStyle */
 /* global calcSpecialDrillZ, calcYoseRelayMetrics, calcCrossSmallFinishDepth */
 /* global DRILL_DIA_MAP */
+/* global drawPreview */
 /* global renderDebugPanel, openDebugPanel */
+
+// preview.js が参照するグローバル
+var _ncLastPlainGCode = null;
+// ハイライトフィルター状態
+var _hlState = { calc: true, input: true, machine: true };
 
 // ========== Section 1: utils（logic.js が依存するグローバル関数） ==========
 
@@ -178,8 +184,9 @@ function renderScreen(screenId) {
         if (info) { prog.hidden=false; prog.innerHTML=buildProgressHTML(info.current,info.total); } else prog.hidden=true;
         footer.hidden=(screenId==="start"||screenStack.length===0);
         if (screenId==="result")   setTimeout(runGeneration,80);
-        if (screenId==="q-maxod")  bindCalcInputs();
-        if (screenId==="q-depths") { initDrillAutoCalc(); bindDepthInputs(); }
+        if (screenId==="q-maxod")  { bindCalcInputs(); initValidation(); }
+        if (screenId==="q-depths") { initDrillAutoCalc(); bindDepthInputs(); initValidation(); }
+        initValidation(); // 全画面でバリデーション対象を登録
     },130);
 }
 function buildProgressHTML(cur,tot) {
@@ -323,18 +330,19 @@ function buildAteLengthScreen() {
         +'<button class="wiz-btn-primary" data-action="next-atelength">次へ →</button></div>';
 }
 
-/* ---- Q5: 外径最大径（+ 計算補助 + M99P100） ---- */
+/* ---- Q5: 外径最大径（SVG 図解 + 入力埋め込み + M99P100） ---- */
 function buildMaxODScreen() {
     var calcMode=wizardState.calcMode||"normal";
     var modeCards=[{v:"normal",l:"通常"},{v:"eccentric",l:"偏心"},{v:"corner",l:"角あり"},{v:"ate",l:"アテ長さから"}]
         .map(function(m){return '<button class="wiz-card wiz-card--sm'+(calcMode===m.v?" selected":"")+'" data-action="set-calc-mode" data-value="'+m.v+'">'+escapeHtml(m.l)+'</button>';}).join("");
 
-    var pN='<div id="cp-normal" class="calc-panel'+(calcMode!=="normal"?" calc-panel--hidden":"")+'"><label class="wiz-lbl" for="calc-stock-a">母材幅 A (mm)</label><input class="wiz-input calc-field" id="calc-stock-a" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valStockA)+'" placeholder="例: 43.0" /><label class="wiz-lbl" for="calc-stock-b">母材幅 B (mm)</label><input class="wiz-input calc-field" id="calc-stock-b" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valStockB)+'" placeholder="例: 43.0" /><p class="calc-hint">計算式: √(A² + B²)</p></div>';
-    var pE='<div id="cp-eccentric" class="calc-panel'+(calcMode!=="eccentric"?" calc-panel--hidden":"")+'"><label class="wiz-lbl" for="calc-ecc-a">距離 A（横）(mm)</label><input class="wiz-input calc-field" id="calc-ecc-a" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valEccA)+'" placeholder="例: 15.0" /><label class="wiz-lbl" for="calc-ecc-b">距離 B（縦）(mm)</label><input class="wiz-input calc-field" id="calc-ecc-b" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valEccB)+'" placeholder="例: 20.0" /><p class="calc-hint">計算式: √((A×2)² + (B×2)²)</p></div>';
-    var pC='<div id="cp-corner" class="calc-panel'+(calcMode!=="corner"?" calc-panel--hidden":"")+'"><label class="wiz-lbl" for="calc-corn-w">母材幅 W (mm)</label><input class="wiz-input calc-field" id="calc-corn-w" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valCornW)+'" placeholder="例: 43.0" /><label class="wiz-lbl" for="calc-corn-h">追加高さ H (mm)</label><input class="wiz-input calc-field" id="calc-corn-h" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valCornH)+'" placeholder="例: 11.0" /><p class="calc-hint">計算式: √((W/2+H)×2)² + W²)</p></div>';
+    // SVGパネル（入力欄を図の中に埋め込む）
+    var pN='<div id="cp-normal" class="calc-panel'+(calcMode!=="normal"?" calc-panel--hidden":"")+'">'+buildSVGNormal()+'<p class="calc-hint">√(A² + B²)</p></div>';
+    var pE='<div id="cp-eccentric" class="calc-panel'+(calcMode!=="eccentric"?" calc-panel--hidden":"")+'">'+buildSVGEccentric()+'<p class="calc-hint">√((A×2)² + (B×2)²)</p></div>';
+    var pC='<div id="cp-corner" class="calc-panel'+(calcMode!=="corner"?" calc-panel--hidden":"")+'">'+buildSVGCorner()+'<p class="calc-hint">√((W/2+H)×2)² + W²)</p></div>';
     var ateOk=KAKU_ATE_VALUES.indexOf(String(wizardState.ateLength))>=0;
     var pA='<div id="cp-ate" class="calc-panel'+(calcMode!=="ate"?" calc-panel--hidden":"")+'">'+
-        (ateOk?'<p class="calc-hint">アテ長さ: '+escapeHtml(wizardState.ateLength)+' mm<br>計算式: (50 − アテ長さ) × 2 × √2</p>'
+        (ateOk?'<p class="calc-hint">アテ長さ <strong>'+escapeHtml(wizardState.ateLength)+'</strong> mm → (50 − アテ長さ) × 2 × √2</p>'
               :'<p class="calc-hint calc-hint--warn">角形アテ（42.5 / 41 / 39.5 / 37.5 / 33.25 / 28.5）を選んだ場合のみ使用できます</p>')+'</div>';
 
     // M99P100（Tube以外）
@@ -349,7 +357,7 @@ function buildMaxODScreen() {
     return '<div class="wiz-question"><h2 class="wiz-q-title">外径最大径を入力してください</h2>'
         +'<p class="wiz-q-sub">ワーク外径の最大値 (mm)</p>'
         +'<div class="wiz-form">'
-        +'<input class="wiz-input wiz-input--hero" id="maxod-direct-input" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.maxOD)+'" placeholder="例: 30.5" />'
+        +'<input class="wiz-input wiz-input--hero validate-positive" id="maxod-direct-input" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.maxOD)+'" placeholder="例: 30.5" autofocus />'
         +m99Html+'</div>'
         +'<details class="wiz-calc-details"><summary class="wiz-calc-summary">自動計算ツール ▼</summary>'
         +'<div class="wiz-calc-body"><div class="wiz-grid wiz-grid--4">'+modeCards+'</div>'
@@ -357,6 +365,94 @@ function buildMaxODScreen() {
         +'<div class="calc-result-row"><div id="calc-result-preview" class="calc-result-preview">入力値を入力してください</div>'
         +'<button class="wiz-btn-secondary" data-action="apply-maxod-calc">この値を使用</button></div></div></details>'
         +'<button class="wiz-btn-primary" data-action="next-maxod">次へ →</button></div>';
+}
+
+/* SVG ヘルパー: arrowhead markers (ID prefix で重複回避) */
+function svgArrows(pfx) {
+    return '<defs><marker id="'+pfx+'-s" orient="auto" markerWidth="7" markerHeight="7" refX="0" refY="3.5"><path d="M7,0 L0,3.5 L7,7 Z" fill="#445"/></marker>'
+        +'<marker id="'+pfx+'-e" orient="auto" markerWidth="7" markerHeight="7" refX="7" refY="3.5"><path d="M0,0 L7,3.5 L0,7 Z" fill="#445"/></marker></defs>';
+}
+/* SVG foreignObject ラッパー（SVG内入力欄） */
+function svgFO(x,y,w,h,id,val,ph) {
+    return '<foreignObject x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'">'
+        +'<input xmlns="http://www.w3.org/1999/xhtml" type="text" id="'+id+'" class="calc-field svg-input validate-positive"'
+        +' value="'+escapeHtml(val)+'" placeholder="'+escapeHtml(ph)+'" inputmode="decimal" />'
+        +'</foreignObject>';
+}
+
+/* 通常モード SVG: 矩形ワーク、対角=最大径、A=幅、B=高さ */
+function buildSVGNormal() {
+    var p="svgn";
+    return '<svg class="calc-svg" viewBox="0 0 265 228" role="img" aria-label="通常モード図解">'
+        +svgArrows(p)
+        // ワーク矩形
+        +'<rect x="5" y="5" width="155" height="150" fill="#161c28" stroke="#2a3550" stroke-width="1.5" rx="2"/>'
+        // 最大径 対角線
+        +'<line x1="5" y1="5" x2="160" y2="155" stroke="#4a9eff" stroke-width="2"/>'
+        +'<text x="72" y="76" fill="#4a9eff" font-size="11" text-anchor="middle" transform="rotate(44,72,76)">最大径</text>'
+        // A 寸法矢印（下）
+        +'<line x1="5" y1="168" x2="160" y2="168" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
+        +'<text x="82" y="183" fill="#7a8fa8" font-size="11" text-anchor="middle">母材幅 A</text>'
+        // A 入力欄
+        +svgFO(5,190,155,26,"calc-stock-a",wizardState.valStockA,"例: 43.0")
+        // B 寸法矢印（右）
+        +'<line x1="172" y1="5" x2="172" y2="155" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
+        +'<text x="215" y="83" fill="#7a8fa8" font-size="11" text-anchor="middle" transform="rotate(-90,215,83)">母材幅 B</text>'
+        // B 入力欄
+        +svgFO(180,68,80,26,"calc-stock-b",wizardState.valStockB,"例: 43.0")
+        +'</svg>';
+}
+
+/* 偏心モード SVG: 矩形ワーク、赤=旋削中心、青=偏心穴軸、A=横距離、B=縦距離 */
+function buildSVGEccentric() {
+    var p="svge";
+    return '<svg class="calc-svg" viewBox="0 0 275 228" role="img" aria-label="偏心モード図解">'
+        +svgArrows(p)
+        // ワーク矩形
+        +'<rect x="0" y="0" width="160" height="155" fill="#161c28" stroke="#2a3550" stroke-width="1.5" rx="2"/>'
+        // 赤: 旋削中心軸（垂直、x=80）
+        +'<line x1="80" y1="-6" x2="80" y2="163" stroke="#e05555" stroke-width="1.5"/>'
+        // 青: 偏心穴軸（水平、y=100）
+        +'<line x1="-6" y1="100" x2="168" y2="100" stroke="#4488ff" stroke-width="1.5"/>'
+        // 交点
+        +'<circle cx="80" cy="100" r="4" fill="white"/>'
+        // A 寸法（左端→中心、水平）
+        +'<line x1="0" y1="170" x2="0" y2="164" stroke="#445" stroke-width="1"/>'
+        +'<line x1="80" y1="170" x2="80" y2="164" stroke="#445" stroke-width="1"/>'
+        +'<line x1="0" y1="168" x2="80" y2="168" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
+        +'<text x="40" y="183" fill="#7a8fa8" font-size="11" text-anchor="middle">距離 A（横）</text>'
+        +svgFO(0,190,155,26,"calc-ecc-a",wizardState.valEccA,"例: 15.0")
+        // B 寸法（上端→穴軸、垂直）
+        +'<line x1="168" y1="0" x2="162" y2="0" stroke="#445" stroke-width="1"/>'
+        +'<line x1="168" y1="100" x2="162" y2="100" stroke="#445" stroke-width="1"/>'
+        +'<line x1="166" y1="0" x2="166" y2="100" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
+        +'<text x="215" y="52" fill="#7a8fa8" font-size="11" text-anchor="middle" transform="rotate(-90,215,52)">距離 B（縦）</text>'
+        +svgFO(174,38,95,26,"calc-ecc-b",wizardState.valEccB,"例: 20.0")
+        +'</svg>';
+}
+
+/* 角ありモード SVG: 幅W×(W+2H)の矩形、最大径=対角線 */
+function buildSVGCorner() {
+    var p="svgc";
+    return '<svg class="calc-svg" viewBox="0 0 265 240" role="img" aria-label="角ありモード図解">'
+        +svgArrows(p)
+        // 外形 (W wide, W+2H tall → 表示比 150×165)
+        +'<rect x="5" y="5" width="155" height="165" fill="#161c28" stroke="#2a3550" stroke-width="1.5" rx="2"/>'
+        // 最大径 対角線
+        +'<line x1="5" y1="5" x2="160" y2="170" stroke="#4a9eff" stroke-width="2"/>'
+        +'<text x="70" y="85" fill="#4a9eff" font-size="11" text-anchor="middle" transform="rotate(48,70,85)">最大径</text>'
+        // H: 上端から中央の補助線（H の意味を示す）
+        +'<line x1="82" y1="5" x2="82" y2="87" stroke="#8866ff" stroke-width="1" stroke-dasharray="4,3"/>'
+        +'<text x="62" y="50" fill="#8866ff" font-size="10">W/2+H</text>'
+        // W 寸法矢印（下）
+        +'<line x1="5" y1="183" x2="160" y2="183" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
+        +'<text x="82" y="197" fill="#7a8fa8" font-size="11" text-anchor="middle">母材幅 W</text>'
+        +svgFO(5,202,155,26,"calc-corn-w",wizardState.valCornW,"例: 43.0")
+        // H 寸法矢印（右）
+        +'<line x1="172" y1="5" x2="172" y2="87" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
+        +svgFO(178,38,80,26,"calc-corn-h",wizardState.valCornH,"例: 11.0")
+        +'<text x="218" y="26" fill="#7a8fa8" font-size="10" text-anchor="middle">追加高さ H</text>'
+        +'</svg>';
 }
 
 /* ---- Q6: 加工深さ（自動計算 + 手動切替 + クイックボタン） ---- */
@@ -760,13 +856,13 @@ function handleAction(action, value) {
             if(!wizardState.workerName){showToast("作成者を入力してください");return;}
             advance("q-drawnum"); break;
         case "copy-gcode": {
-            var el2=document.getElementById("gcode-plain");
+            var el2=document.getElementById("resultArea");
             var txt=el2?(el2.dataset.plain||el2.textContent):"";
             navigator.clipboard.writeText(txt).then(function(){showToast("コピーしました ✓");}).catch(function(){showToast("コピーに失敗しました");});
             break;
         }
         case "save-gcode": {
-            var sel=document.getElementById("gcode-plain");
+            var sel=document.getElementById("resultArea");
             var sText=sel?(sel.dataset.plain||sel.textContent):"";
             var blob2=new Blob([sText],{type:"text/plain"});
             var url2=URL.createObjectURL(blob2);
@@ -774,6 +870,7 @@ function handleAction(action, value) {
             document.body.appendChild(a2);a2.click();document.body.removeChild(a2);URL.revokeObjectURL(url2);
             break;
         }
+        case "toggle-hl": toggleHL(value); break;
         case "export-json": exportStateJson(); break;
         case "import-json": importStateJson(); break;
         case "open-debug":
@@ -855,6 +952,13 @@ function buildFileName() {
     return "PM-"+a+"-"+b+c+"=No,"+(wizardState.processNum||"1")+"_"+(wizardState.workerName||"")+".txt";
 }
 
+/* Gコード各行を .gc-line スパンで囲む（preview.js の dblclick sync に必要） */
+function wrapGCodeLines(html) {
+    return html.split("\n").map(function(line, i) {
+        return '<span class="gc-line" data-ln="'+i+'">'+line+'</span>';
+    }).join("\n");
+}
+
 function runGeneration() {
     currentInternalStyle=wizardState.internalStyle||"";
     var input=buildInputFromState();
@@ -862,34 +966,121 @@ function runGeneration() {
     var wrap=document.getElementById("result-wrap"); if(!wrap) return;
     var plain=result.plainText||"";
 
+    // preview.js が参照するグローバルに平文 Gコードをセット
+    _ncLastPlainGCode = plain;
+    window._ncLastPlainGCode = plain;
+
     var rows=[
         ["機械",wizardState.machine],["ワーク種別",wizardState.workType],
         ["加工スタイル",wizardState.workType==="Tube"?"（チューブ）":(STYLE_LABELS[wizardState.internalStyle]||wizardState.internalStyle||"")],
         ["M99P100",wizardState.m99Mode],["アテ長さ",wizardState.ateLength+" mm"],
-        ["外径最大径",wizardState.maxOD+" mm"],        ["ドリル深さ",wizardState.drillDepth+" mm"],
+        ["外径最大径",wizardState.maxOD+" mm"],["ドリル深さ",wizardState.drillDepth+" mm"],
         [isCrossStyle(wizardState.internalStyle)?"IP（穴中心距離）":"内径深さ", wizardState.idDepth+" mm"],
         ["図番","PM-"+(wizardState.drawNumA||"")+"-"+(wizardState.drawNumB||"")+(wizardState.drawRev!=="NONE"?wizardState.drawRev:"")+" =No,"+(wizardState.processNum||"")],
         ["作成者",wizardState.workerName],
     ].map(function(r){return '<div class="wiz-sum-row"><span class="wiz-sum-key">'+escapeHtml(r[0])+'</span><span class="wiz-sum-val">'+escapeHtml(r[1]||"")+'</span></div>';}).join("");
 
+    // ハイライトフィルターボタン
+    var hlBtns=['calc','input','machine'].map(function(k){
+        var lbl=k==='calc'?"計算値":k==='input'?"入力値":"機械コード";
+        return '<button class="wiz-hl-btn'+(_hlState[k]?" active":"")+'" data-action="toggle-hl" data-value="'+k+'">'+lbl+'</button>';
+    }).join("");
+
+    // 各行を .gc-line で囲む
+    var wrappedHtml=wrapGCodeLines(result.displayHtml||escapeHtml(plain));
+
     wrap.innerHTML=
         '<details class="wiz-summary"><summary>入力内容を確認</summary>'+rows+'</details>'
-        +'<div class="wiz-gcode-wrap"><pre class="wiz-gcode" id="gcode-plain" data-plain="'+escapeHtml(plain)+'">'+(result.displayHtml||escapeHtml(plain))+'</pre></div>'
+        +'<div class="wiz-hl-bar"><span class="wiz-hl-lbl">色表示:</span>'+hlBtns+'</div>'
+        +'<div class="wiz-gcode-wrap">'
+        +'<pre id="resultArea" class="wiz-gcode" data-plain="'+escapeHtml(plain)+'">'+wrappedHtml+'</pre>'
+        +'</div>'
+        +'<div id="previewContainer" class="wiz-preview-wrap" style="display:none">'
+        +'<canvas id="simCanvas" class="wiz-preview-canvas"></canvas>'
+        +'</div>'
         +'<div class="wiz-result-actions">'
         +'<button class="wiz-btn-secondary" data-action="copy-gcode">コピー</button>'
         +'<button class="wiz-btn-secondary" data-action="save-gcode">Gコード保存</button>'
         +'<button class="wiz-btn-secondary" data-action="export-json">入力値保存 (JSON)</button>'
         +'<button class="wiz-btn-outline"   data-action="restart">最初からやり直す</button>'
         +'</div>';
+
+    applyHLFilters();
+    setTimeout(function() { if (typeof drawPreview==="function") drawPreview(true); }, 120);
 }
 
-// ========== Section 12: 初期化 ==========
+function applyHLFilters() {
+    var el=document.getElementById("resultArea"); if(!el) return;
+    ['calc','input','machine'].forEach(function(k){ el.classList.toggle("h-off-"+k,!_hlState[k]); });
+}
+function toggleHL(attr) {
+    _hlState[attr]=!_hlState[attr];
+    applyHLFilters();
+    document.querySelectorAll("[data-action='toggle-hl'][data-value='"+attr+"']").forEach(function(b){b.classList.toggle("active",_hlState[attr]);});
+}
+
+// ========== Section 12: バリデーション ==========
+
+function initValidation() {
+    document.querySelectorAll(".validate-positive").forEach(function(el) {
+        if (el.dataset.valBound) return;
+        el.dataset.valBound = "1";
+        el.addEventListener("input", function() { validatePositive(el); });
+        el.addEventListener("blur",  function() { validatePositive(el); });
+    });
+}
+function validatePositive(el) {
+    var v = el.value.trim();
+    var errId = el.id+"-err";
+    var existing = document.getElementById(errId);
+    if (v === "") {
+        el.classList.remove("wiz-input--invalid");
+        if (existing) existing.remove();
+        return true;
+    }
+    var num = parseFloat(v);
+    if (isNaN(num) || num <= 0) {
+        el.classList.add("wiz-input--invalid");
+        if (!existing) {
+            var e = document.createElement("div");
+            e.id = errId; e.className = "wiz-field-error";
+            e.textContent = "正の数値を入力してください";
+            el.parentNode.insertBefore(e, el.nextSibling);
+        }
+        return false;
+    }
+    el.classList.remove("wiz-input--invalid");
+    if (existing) existing.remove();
+    return true;
+}
+
+// ========== Section 13: 初期化 ==========
 
 document.addEventListener("DOMContentLoaded", function() {
     var backBtn=$id("wiz-back-btn"); if(backBtn) backBtn.addEventListener("click",goBack);
+
+    // 全 data-action クリックを document で委譲捕捉
     document.addEventListener("click", function(e) {
         var btn=e.target.closest("[data-action]"); if(!btn) return;
         handleAction(btn.dataset.action,btn.dataset.value);
     });
+
+    // input イベントでバリデーションを委譲実行
+    document.addEventListener("input", function(e) {
+        var el = e.target;
+        if (el.classList.contains("validate-positive")) validatePositive(el);
+    });
+
+    // Enter キーで画面内の「次へ」ボタンをクリック
+    document.addEventListener("keydown", function(e) {
+        if (e.key !== "Enter") return;
+        var tag = document.activeElement && document.activeElement.tagName;
+        if (tag === "BUTTON" || tag === "TEXTAREA" || tag === "SELECT") return;
+        var main = document.getElementById("wiz-main");
+        if (!main) return;
+        var prim = main.querySelector(".wiz-btn-primary[data-action]");
+        if (prim) { e.preventDefault(); prim.click(); }
+    });
+
     renderScreen("start");
 });
