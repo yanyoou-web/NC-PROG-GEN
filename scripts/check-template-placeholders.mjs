@@ -17,9 +17,9 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 
-// ─── app.js から replaceMap のキーセットを抽出 ───────────────────────────────
-// app.js を文字列として読み込み、replaceMap = { ... } 内のキーを正規表現で収集する
-const appSrc = readFileSync(join(ROOT, "assets", "app.js"), "utf8");
+// ─── logic.js から replaceMap のキーセットを抽出 ──────────────────────────────
+// replaceMap は generateGCode (logic.js) に定義されている
+const appSrc = readFileSync(join(ROOT, "assets", "logic.js"), "utf8");
 
 // 1) 固定キー: replaceMap セクションを抽出してキーを収集
 const replaceMapSectionRe = /const replaceMap\s*=\s*\{([\s\S]*?)\};/;
