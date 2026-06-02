@@ -9,13 +9,6 @@
 /* global isM8WorkType, isYoseMachiningStyle, isYoseRelayStyle */
 /* global calcSpecialDrillZ, calcYoseRelayMetrics, calcCrossSmallFinishDepth */
 /* global DRILL_DIA_MAP */
-/* global drawPreview */
-/* global renderDebugPanel, openDebugPanel */
-
-// preview.js が参照するグローバル
-var _ncLastPlainGCode = null;
-// ハイライトフィルター状態
-var _hlState = { calc: true, input: true, machine: true };
 
 // ========== Section 1: utils（logic.js が依存するグローバル関数） ==========
 
@@ -44,17 +37,9 @@ function ncFormat(val) {
     const num = parseFloat(val); if (isNaN(num)) return "";
     const s = num.toString(); return s.indexOf(".") === -1 ? s + "." : s;
 }
-function normalizeHighlightAttr(attr) { return attr==="input"||attr==="machine" ? attr : "calc"; }
-function isMCodeLike(val) { return /^M\d+(?:\.\d+)?(?:P\d+)?$/.test(String(val==null?"":val).trim().toUpperCase()); }
-function wrapH(val, attr) {
-    if (val===""||val===undefined) return "";
-    if (isMCodeLike(val)) return escapeHtml(val);
-    const k = normalizeHighlightAttr(attr);
-    return '<span class="h-val h-val--'+k+'">'+escapeHtml(val)+"</span>";
-}
-function wrapHCalc(val)    { return wrapH(val,"calc"); }
-function wrapHInput(val)   { return wrapH(val,"input"); }
-function wrapHMachine(val) { return wrapH(val,"machine"); }
+function wrapHCalc(val)    { return (val===""||val===undefined) ? "" : escapeHtml(val); }
+function wrapHInput(val)   { return (val===""||val===undefined) ? "" : escapeHtml(val); }
+function wrapHMachine(val) { return (val===""||val===undefined) ? "" : escapeHtml(val); }
 function gcodeDisplayHtmlToPlainText(htmlStr) {
     if (!htmlStr) return "";
     const d = document.createElement("div"); d.innerHTML = htmlStr;
@@ -68,9 +53,9 @@ function isDebugModeOn() { return false; }
 
 var STYLE_LABELS = {
     Hirazoko:"内径バイト平底", Ichimonji:"一文字DR平底", Normal:"通常バイト加工",
-    YoseRelay:"ヨセ中継", Yose:"ヨセ", CrossSmall:"交差穴（小径）", CrossBig:"交差穴（大径）",
+    YoseRelay:"ヨセ中継", Yose:"ヨセ", CrossSmall:"交差穴（小径）",
 };
-var STYLE_NUMS = { Hirazoko:"1",Ichimonji:"2",Normal:"3",YoseRelay:"4",Yose:"5",CrossSmall:"6",CrossBig:"7" };
+var STYLE_NUMS = { Hirazoko:"1",Ichimonji:"2",Normal:"3",YoseRelay:"4",Yose:"5",CrossSmall:"6" };
 
 function getAvailableStyles(workType) {
     if (workType==="J_M8_300") return ["CrossSmall"];
@@ -82,10 +67,10 @@ function getAvailableStyles(workType) {
         return ["Hirazoko","Normal","YoseRelay"];
     if (workType==="M42X3_25175"||workType==="M42X3_25175_16"||workType==="M42X3_25175_20"||workType==="M42X3_25175_22")
         return ["Hirazoko","Normal","Yose","YoseRelay"];
-    if (workType==="M12"||workType==="M12_MH") return ["Ichimonji","Normal","YoseRelay","CrossSmall","CrossBig"];
+    if (workType==="M12"||workType==="M12_MH") return ["Ichimonji","Normal","YoseRelay","CrossSmall"];
     if (workType==="TOMESEN_M16"||workType==="TOMESEN_M18"||workType==="TOMESEN_M22"||workType==="TOMESEN_M24"||workType==="TOMESEN_M35")
         return ["Hirazoko","Ichimonji","Normal","YoseRelay","Yose"];
-    return ["Hirazoko","Normal","YoseRelay","Yose","CrossBig","CrossSmall"];
+    return ["Hirazoko","Normal","YoseRelay","Yose","CrossSmall"];
 }
 
 // ========== Section 3: 定数 ==========
@@ -95,7 +80,7 @@ var WORK_TYPE_GROUPS = [
     {label:"ねじ系 MH",items:[{value:"M12_MH",label:"M12-MH"},{value:"M15_MH",label:"M15-MH"},{value:"M18_MH",label:"M18-MH"},{value:"M22_MH",label:"M22-MH"},{value:"G78_MH",label:"G78-MH"},{value:"M40_MH",label:"M40-MH"}]},
     {label:"G18系",    items:[{value:"G18_40",label:"φ4.0"},{value:"G18_42",label:"φ4.2"},{value:"G18_62",label:"φ6.2"},{value:"G18_655",label:"φ6.55"},{value:"G18_6175",label:"φ6.175"},{value:"G18_40_MH",label:"φ4.0 MH"},{value:"G18_42_MH",label:"φ4.2 MH"},{value:"G18_62_MH",label:"φ6.2 MH"},{value:"G18_655_MH",label:"φ6.55 MH"},{value:"G18_6175_MH",label:"φ6.175 MH"}]},
     {label:"M42X3系",  items:[{value:"M42X3_25175",label:"φ25.175 ST"},{value:"M42X3_25175_16",label:"→φ16"},{value:"M42X3_25175_20",label:"→φ20"},{value:"M42X3_25175_22",label:"→φ22"}]},
-    {label:"M8系",     items:[{value:"M8_21",label:"M8 φ2.1"},{value:"M8_31",label:"M8 φ3.1"},{value:"J_M8_300",label:"J-M8-ASWD-300"}]},
+    {label:"M8系",     items:[{value:"M8_21",label:"S-M8 φ2.1"},{value:"M8_31",label:"S-M8 φ3.1"},{value:"J_M8_300",label:"次世代M8 φ3.0"}]},
     {label:"トメセン",  items:[{value:"TOMESEN_M16",label:"M16"},{value:"TOMESEN_M18",label:"M18"},{value:"TOMESEN_M22",label:"M22"},{value:"TOMESEN_M24",label:"M24"},{value:"TOMESEN_M35",label:"M35"}]},
     {label:"特殊",     items:[{value:"G12B_G_ST_12175_8",label:"G12B-ST-12.175-8"}]},
     {label:"チューブ", items:[{value:"Tube",label:"チューブ"}]},
@@ -137,7 +122,7 @@ function isMHWorkType(wt) {
 }
 function isM12Like(wt)   { return wt==="M12"||wt==="M12_MH"; }
 function isG18Small(wt)  { return wt==="G18_40"||wt==="G18_42"||wt==="G18_40_MH"||wt==="G18_42_MH"; }
-function isCrossStyle(s) { return s==="CrossSmall"||s==="CrossBig"; }
+function isCrossStyle(s) { return s==="CrossSmall"; }
 function needsOptionsScreen() { return isMHWorkType(wizardState.workType)||wizardState.workType==="G12B_G_ST_12175_8"; }
 
 function getNextScreen(currentId) {
@@ -189,8 +174,61 @@ function renderScreen(screenId) {
         initValidation(); // 全画面でバリデーション対象を登録
     },130);
 }
+var STYLE_LABELS_SHORT = {
+    Hirazoko:"平底", Ichimonji:"一文字平底", Normal:"通常バイト",
+    YoseRelay:"ヨセ中継", Yose:"ヨセ", CrossSmall:"交差穴",
+};
+
+function getWorkTypeShortLabel(wt) {
+    for (var i=0;i<WORK_TYPE_GROUPS.length;i++) {
+        var g=WORK_TYPE_GROUPS[i];
+        for (var j=0;j<g.items.length;j++) {
+            if (g.items[j].value===wt) return g.items[j].label;
+        }
+    }
+    return wt||"";
+}
+
+function buildCrumbBarHTML() {
+    var chips=[];
+    if (wizardState.machine)
+        chips.push(wizardState.machine);
+    if (wizardState.workType) {
+        var wl=wizardState.workType==="Tube"?"チューブ":getWorkTypeShortLabel(wizardState.workType);
+        chips.push(wl);
+    }
+    if (wizardState.workType==="Tube"&&wizardState.tubeSpec)
+        chips.push(wizardState.tubeSpec+(wizardState.tubeLength?" "+wizardState.tubeLength+"mm":""));
+    if (wizardState.internalStyle)
+        chips.push(STYLE_LABELS_SHORT[wizardState.internalStyle]||wizardState.internalStyle);
+    if (wizardState.ateLength)
+        chips.push("アテ "+wizardState.ateLength);
+    if (wizardState.maxOD)
+        chips.push("最大径 "+wizardState.maxOD);
+
+    // バッジ（M99P100等）
+    var badges=[];
+    if (wizardState.m99Mode==="on")    badges.push("M99P100");
+    if (wizardState.m99Mode==="x50u8") badges.push("X50.U8");
+
+    if (chips.length===0&&badges.length===0) return "";
+
+    var h='<div class="wiz-crumb-bar">';
+    for (var i=0;i<chips.length;i++) {
+        if (i>0) h+='<span class="wiz-crumb-sep">›</span>';
+        h+='<span class="wiz-crumb">'+escapeHtml(chips[i])+'</span>';
+    }
+    for (var j=0;j<badges.length;j++) {
+        h+='<span class="wiz-crumb-sep">·</span>';
+        h+='<span class="wiz-crumb wiz-crumb--badge">'+escapeHtml(badges[j])+'</span>';
+    }
+    h+='</div>';
+    return h;
+}
+
 function buildProgressHTML(cur,tot) {
-    var h='<div class="wiz-prog-steps">';
+    var h=buildCrumbBarHTML();
+    h+='<div class="wiz-prog-steps">';
     for (var i=1;i<=tot;i++) {
         var c=i<cur?"done":i===cur?"active":"";
         h+='<div class="wiz-prog-dot '+c+'"></div>';
@@ -286,8 +324,8 @@ function buildYoseDetailScreen() {
         .map(function(o){return card(o.v,o.l,"select-yose-method",wizardState.yoseMethod===o.v,"wiz-card--sm");}).join("");
     var angleCards=["75","60","45"].map(function(a){return card(a,a+"度","select-yose-angle",wizardState.yoseAngle===a,"wiz-card--sm");}).join("");
     var relayFields=isRelay
-        ?'<label class="wiz-lbl" for="yose-total-len">全長 (mm)</label><input class="wiz-input" id="yose-total-len" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yoseTotalLength)+'" placeholder="例: 85" />'
-         +'<label class="wiz-lbl" for="yose-partner-depth">相手径深さ (mm)</label><input class="wiz-input" id="yose-partner-depth" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yosePartnerDepth)+'" placeholder="例: 12" />'
+        ?'<label class="wiz-lbl" for="yose-total-len">全長 (mm)</label><input class="wiz-input" id="yose-total-len" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yoseTotalLength)+'" />'
+         +'<label class="wiz-lbl" for="yose-partner-depth">相手径深さ (mm)</label><input class="wiz-input" id="yose-partner-depth" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yosePartnerDepth)+'" />'
         :"";
     return '<div class="wiz-question">'
         +'<h2 class="wiz-q-title">'+(isRelay?"ヨセ中継":"ヨセ")+' の詳細を入力してください</h2>'
@@ -295,7 +333,7 @@ function buildYoseDetailScreen() {
         +'<label class="wiz-lbl">加工方法</label><div class="wiz-grid wiz-grid--2">'+methodCards+'</div>'
         +'<label class="wiz-lbl">テーパ角度</label><div class="wiz-grid wiz-grid--3">'+angleCards+'</div>'
         +'<label class="wiz-lbl" for="yose-d">相手径 Φd (mm)</label>'
-        +'<input class="wiz-input" id="yose-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yoseD)+'" placeholder="例: 4.0" />'
+        +'<input class="wiz-input" id="yose-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yoseD)+'" />'
         +relayFields+'</div>'
         +'<button class="wiz-btn-primary" data-action="next-yose">次へ →</button></div>';
 }
@@ -326,7 +364,7 @@ function buildAteLengthScreen() {
     return '<div class="wiz-question"><h2 class="wiz-q-title">アテ長さを入力してください</h2>'
         +'<div class="wiz-presets">'+presets+'</div>'
         +'<div class="wiz-form"><label class="wiz-lbl" for="ate-input">直接入力 (mm)</label>'
-        +'<input class="wiz-input wiz-input--lg" id="ate-input" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.ateLength)+'" placeholder="例: 42.5" /></div>'
+        +'<input class="wiz-input wiz-input--lg" id="ate-input" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.ateLength)+'" /></div>'
         +'<button class="wiz-btn-primary" data-action="next-atelength">次へ →</button></div>';
 }
 
@@ -346,7 +384,7 @@ function buildMaxODScreen() {
               :'<p class="calc-hint calc-hint--warn">角形アテ（42.5 / 41 / 39.5 / 37.5 / 33.25 / 28.5）を選んだ場合のみ使用できます</p>')+'</div>';
 
     // 計算式テキスト（モードに応じて切替、this値を使用ボタンの直上）
-    var formulaMap={normal:"√(A² + B²)",eccentric:"√((A×2)² + (B×2)²)",corner:"√((W/2+H)×2)² + W²)",ate:""};
+    var formulaMap={normal:"√(A² + B²)",eccentric:"√((A×2)² + (B×2)²)",corner:"√(((W/2+H)×2)² + W²)",ate:""};
     var formulaHtml=formulaMap[calcMode]?'<p class="calc-formula-label">'+formulaMap[calcMode]+'</p>':"";
 
     // M99P100（Tube以外）— 自動計算ツールの下に配置
@@ -361,7 +399,7 @@ function buildMaxODScreen() {
     return '<div class="wiz-question"><h2 class="wiz-q-title">外径最大径を入力してください</h2>'
         +'<p class="wiz-q-sub">ワーク外径の最大値 (mm)</p>'
         +'<div class="wiz-form">'
-        +'<input class="wiz-input wiz-input--hero validate-positive" id="maxod-direct-input" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.maxOD)+'" placeholder="例: 30.5" autofocus />'
+        +'<input class="wiz-input wiz-input--hero validate-positive" id="maxod-direct-input" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.maxOD)+'" autofocus />'
         +'</div>'
         +'<details class="wiz-calc-details"><summary class="wiz-calc-summary">自動計算ツール ▼</summary>'
         +'<div class="wiz-calc-body"><div class="wiz-grid wiz-grid--4">'+modeCards+'</div>'
@@ -379,19 +417,19 @@ function svgArrows(pfx) {
         +'<marker id="'+pfx+'-e" orient="auto" markerWidth="7" markerHeight="7" refX="7" refY="3.5"><path d="M0,0 L7,3.5 L0,7 Z" fill="#445"/></marker></defs>';
 }
 /* SVG foreignObject ラッパー（SVG内入力欄）
-   固定サイズ: 高さ22px（フォント11相当）・幅60px（半角5桁＋余白）*/
-function svgFO(x,y,_w,_h,id,val,ph) {
-    var W=60, H=22;
+   固定サイズ: 高さ28px（フォント11px + padding + border 込み）・幅60px（半角5桁＋余白）*/
+function svgFO(x,y,_w,_h,id,val) {
+    var W=60, H=28;
     return '<foreignObject x="'+x+'" y="'+y+'" width="'+W+'" height="'+H+'">'
         +'<input xmlns="http://www.w3.org/1999/xhtml" type="text" id="'+id+'" class="calc-field svg-input validate-positive"'
-        +' value="'+escapeHtml(val)+'" placeholder="'+escapeHtml(ph)+'" inputmode="decimal" />'
+        +' value="'+escapeHtml(val)+'" inputmode="decimal" />'
         +'</foreignObject>';
 }
 
 /* 通常モード SVG: 矩形ワーク、対角=最大径、A=幅、B=高さ */
 function buildSVGNormal() {
     var p="svgn";
-    return '<svg class="calc-svg" viewBox="0 0 265 228" role="img" aria-label="通常モード図解">'
+    return '<svg class="calc-svg" viewBox="-53 0 287 228" role="img" aria-label="通常モード図解">'
         +svgArrows(p)
         // ワーク矩形
         +'<rect x="5" y="5" width="155" height="150" fill="#161c28" stroke="#2a3550" stroke-width="1.5" rx="2"/>'
@@ -402,19 +440,19 @@ function buildSVGNormal() {
         +'<line x1="5" y1="168" x2="160" y2="168" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
         +'<text x="82" y="183" fill="#7a8fa8" font-size="11" text-anchor="middle">母材幅 A</text>'
         // A 入力欄
-        +svgFO(52,190,60,22,"calc-stock-a",wizardState.valStockA,"43.0")
+        +svgFO(52,190,60,22,"calc-stock-a",wizardState.valStockA)
         // B 寸法矢印（右）
         +'<line x1="172" y1="5" x2="172" y2="155" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
-        +'<text x="180" y="72" fill="#7a8fa8" font-size="11">母材幅 B</text>'
+        +'<text x="175" y="72" fill="#7a8fa8" font-size="11">母材幅 B</text>'
         // B 入力欄
-        +svgFO(180,79,60,22,"calc-stock-b",wizardState.valStockB,"43.0")
+        +svgFO(174,79,60,22,"calc-stock-b",wizardState.valStockB)
         +'</svg>';
 }
 
 /* 偏心モード SVG: 矩形ワーク、赤=旋削中心、青=偏心穴軸、A=横距離、B=縦距離 */
 function buildSVGEccentric() {
     var p="svge";
-    return '<svg class="calc-svg" viewBox="0 0 275 228" role="img" aria-label="偏心モード図解">'
+    return '<svg class="calc-svg" viewBox="-56 0 285 228" role="img" aria-label="偏心モード図解">'
         +svgArrows(p)
         // ワーク矩形
         +'<rect x="0" y="0" width="160" height="155" fill="#161c28" stroke="#2a3550" stroke-width="1.5" rx="2"/>'
@@ -429,33 +467,35 @@ function buildSVGEccentric() {
         +'<line x1="80" y1="170" x2="80" y2="164" stroke="#445" stroke-width="1"/>'
         +'<line x1="0" y1="168" x2="80" y2="168" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
         +'<text x="40" y="183" fill="#7a8fa8" font-size="11" text-anchor="middle">距離 A（横）</text>'
-        +svgFO(10,190,60,22,"calc-ecc-a",wizardState.valEccA,"15.0")
+        +svgFO(10,190,60,22,"calc-ecc-a",wizardState.valEccA)
         // B 寸法（上端→穴軸、垂直）
         +'<line x1="168" y1="0" x2="162" y2="0" stroke="#445" stroke-width="1"/>'
         +'<line x1="168" y1="100" x2="162" y2="100" stroke="#445" stroke-width="1"/>'
         +'<line x1="166" y1="0" x2="166" y2="100" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
-        +'<text x="174" y="36" fill="#7a8fa8" font-size="11">距離 B（縦）</text>'
-        +svgFO(174,42,60,22,"calc-ecc-b",wizardState.valEccB,"20.0")
+        +'<text x="170" y="36" fill="#7a8fa8" font-size="11">距離 B（縦）</text>'
+        +svgFO(169,42,60,22,"calc-ecc-b",wizardState.valEccB)
         +'</svg>';
 }
 
-/* 角ありモード SVG: 大きな下部矩形（幅W）の上に小矩形（高さH）が中央に乗った形状 */
+/* 角ありモード SVG: 大きな下部矩形（幅W）の上に小矩形（高さH）が中央に乗った形状
+   viewBox を通常/偏心モードと同一（-53 0 287 228）にすることで
+   拡大倍率・テキスト・入力欄の見た目サイズを揃える */
 function buildSVGCorner() {
     var p="svgc";
-    return '<svg class="calc-svg" viewBox="0 0 245 255" role="img" aria-label="角ありモード図解">'
+    return '<svg class="calc-svg" viewBox="-53 0 287 228" role="img" aria-label="角ありモード図解">'
         +svgArrows(p)
-        // 下部大矩形（母材幅 W）
-        +'<rect x="10" y="100" width="140" height="90" fill="#161c28" stroke="#2a3550" stroke-width="1.5"/>'
-        // 上部小矩形（追加高さ H）
-        +'<rect x="45" y="10" width="70" height="90" fill="#161c28" stroke="#2a3550" stroke-width="1.5"/>'
+        // 下部大矩形（母材幅 W）— x=5〜160, y=45〜155（小矩形分だけ上に伸ばす）
+        +'<rect x="5" y="45" width="155" height="110" fill="#161c28" stroke="#2a3550" stroke-width="1.5"/>'
+        // 上部小矩形（追加高さ H）— 正方形(22×22), 中央配置, 底辺=下部矩形上端(y=45)
+        +'<rect x="72" y="23" width="22" height="22" fill="#161c28" stroke="#2a3550" stroke-width="1.5"/>'
         // 母材幅 W 寸法矢印（下）
-        +'<line x1="10" y1="205" x2="150" y2="205" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
-        +'<text x="80" y="219" fill="#7a8fa8" font-size="11" text-anchor="middle">母材幅 W</text>'
-        +svgFO(50,224,60,22,"calc-corn-w",wizardState.valCornW,"43.0")
-        // 追加高さ H 寸法矢印（右）
-        +'<line x1="162" y1="10" x2="162" y2="100" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
-        +'<text x="170" y="48" fill="#7a8fa8" font-size="10">追加高さ H</text>'
-        +svgFO(170,57,60,22,"calc-corn-h",wizardState.valCornH,"11.0")
+        +'<line x1="5" y1="168" x2="160" y2="168" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
+        +'<text x="82" y="183" fill="#7a8fa8" font-size="11" text-anchor="middle">母材幅 W</text>'
+        +svgFO(52,190,60,22,"calc-corn-w",wizardState.valCornW)
+        // 追加高さ H 寸法矢印（右）— y=23〜45（小矩形の高さ分のみ）、中点 y=34
+        +'<line x1="172" y1="23" x2="172" y2="45" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
+        +'<text x="175" y="29" fill="#7a8fa8" font-size="11">追加高さ H</text>'
+        +svgFO(174,31,60,22,"calc-corn-h",wizardState.valCornH)
         +'</svg>';
 }
 
@@ -478,8 +518,8 @@ function buildDepthsScreen() {
     if (!isManual && autoVal!==null) {
         // 自動計算値を表示（readonly）
         drillHtml='<label class="wiz-lbl">ドリル深さ</label>'
-            +'<div class="depth-auto-row">'
-            +'<span class="depth-auto-val">'+escapeHtml(autoVal)+' mm <span class="depth-auto-badge">自動計算</span></span>'
+            +'<div class="depth-auto-row" id="drill-depth-auto-row">'
+            +'<span class="depth-auto-val" id="drill-depth-auto-val">'+escapeHtml(autoVal)+' mm <span class="depth-auto-badge">自動計算</span></span>'
             +'<button class="depth-manual-link" data-action="toggle-drill-manual">手動で変更</button>'
             +'</div>';
     } else {
@@ -489,7 +529,7 @@ function buildDepthsScreen() {
         }).join("");
         drillHtml='<label class="wiz-lbl">ドリル深さ (mm)</label>'
             +'<input class="wiz-input depth-cross-field" id="drill-depth" type="text" inputmode="decimal"'
-            +' value="'+escapeHtml(wizardState.drillDepth)+'" placeholder="例: 18.0" />'
+            +' value="'+escapeHtml(wizardState.drillDepth)+'" />'
             +'<div class="depth-quick-row">'+quickBtns+'</div>'
             +(autoVal!==null?'<button class="depth-manual-link" data-action="toggle-drill-manual">自動計算に戻す（'+escapeHtml(autoVal)+'mm）</button>':"");
     }
@@ -506,7 +546,7 @@ function buildDepthsScreen() {
     } else {
         idHtml='<label class="wiz-lbl" for="id-depth">'+idLabel+'</label>'
             +'<input class="wiz-input depth-cross-field" id="id-depth" type="text" inputmode="decimal"'
-            +' value="'+escapeHtml(wizardState.idDepth)+'" placeholder="'+(isCross?"例: 20.0 (IP)":"例: 15.0")+'" />';
+            +' value="'+escapeHtml(wizardState.idDepth)+'" />';
     }
 
     // 交差穴: IP（内径交差点）+ 相手径 + CP表示 + CrossSmall仕上げ深さ参考値
@@ -515,14 +555,14 @@ function buildDepthsScreen() {
         var cpComp=computeCP(wizardState.idDepth,wizardState.valPartnerD);
         var finishDepthHint="";
         if (st==="CrossSmall" && cpComp) {
-            var fd=computeCrossSmallFinishDepthHint(cpComp);
+            var fd=computeCrossSmallFinishDepthHint(cpComp, wizardState.valPartnerD);
             if (fd!==null) finishDepthHint='<p class="depth-finish-hint">内径仕上深さ参考値: '+escapeHtml(fd)+' mm</p>';
         }
         cpHtml='<label class="wiz-lbl" for="depth-partner-d">相手径 Φ (mm)</label>'
-            +'<input class="wiz-input depth-cross-field" id="depth-partner-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valPartnerD)+'" placeholder="例: 6.0" />'
+            +'<input class="wiz-input depth-cross-field" id="depth-partner-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valPartnerD)+'" />'
             +'<label class="wiz-lbl">CP値 = IP − 相手径/2（自動計算）</label>'
             +'<input class="wiz-input" id="depth-cp-display" type="text" readonly value="'+escapeHtml(cpComp)+'"'
-            +' placeholder="IP・相手径を入力すると自動計算" style="background:#1a2030;color:#7ec8e3;font-weight:bold;" />'
+            +' style="background:#1a2030;color:#7ec8e3;font-weight:bold;" />'
             +finishDepthHint;
     }
 
@@ -570,14 +610,14 @@ function buildDrawNumScreen() {
     return '<div class="wiz-question"><h2 class="wiz-q-title">図番・作成者を入力してください</h2>'
         +'<div class="wiz-form"><label class="wiz-lbl">図番</label>'
         +'<div class="wiz-drawnum-row"><span class="wiz-fix">PM-</span>'
-        +'<input class="wiz-input wiz-input--sm" id="v1a" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.drawNumA)+'" placeholder="12345" />'
+        +'<input class="wiz-input wiz-input--sm" id="v1a" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.drawNumA)+'" />'
         +'<span class="wiz-fix">-</span>'
         +'<input class="wiz-input wiz-input--xs" id="v1b" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.drawNumB)+'" />'
         +'<select class="wiz-select" id="v1c">'+revOpts+'</select>'
         +'<span class="wiz-fix">=No,</span>'
         +'<input class="wiz-input wiz-input--xs" id="v2" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.processNum)+'" /></div>'
         +'<label class="wiz-lbl" for="worker-name">作成者</label>'
-        +'<input class="wiz-input" id="worker-name" type="text" value="'+escapeHtml(wizardState.workerName)+'" placeholder="半角英数字" />'
+        +'<input class="wiz-input" id="worker-name" type="text" value="'+escapeHtml(wizardState.workerName)+'" />'
         +'<div class="wiz-author-presets">'+authorBtns+'</div></div>'
         +'<button class="wiz-btn-primary" data-action="next-drawnum">Gコードを生成する →</button></div>';
 }
@@ -595,15 +635,31 @@ function computeCP(idDepth,partnerD) {
     return (d-p/2).toFixed(3);
 }
 
-/* ドリル深さ自動計算（logic.js の関数を使用） */
+/* ドリル深さ自動計算（logic.js の関数を使用）
+   DOM が存在する場合は DOM の現在値を優先して参照する */
 function computeDrillDepthAuto() {
     var wt=wizardState.workType, st=wizardState.internalStyle;
-    var cp=parseFloat(wizardState.cpVal), idD=parseFloat(wizardState.idDepth);
+
+    // 内径深さ: DOM 優先（同一画面でリアルタイム計算するため）
+    var idDomEl=document.getElementById("id-depth");
+    var idD=parseFloat(idDomEl?idDomEl.value:wizardState.idDepth);
+
+    // CP: DOM の ip/partnerD から直接計算（wizardState.cpVal は確定時のみ更新されるため）
+    var ipVal=idDomEl?idDomEl.value:wizardState.idDepth;
+    var pdDomEl=document.getElementById("depth-partner-d");
+    var pdVal=pdDomEl?pdDomEl.value:wizardState.valPartnerD;
+    var cpLive=computeCP(ipVal,pdVal);
+    var cp=parseFloat(cpLive||wizardState.cpVal);
+
+    // Hirazoko / Ichimonji: logic.js は idDepth + 0.1 を finalDrillDepth に使用する
+    if (st==="Hirazoko"||st==="Ichimonji") {
+        return !isNaN(idD) ? (idD+0.1).toFixed(3) : null;
+    }
     // M12/G18small + CrossSmall: cp + 1.2 + 1
     if ((isM12Like(wt)||isG18Small(wt))&&st==="CrossSmall") {
         return !isNaN(cp) ? (cp+1.2+1).toFixed(3) : null;
     }
-    // 他の CrossSmall/CrossBig: calcSpecialDrillZ(style, drillDia, cp)
+    // 他の CrossSmall: calcSpecialDrillZ(style, drillDia, cp)
     if (isCrossStyle(st)) {
         if (typeof calcSpecialDrillZ==="undefined"||typeof DRILL_DIA_MAP==="undefined") return null;
         var dd=DRILL_DIA_MAP[wt]||0; if (!dd||isNaN(cp)) return null;
@@ -640,10 +696,12 @@ function computeIdDepthForRelay() {
     return m.relayIdDepth.toFixed(3);
 }
 
-/* CrossSmall 仕上げ深さ参考値（グレー表示用） */
-function computeCrossSmallFinishDepthHint(cpVal) {
+/* CrossSmall 仕上げ深さ参考値（グレー表示用）
+   partnerD: DOMの現在値を呼び出し元から渡す（wizardState.valPartnerDは確定前は古い値のため） */
+function computeCrossSmallFinishDepthHint(cpVal, partnerD) {
     if (typeof calcCrossSmallFinishDepth==="undefined") return null;
-    var d=calcCrossSmallFinishDepth({cpVal:cpVal,valPartnerD:wizardState.valPartnerD,workType:wizardState.workType,tubeSpec:wizardState.tubeSpec});
+    var pd = (partnerD !== undefined) ? partnerD : wizardState.valPartnerD;
+    var d=calcCrossSmallFinishDepth({cpVal:cpVal,valPartnerD:pd,workType:wizardState.workType,tubeSpec:wizardState.tubeSpec});
     return (isNaN(d)||!isFinite(d))?null:d.toFixed(3);
 }
 
@@ -674,12 +732,31 @@ function updateCPDisplay() {
     var cpV=computeCP(id,pd);
     var hint=document.querySelector(".depth-finish-hint");
     if (hint&&wizardState.internalStyle==="CrossSmall"&&cpV) {
-        var fd=computeCrossSmallFinishDepthHint(cpV);
+        var fd=computeCrossSmallFinishDepthHint(cpV, pd);
         hint.textContent=fd?"内径仕上深さ参考値: "+fd+" mm":"";
+    }
+    // drillDepth 自動計算表示も更新
+    updateDrillDepthDisplay();
+}
+/* drillDepth 自動計算バッジ（#drill-depth-auto-val）をリアルタイムで更新 */
+function updateDrillDepthDisplay() {
+    if (wizardState.drillDepthManual) return;
+    var autoRow=document.getElementById("drill-depth-auto-row");
+    var autoValEl=document.getElementById("drill-depth-auto-val");
+    if (!autoRow||!autoValEl) return; // 手動入力モード（#drill-depth-auto-row が存在しない）
+    var newVal=computeDrillDepthAuto();
+    if (newVal!==null) {
+        autoValEl.innerHTML=escapeHtml(newVal)+' mm <span class="depth-auto-badge">自動計算</span>';
+        wizardState.drillDepth=newVal;
+    } else {
+        autoValEl.innerHTML='<span style="color:var(--text-sub)">入力値を確認中...</span>';
     }
 }
 function bindDepthInputs() {
-    document.querySelectorAll(".depth-cross-field").forEach(function(inp){inp.addEventListener("input",updateCPDisplay);});
+    // CP + drillDepth 連動: 全 depth-cross-field + id-depth を監視
+    document.querySelectorAll(".depth-cross-field, #id-depth").forEach(function(inp){
+        inp.addEventListener("input",updateCPDisplay);
+    });
 }
 function initDrillAutoCalc() {
     // 自動計算値をstateに書き込む（手動でない場合）
@@ -714,8 +791,17 @@ function importStateJson() {
                 var data=JSON.parse(e.target.result);
                 if (!data||data._type!=="nc-gui-v2") { showToast("NC v2 入力JSONではありません"); return; }
                 Object.keys(wizardState).forEach(function(k){ if (k in data&&!k.startsWith("_")) wizardState[k]=data[k]; });
-                // 戻るスタックを設定してQ7(図番)から進めるようにする
-                screenStack=["start","q-machine","q-worktype","q-style","q-atelength","q-maxod","q-depths"];
+                // 戻るスタックをインポートデータのパスに応じて動的に構築
+                var stack=["start","q-machine","q-worktype"];
+                if (wizardState.workType==="Tube") {
+                    stack.push("q-tube-spec","q-tube-length");
+                } else {
+                    stack.push("q-style");
+                    if (wizardState.internalStyle==="YoseRelay"||wizardState.internalStyle==="Yose") stack.push("q-yose-detail");
+                    if (isMHWorkType(wizardState.workType)||wizardState.workType==="G12B_G_ST_12175_8") stack.push("q-options");
+                }
+                stack.push("q-atelength","q-maxod","q-depths");
+                screenStack=stack;
                 renderScreen("q-drawnum");
                 showToast("インポート完了: "+file.name);
             } catch(err) { showToast("読み込み失敗: "+err.message); }
@@ -779,7 +865,7 @@ function handleAction(action, value) {
             ["normal","eccentric","corner","ate"].forEach(function(m){var el=document.getElementById("cp-"+m);if(el)el.classList.toggle("calc-panel--hidden",m!==value);});
             // 計算式ラベルを更新
             (function(){
-                var fmap={normal:"√(A² + B²)",eccentric:"√((A×2)² + (B×2)²)",corner:"√((W/2+H)×2)² + W²)",ate:""};
+                var fmap={normal:"√(A² + B²)",eccentric:"√((A×2)² + (B×2)²)",corner:"√(((W/2+H)×2)² + W²)",ate:""};
                 var fl=document.querySelector(".calc-formula-label");
                 if(fl){fl.textContent=fmap[value]||"";}
             })();
@@ -802,6 +888,13 @@ function handleAction(action, value) {
             break;
         case "next-maxod":
             wizardState.maxOD=(document.getElementById("maxod-direct-input")||{value:""}).value.trim();
+            // 自動計算ツールの入力値を「この値を使用」を押さなくても保存する
+            wizardState.valStockA=(document.getElementById("calc-stock-a")||{value:""}).value;
+            wizardState.valStockB=(document.getElementById("calc-stock-b")||{value:""}).value;
+            wizardState.valEccA  =(document.getElementById("calc-ecc-a")||{value:""}).value;
+            wizardState.valEccB  =(document.getElementById("calc-ecc-b")||{value:""}).value;
+            wizardState.valCornW =(document.getElementById("calc-corn-w")||{value:""}).value;
+            wizardState.valCornH =(document.getElementById("calc-corn-h")||{value:""}).value;
             if(!wizardState.maxOD){showToast("外径最大径を入力してください");return;}
             advance("q-maxod"); break;
         case "toggle-drill-manual": {
@@ -815,7 +908,7 @@ function handleAction(action, value) {
                 wizardState.drillDepthManual=true;
                 if (curVal) wizardState.drillDepth=curVal;
             }
-            renderScreen("q-depths"); screenStack.pop(); break;
+            renderScreen("q-depths"); break;
         }
         case "quick-drill":
             wizardState.drillDepth=value;
@@ -837,9 +930,6 @@ function handleAction(action, value) {
             wizardState.g18CrossMethod=value;
             document.querySelectorAll("[data-action='select-g18-cross']").forEach(function(b){b.classList.toggle("selected",b.dataset.value===value);});
             break;
-        case "toggle-oku-bite": {
-            var chk=document.getElementById("chk-oku-bite"); if(chk) wizardState.okuBiteEnabled=chk.checked; break;
-        }
         case "next-depths":
             // 自動計算値を最終確定
             if (!wizardState.drillDepthManual) {
@@ -880,13 +970,8 @@ function handleAction(action, value) {
             document.body.appendChild(a2);a2.click();document.body.removeChild(a2);URL.revokeObjectURL(url2);
             break;
         }
-        case "toggle-hl": toggleHL(value); break;
         case "export-json": exportStateJson(); break;
         case "import-json": importStateJson(); break;
-        case "open-debug":
-            if (typeof renderDebugPanel==="function") renderDebugPanel();
-            if (typeof openDebugPanel==="function") openDebugPanel();
-            break;
         case "restart":
             wizardState={machine:null,workType:null,tubeSpec:"",tubeLength:"",internalStyle:null,
                 yoseMethod:"2",yoseAngle:"60",yoseD:"",yoseTotalLength:"",yosePartnerDepth:"",
@@ -962,23 +1047,12 @@ function buildFileName() {
     return "PM-"+a+"-"+b+c+"=No,"+(wizardState.processNum||"1")+"_"+(wizardState.workerName||"")+".txt";
 }
 
-/* Gコード各行を .gc-line スパンで囲む（preview.js の dblclick sync に必要） */
-function wrapGCodeLines(html) {
-    return html.split("\n").map(function(line, i) {
-        return '<span class="gc-line" data-ln="'+i+'">'+line+'</span>';
-    }).join("\n");
-}
-
 function runGeneration() {
     currentInternalStyle=wizardState.internalStyle||"";
     var input=buildInputFromState();
     var result=generateGCode(input,wizardState.machine);
     var wrap=document.getElementById("result-wrap"); if(!wrap) return;
     var plain=result.plainText||"";
-
-    // preview.js が参照するグローバルに平文 Gコードをセット
-    _ncLastPlainGCode = plain;
-    window._ncLastPlainGCode = plain;
 
     var rows=[
         ["機械",wizardState.machine],["ワーク種別",wizardState.workType],
@@ -990,23 +1064,10 @@ function runGeneration() {
         ["作成者",wizardState.workerName],
     ].map(function(r){return '<div class="wiz-sum-row"><span class="wiz-sum-key">'+escapeHtml(r[0])+'</span><span class="wiz-sum-val">'+escapeHtml(r[1]||"")+'</span></div>';}).join("");
 
-    // ハイライトフィルターボタン
-    var hlBtns=['calc','input','machine'].map(function(k){
-        var lbl=k==='calc'?"計算値":k==='input'?"入力値":"機械コード";
-        return '<button class="wiz-hl-btn'+(_hlState[k]?" active":"")+'" data-action="toggle-hl" data-value="'+k+'">'+lbl+'</button>';
-    }).join("");
-
-    // 各行を .gc-line で囲む
-    var wrappedHtml=wrapGCodeLines(result.displayHtml||escapeHtml(plain));
-
     wrap.innerHTML=
         '<details class="wiz-summary"><summary>入力内容を確認</summary>'+rows+'</details>'
-        +'<div class="wiz-hl-bar"><span class="wiz-hl-lbl">色表示:</span>'+hlBtns+'</div>'
         +'<div class="wiz-gcode-wrap">'
-        +'<pre id="resultArea" class="wiz-gcode" data-plain="'+escapeHtml(plain)+'">'+wrappedHtml+'</pre>'
-        +'</div>'
-        +'<div id="previewContainer" class="wiz-preview-wrap" style="display:none">'
-        +'<canvas id="simCanvas" class="wiz-preview-canvas"></canvas>'
+        +'<pre id="resultArea" class="wiz-gcode" data-plain="'+escapeHtml(plain)+'">'+(result.displayHtml||escapeHtml(plain))+'</pre>'
         +'</div>'
         +'<div class="wiz-result-actions">'
         +'<button class="wiz-btn-secondary" data-action="copy-gcode">コピー</button>'
@@ -1014,20 +1075,8 @@ function runGeneration() {
         +'<button class="wiz-btn-secondary" data-action="export-json">入力値保存 (JSON)</button>'
         +'<button class="wiz-btn-outline"   data-action="restart">最初からやり直す</button>'
         +'</div>';
-
-    applyHLFilters();
-    setTimeout(function() { if (typeof drawPreview==="function") drawPreview(true); }, 120);
 }
 
-function applyHLFilters() {
-    var el=document.getElementById("resultArea"); if(!el) return;
-    ['calc','input','machine'].forEach(function(k){ el.classList.toggle("h-off-"+k,!_hlState[k]); });
-}
-function toggleHL(attr) {
-    _hlState[attr]=!_hlState[attr];
-    applyHLFilters();
-    document.querySelectorAll("[data-action='toggle-hl'][data-value='"+attr+"']").forEach(function(b){b.classList.toggle("active",_hlState[attr]);});
-}
 
 // ========== Section 12: バリデーション ==========
 
