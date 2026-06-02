@@ -439,27 +439,29 @@ function buildSVGEccentric() {
         +'</svg>';
 }
 
-/* 角ありモード SVG: 幅W×(W+2H)の矩形、最大径=対角線 */
+/* 角ありモード SVG: 大きな下部矩形（幅W）の上に小矩形（高さH）が中央に乗った形状 */
 function buildSVGCorner() {
     var p="svgc";
-    return '<svg class="calc-svg" viewBox="0 0 265 240" role="img" aria-label="角ありモード図解">'
+    // 下部大矩形: x=10, y=100, w=140, h=90
+    // 上部小矩形: x=45, y=10,  w=70,  h=90  (中央揃え)
+    // 最大径対角: (10,10) → (150,190)
+    return '<svg class="calc-svg" viewBox="0 0 245 255" role="img" aria-label="角ありモード図解">'
         +svgArrows(p)
-        // 外形 (W wide, W+2H tall → 表示比 150×165)
-        +'<rect x="5" y="5" width="155" height="165" fill="#161c28" stroke="#2a3550" stroke-width="1.5" rx="2"/>'
-        // 最大径 対角線
-        +'<line x1="5" y1="5" x2="160" y2="170" stroke="#4a9eff" stroke-width="2"/>'
-        +'<text x="70" y="85" fill="#4a9eff" font-size="11" text-anchor="middle" transform="rotate(48,70,85)">最大径</text>'
-        // H: 上端から中央の補助線（H の意味を示す）
-        +'<line x1="82" y1="5" x2="82" y2="87" stroke="#8866ff" stroke-width="1" stroke-dasharray="4,3"/>'
-        +'<text x="62" y="50" fill="#8866ff" font-size="10">W/2+H</text>'
-        // W 寸法矢印（下）
-        +'<line x1="5" y1="183" x2="160" y2="183" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
-        +'<text x="82" y="197" fill="#7a8fa8" font-size="11" text-anchor="middle">母材幅 W</text>'
-        +svgFO(52,202,60,22,"calc-corn-w",wizardState.valCornW,"43.0")
-        // H 寸法矢印（右）
-        +'<line x1="172" y1="5" x2="172" y2="87" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
-        +'<text x="178" y="34" fill="#7a8fa8" font-size="10">追加高さ H</text>'
-        +svgFO(178,40,60,22,"calc-corn-h",wizardState.valCornH,"11.0")
+        // 下部大矩形（母材幅 W）
+        +'<rect x="10" y="100" width="140" height="90" fill="#cdd4e0" stroke="#5a7090" stroke-width="1.5"/>'
+        // 上部小矩形（追加高さ H）
+        +'<rect x="45" y="10" width="70" height="90" fill="#cdd4e0" stroke="#5a7090" stroke-width="1.5"/>'
+        // 最大径 対角線（バウンディングボックス角）
+        +'<line x1="10" y1="10" x2="150" y2="190" stroke="#4a9eff" stroke-width="2"/>'
+        +'<text x="63" y="93" fill="#4a9eff" font-size="11" text-anchor="middle" transform="rotate(52,63,93)">最大径</text>'
+        // 母材幅 W 寸法矢印（下）
+        +'<line x1="10" y1="205" x2="150" y2="205" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
+        +'<text x="80" y="219" fill="#7a8fa8" font-size="11" text-anchor="middle">母材幅 W</text>'
+        +svgFO(50,224,60,22,"calc-corn-w",wizardState.valCornW,"43.0")
+        // 追加高さ H 寸法矢印（右）
+        +'<line x1="162" y1="10" x2="162" y2="100" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
+        +'<text x="170" y="48" fill="#7a8fa8" font-size="10">追加高さ H</text>'
+        +svgFO(170,57,60,22,"calc-corn-h",wizardState.valCornH,"11.0")
         +'</svg>';
 }
 
