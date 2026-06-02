@@ -439,24 +439,25 @@ function buildSVGEccentric() {
         +'</svg>';
 }
 
-/* 角ありモード SVG: 大きな下部矩形（幅W）の上に小矩形（高さH）が中央に乗った形状（2倍サイズ） */
+/* 角ありモード SVG: 大きな下部矩形（幅W）の上に小矩形（高さH）が中央に乗った形状（2倍サイズ）
+   viewBox "0 0 490 520": 描画内容全体の幅×高さ（px単位のキャンバスサイズ）
+   座標を2倍にした分 viewBox も2倍に広げることで、表示サイズを変えずに解像度を上げている */
 function buildSVGCorner() {
     var p="svgc";
-    // 全座標を元の2倍: 下部 x=20,y=200,w=280,h=180 / 上部 x=90,y=20,w=140,h=180
     return '<svg class="calc-svg" viewBox="0 0 490 520" role="img" aria-label="角ありモード図解">'
         +svgArrows(p)
-        // 下部大矩形（母材幅 W）
+        // 下部大矩形（母材幅 W）: 元座標の2倍
         +'<rect x="20" y="200" width="280" height="180" fill="#161c28" stroke="#2a3550" stroke-width="2"/>'
-        // 上部小矩形（追加高さ H）
+        // 上部小矩形（追加高さ H）: 中央揃え
         +'<rect x="90" y="20" width="140" height="180" fill="#161c28" stroke="#2a3550" stroke-width="2"/>'
         // 母材幅 W 寸法矢印（下）
         +'<line x1="20" y1="408" x2="300" y2="408" stroke="#445" stroke-width="1.4" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
-        +'<text x="160" y="424" fill="#7a8fa8" font-size="13" text-anchor="middle">母材幅 W</text>'
-        +svgFO(130,432,60,22,"calc-corn-w",wizardState.valCornW,"43.0")
+        +'<text x="160" y="426" fill="#7a8fa8" font-size="14" text-anchor="middle">母材幅 W</text>'
+        +svgFO(130,434,60,22,"calc-corn-w",wizardState.valCornW,"43.0")
         // 追加高さ H 寸法矢印（右）
-        +'<line x1="316" y1="20" x2="316" y2="200" stroke="#445" stroke-width="1.4" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
-        +'<text x="326" y="100" fill="#7a8fa8" font-size="12">追加高さ H</text>'
-        +svgFO(326,112,60,22,"calc-corn-h",wizardState.valCornH,"11.0")
+        +'<line x1="324" y1="20" x2="324" y2="200" stroke="#445" stroke-width="1.4" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
+        +'<text x="334" y="98" fill="#7a8fa8" font-size="12">追加高さ H</text>'
+        +svgFO(334,108,60,22,"calc-corn-h",wizardState.valCornH,"11.0")
         +'</svg>';
 }
 
