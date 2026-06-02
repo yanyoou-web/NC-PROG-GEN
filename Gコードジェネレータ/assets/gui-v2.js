@@ -439,28 +439,24 @@ function buildSVGEccentric() {
         +'</svg>';
 }
 
-/* 角ありモード SVG: 大きな下部矩形（幅W）の上に小矩形（高さH）が中央に乗った形状 */
+/* 角ありモード SVG: 大きな下部矩形（幅W）の上に小矩形（高さH）が中央に乗った形状（2倍サイズ） */
 function buildSVGCorner() {
     var p="svgc";
-    // 下部大矩形: x=10, y=100, w=140, h=90
-    // 上部小矩形: x=45, y=10,  w=70,  h=90  (中央揃え)
-    // 最大径対角: (10,10) → (150,190)
-    return '<svg class="calc-svg" viewBox="0 0 245 255" role="img" aria-label="角ありモード図解">'
+    // 全座標を元の2倍: 下部 x=20,y=200,w=280,h=180 / 上部 x=90,y=20,w=140,h=180
+    return '<svg class="calc-svg" viewBox="0 0 490 520" role="img" aria-label="角ありモード図解">'
         +svgArrows(p)
         // 下部大矩形（母材幅 W）
-        +'<rect x="10" y="100" width="140" height="90" fill="#161c28" stroke="#2a3550" stroke-width="1.5"/>'
+        +'<rect x="20" y="200" width="280" height="180" fill="#161c28" stroke="#2a3550" stroke-width="2"/>'
         // 上部小矩形（追加高さ H）
-        +'<rect x="45" y="10" width="70" height="90" fill="#161c28" stroke="#2a3550" stroke-width="1.5"/>'
-        // 最大径 対角線
-        +'<line x1="10" y1="10" x2="150" y2="190" stroke="#4a9eff" stroke-width="2"/>'
+        +'<rect x="90" y="20" width="140" height="180" fill="#161c28" stroke="#2a3550" stroke-width="2"/>'
         // 母材幅 W 寸法矢印（下）
-        +'<line x1="10" y1="205" x2="150" y2="205" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
-        +'<text x="80" y="219" fill="#7a8fa8" font-size="11" text-anchor="middle">母材幅 W</text>'
-        +svgFO(50,224,60,22,"calc-corn-w",wizardState.valCornW,"43.0")
+        +'<line x1="20" y1="408" x2="300" y2="408" stroke="#445" stroke-width="1.4" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
+        +'<text x="160" y="424" fill="#7a8fa8" font-size="13" text-anchor="middle">母材幅 W</text>'
+        +svgFO(130,432,60,22,"calc-corn-w",wizardState.valCornW,"43.0")
         // 追加高さ H 寸法矢印（右）
-        +'<line x1="162" y1="10" x2="162" y2="100" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
-        +'<text x="170" y="48" fill="#7a8fa8" font-size="10">追加高さ H</text>'
-        +svgFO(170,57,60,22,"calc-corn-h",wizardState.valCornH,"11.0")
+        +'<line x1="316" y1="20" x2="316" y2="200" stroke="#445" stroke-width="1.4" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
+        +'<text x="326" y="100" fill="#7a8fa8" font-size="12">追加高さ H</text>'
+        +svgFO(326,112,60,22,"calc-corn-h",wizardState.valCornH,"11.0")
         +'</svg>';
 }
 
