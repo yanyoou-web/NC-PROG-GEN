@@ -448,12 +448,11 @@ function buildSVGCorner() {
     return '<svg class="calc-svg" viewBox="0 0 245 255" role="img" aria-label="角ありモード図解">'
         +svgArrows(p)
         // 下部大矩形（母材幅 W）
-        +'<rect x="10" y="100" width="140" height="90" fill="#cdd4e0" stroke="#5a7090" stroke-width="1.5"/>'
+        +'<rect x="10" y="100" width="140" height="90" fill="#161c28" stroke="#2a3550" stroke-width="1.5"/>'
         // 上部小矩形（追加高さ H）
-        +'<rect x="45" y="10" width="70" height="90" fill="#cdd4e0" stroke="#5a7090" stroke-width="1.5"/>'
-        // 最大径 対角線（バウンディングボックス角）
+        +'<rect x="45" y="10" width="70" height="90" fill="#161c28" stroke="#2a3550" stroke-width="1.5"/>'
+        // 最大径 対角線
         +'<line x1="10" y1="10" x2="150" y2="190" stroke="#4a9eff" stroke-width="2"/>'
-        +'<text x="63" y="93" fill="#4a9eff" font-size="11" text-anchor="middle" transform="rotate(52,63,93)">最大径</text>'
         // 母材幅 W 寸法矢印（下）
         +'<line x1="10" y1="205" x2="150" y2="205" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
         +'<text x="80" y="219" fill="#7a8fa8" font-size="11" text-anchor="middle">母材幅 W</text>'
