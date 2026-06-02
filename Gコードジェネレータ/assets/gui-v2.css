@@ -557,6 +557,7 @@ body {
     flex: 1;
 }
 .calc-result-preview--ready { color: var(--accent); font-weight: 700; }
+.calc-result-preview--right { text-align: right; }
 
 /* ---------- ヨセ角度カード（3列） ---------- */
 .wiz-grid--3 { grid-template-columns: repeat(3, 1fr); }
@@ -681,11 +682,11 @@ body {
 .svg-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(74,158,255,0.2); }
 .svg-input.wiz-input--invalid { border-color: var(--danger); }
 
-/* 計算式ラベル（この値を使用 ボタンの直上） */
+/* 計算式ラベル（この値を使用 ボタンの直上、右寄せ） */
 .calc-formula-label {
     font-size: 0.82rem;
     color: var(--text-sub);
-    text-align: center;
+    text-align: right;
     padding: 4px 0 2px;
     letter-spacing: 0.02em;
 }

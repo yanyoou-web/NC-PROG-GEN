@@ -367,7 +367,7 @@ function buildMaxODScreen() {
         +'<div class="wiz-calc-body"><div class="wiz-grid wiz-grid--4">'+modeCards+'</div>'
         +pN+pE+pC+pA
         +formulaHtml
-        +'<div class="calc-result-row"><div id="calc-result-preview" class="calc-result-preview"></div>'
+        +'<div class="calc-result-row"><div id="calc-result-preview" class="calc-result-preview calc-result-preview--right"></div>'
         +'<button class="wiz-btn-secondary" data-action="apply-maxod-calc">この値を使用</button></div></div></details>'
         +m99Html
         +'<button class="wiz-btn-primary" data-action="next-maxod">次へ →</button></div>';
@@ -663,8 +663,8 @@ function computeMaxOdResult() {
 function updateCalcPreview() {
     var el=document.getElementById("calc-result-preview"); if(!el) return;
     var r=computeMaxOdResult();
-    if (r!==null){el.textContent="計算結果: "+r+" mm";el.className="calc-result-preview calc-result-preview--ready";}
-    else{el.textContent="入力値を入力してください";el.className="calc-result-preview";}
+    if (r!==null){el.textContent="計算結果: "+r+" mm";el.className="calc-result-preview calc-result-preview--right calc-result-preview--ready";}
+    else{el.textContent="";el.className="calc-result-preview calc-result-preview--right";}
 }
 function bindCalcInputs() {
     document.querySelectorAll(".calc-field").forEach(function(inp){inp.addEventListener("input",updateCalcPreview);});
