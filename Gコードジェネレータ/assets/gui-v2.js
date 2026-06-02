@@ -336,34 +336,40 @@ function buildMaxODScreen() {
     var modeCards=[{v:"normal",l:"通常"},{v:"eccentric",l:"偏心"},{v:"corner",l:"角あり"},{v:"ate",l:"アテ長さから"}]
         .map(function(m){return '<button class="wiz-card wiz-card--sm'+(calcMode===m.v?" selected":"")+'" data-action="set-calc-mode" data-value="'+m.v+'">'+escapeHtml(m.l)+'</button>';}).join("");
 
-    // SVGパネル（入力欄を図の中に埋め込む）
-    var pN='<div id="cp-normal" class="calc-panel'+(calcMode!=="normal"?" calc-panel--hidden":"")+'">'+buildSVGNormal()+'<p class="calc-hint">√(A² + B²)</p></div>';
-    var pE='<div id="cp-eccentric" class="calc-panel'+(calcMode!=="eccentric"?" calc-panel--hidden":"")+'">'+buildSVGEccentric()+'<p class="calc-hint">√((A×2)² + (B×2)²)</p></div>';
-    var pC='<div id="cp-corner" class="calc-panel'+(calcMode!=="corner"?" calc-panel--hidden":"")+'">'+buildSVGCorner()+'<p class="calc-hint">√((W/2+H)×2)² + W²)</p></div>';
+    // SVGパネル: 計算式は calc-result-row の直上に表示
+    var pN='<div id="cp-normal" class="calc-panel'+(calcMode!=="normal"?" calc-panel--hidden":"")+'">'+buildSVGNormal()+'</div>';
+    var pE='<div id="cp-eccentric" class="calc-panel'+(calcMode!=="eccentric"?" calc-panel--hidden":"")+'">'+buildSVGEccentric()+'</div>';
+    var pC='<div id="cp-corner" class="calc-panel'+(calcMode!=="corner"?" calc-panel--hidden":"")+'">'+buildSVGCorner()+'</div>';
     var ateOk=KAKU_ATE_VALUES.indexOf(String(wizardState.ateLength))>=0;
     var pA='<div id="cp-ate" class="calc-panel'+(calcMode!=="ate"?" calc-panel--hidden":"")+'">'+
         (ateOk?'<p class="calc-hint">アテ長さ <strong>'+escapeHtml(wizardState.ateLength)+'</strong> mm → (50 − アテ長さ) × 2 × √2</p>'
               :'<p class="calc-hint calc-hint--warn">角形アテ（42.5 / 41 / 39.5 / 37.5 / 33.25 / 28.5）を選んだ場合のみ使用できます</p>')+'</div>';
 
-    // M99P100（Tube以外）
+    // 計算式テキスト（モードに応じて切替、this値を使用ボタンの直上）
+    var formulaMap={normal:"√(A² + B²)",eccentric:"√((A×2)² + (B×2)²)",corner:"√((W/2+H)×2)² + W²)",ate:""};
+    var formulaHtml=formulaMap[calcMode]?'<p class="calc-formula-label">'+formulaMap[calcMode]+'</p>':"";
+
+    // M99P100（Tube以外）— 自動計算ツールの下に配置
     var m99Html="";
     if (wizardState.workType!=="Tube") {
         var m99Opts=[{v:"off",l:"使用しない"},{v:"on",l:"使用する (M99P100)"}];
         if (wizardState.workType==="M40"||wizardState.workType==="M40_MH") m99Opts.push({v:"x50u8",l:"X50.U8. (M40専用)"});
         var m99Cards=m99Opts.map(function(o){return card(o.v,o.l,"select-m99",wizardState.m99Mode===o.v,"wiz-card--sm");}).join("");
-        m99Html='<label class="wiz-lbl">M99P100</label><div class="wiz-grid wiz-grid--2">'+m99Cards+'</div>';
+        m99Html='<div class="wiz-form wiz-m99-section"><label class="wiz-lbl">M99P100</label><div class="wiz-grid wiz-grid--2">'+m99Cards+'</div></div>';
     }
 
     return '<div class="wiz-question"><h2 class="wiz-q-title">外径最大径を入力してください</h2>'
         +'<p class="wiz-q-sub">ワーク外径の最大値 (mm)</p>'
         +'<div class="wiz-form">'
         +'<input class="wiz-input wiz-input--hero validate-positive" id="maxod-direct-input" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.maxOD)+'" placeholder="例: 30.5" autofocus />'
-        +m99Html+'</div>'
+        +'</div>'
         +'<details class="wiz-calc-details"><summary class="wiz-calc-summary">自動計算ツール ▼</summary>'
         +'<div class="wiz-calc-body"><div class="wiz-grid wiz-grid--4">'+modeCards+'</div>'
         +pN+pE+pC+pA
-        +'<div class="calc-result-row"><div id="calc-result-preview" class="calc-result-preview">入力値を入力してください</div>'
+        +formulaHtml
+        +'<div class="calc-result-row"><div id="calc-result-preview" class="calc-result-preview"></div>'
         +'<button class="wiz-btn-secondary" data-action="apply-maxod-calc">この値を使用</button></div></div></details>'
+        +m99Html
         +'<button class="wiz-btn-primary" data-action="next-maxod">次へ →</button></div>';
 }
 
@@ -372,9 +378,11 @@ function svgArrows(pfx) {
     return '<defs><marker id="'+pfx+'-s" orient="auto" markerWidth="7" markerHeight="7" refX="0" refY="3.5"><path d="M7,0 L0,3.5 L7,7 Z" fill="#445"/></marker>'
         +'<marker id="'+pfx+'-e" orient="auto" markerWidth="7" markerHeight="7" refX="7" refY="3.5"><path d="M0,0 L7,3.5 L0,7 Z" fill="#445"/></marker></defs>';
 }
-/* SVG foreignObject ラッパー（SVG内入力欄） */
-function svgFO(x,y,w,h,id,val,ph) {
-    return '<foreignObject x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'">'
+/* SVG foreignObject ラッパー（SVG内入力欄）
+   固定サイズ: 高さ22px（フォント11相当）・幅60px（半角5桁＋余白）*/
+function svgFO(x,y,_w,_h,id,val,ph) {
+    var W=60, H=22;
+    return '<foreignObject x="'+x+'" y="'+y+'" width="'+W+'" height="'+H+'">'
         +'<input xmlns="http://www.w3.org/1999/xhtml" type="text" id="'+id+'" class="calc-field svg-input validate-positive"'
         +' value="'+escapeHtml(val)+'" placeholder="'+escapeHtml(ph)+'" inputmode="decimal" />'
         +'</foreignObject>';
@@ -394,12 +402,12 @@ function buildSVGNormal() {
         +'<line x1="5" y1="168" x2="160" y2="168" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
         +'<text x="82" y="183" fill="#7a8fa8" font-size="11" text-anchor="middle">母材幅 A</text>'
         // A 入力欄
-        +svgFO(5,190,155,26,"calc-stock-a",wizardState.valStockA,"例: 43.0")
+        +svgFO(52,190,60,22,"calc-stock-a",wizardState.valStockA,"43.0")
         // B 寸法矢印（右）
         +'<line x1="172" y1="5" x2="172" y2="155" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
-        +'<text x="215" y="83" fill="#7a8fa8" font-size="11" text-anchor="middle" transform="rotate(-90,215,83)">母材幅 B</text>'
+        +'<text x="180" y="72" fill="#7a8fa8" font-size="11">母材幅 B</text>'
         // B 入力欄
-        +svgFO(180,68,80,26,"calc-stock-b",wizardState.valStockB,"例: 43.0")
+        +svgFO(180,79,60,22,"calc-stock-b",wizardState.valStockB,"43.0")
         +'</svg>';
 }
 
@@ -421,13 +429,13 @@ function buildSVGEccentric() {
         +'<line x1="80" y1="170" x2="80" y2="164" stroke="#445" stroke-width="1"/>'
         +'<line x1="0" y1="168" x2="80" y2="168" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
         +'<text x="40" y="183" fill="#7a8fa8" font-size="11" text-anchor="middle">距離 A（横）</text>'
-        +svgFO(0,190,155,26,"calc-ecc-a",wizardState.valEccA,"例: 15.0")
+        +svgFO(10,190,60,22,"calc-ecc-a",wizardState.valEccA,"15.0")
         // B 寸法（上端→穴軸、垂直）
         +'<line x1="168" y1="0" x2="162" y2="0" stroke="#445" stroke-width="1"/>'
         +'<line x1="168" y1="100" x2="162" y2="100" stroke="#445" stroke-width="1"/>'
         +'<line x1="166" y1="0" x2="166" y2="100" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
-        +'<text x="215" y="52" fill="#7a8fa8" font-size="11" text-anchor="middle" transform="rotate(-90,215,52)">距離 B（縦）</text>'
-        +svgFO(174,38,95,26,"calc-ecc-b",wizardState.valEccB,"例: 20.0")
+        +'<text x="174" y="36" fill="#7a8fa8" font-size="11">距離 B（縦）</text>'
+        +svgFO(174,42,60,22,"calc-ecc-b",wizardState.valEccB,"20.0")
         +'</svg>';
 }
 
@@ -447,11 +455,11 @@ function buildSVGCorner() {
         // W 寸法矢印（下）
         +'<line x1="5" y1="183" x2="160" y2="183" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
         +'<text x="82" y="197" fill="#7a8fa8" font-size="11" text-anchor="middle">母材幅 W</text>'
-        +svgFO(5,202,155,26,"calc-corn-w",wizardState.valCornW,"例: 43.0")
+        +svgFO(52,202,60,22,"calc-corn-w",wizardState.valCornW,"43.0")
         // H 寸法矢印（右）
         +'<line x1="172" y1="5" x2="172" y2="87" stroke="#445" stroke-width="1.2" marker-start="url(#'+p+'-s)" marker-end="url(#'+p+'-e)"/>'
-        +svgFO(178,38,80,26,"calc-corn-h",wizardState.valCornH,"例: 11.0")
-        +'<text x="218" y="26" fill="#7a8fa8" font-size="10" text-anchor="middle">追加高さ H</text>'
+        +'<text x="178" y="34" fill="#7a8fa8" font-size="10">追加高さ H</text>'
+        +svgFO(178,40,60,22,"calc-corn-h",wizardState.valCornH,"11.0")
         +'</svg>';
 }
 
@@ -773,6 +781,12 @@ function handleAction(action, value) {
             wizardState.calcMode=value;
             document.querySelectorAll("[data-action='set-calc-mode']").forEach(function(b){b.classList.toggle("selected",b.dataset.value===value);});
             ["normal","eccentric","corner","ate"].forEach(function(m){var el=document.getElementById("cp-"+m);if(el)el.classList.toggle("calc-panel--hidden",m!==value);});
+            // 計算式ラベルを更新
+            (function(){
+                var fmap={normal:"√(A² + B²)",eccentric:"√((A×2)² + (B×2)²)",corner:"√((W/2+H)×2)² + W²)",ate:""};
+                var fl=document.querySelector(".calc-formula-label");
+                if(fl){fl.textContent=fmap[value]||"";}
+            })();
             updateCalcPreview(); break;
         case "apply-maxod-calc": {
             wizardState.valStockA=(document.getElementById("calc-stock-a")||{value:""}).value;

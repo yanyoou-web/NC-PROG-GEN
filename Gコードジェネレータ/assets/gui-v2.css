@@ -664,21 +664,38 @@ body {
     max-height: 240px;
     overflow: visible;
 }
-/* foreignObject 内の input は通常の CSS が適用される */
+/* foreignObject 内の input: フォント11px、幅60px固定（半角5桁）、高さ22px */
 .svg-input {
     background: var(--bg-input);
     border: 1.5px solid var(--border);
-    border-radius: 5px;
+    border-radius: 4px;
     color: var(--text);
-    font-size: 0.85rem;
-    padding: 4px 8px;
-    width: 100%;
+    font-size: 11px;
+    padding: 3px 5px;
+    width: 60px;
+    height: 22px;
     box-sizing: border-box;
     outline: none;
-    font-family: inherit;
+    font-family: "Consolas", monospace;
 }
 .svg-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(74,158,255,0.2); }
 .svg-input.wiz-input--invalid { border-color: var(--danger); }
+
+/* 計算式ラベル（この値を使用 ボタンの直上） */
+.calc-formula-label {
+    font-size: 0.82rem;
+    color: var(--text-sub);
+    text-align: center;
+    padding: 4px 0 2px;
+    letter-spacing: 0.02em;
+}
+
+/* M99P100 セクション（自動計算ツールの下） */
+.wiz-m99-section {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
 
 /* ---------- リアルタイムバリデーション ---------- */
 .wiz-input--invalid { border-color: var(--danger) !important; }
