@@ -14,6 +14,7 @@
                 <img src="assets/icon.svg" alt="NC" class="wiz-header__icon" />
                 <span class="wiz-header__title">NCプログラム作成</span>
                 <a href="index.html" class="wiz-header__classic">従来版へ</a>
+                <button id="wiz-settings-btn" type="button" class="wiz-settings-btn" title="設定">⚙</button>
             </header>
 
             <!-- 進捗バー（ステップ表示） -->
@@ -22,10 +23,27 @@
             <!-- メインコンテンツ（ウィザードが各画面を描画する） -->
             <main id="wiz-main"></main>
 
-            <!-- フッター（戻るボタン） -->
+            <!-- フッター（戻るボタン / やり直しボタン） -->
             <footer id="wiz-footer" hidden>
-                <button id="wiz-back-btn" type="button" class="wiz-back-btn">← 戻る</button>
+                <button id="wiz-back-btn"    type="button" class="wiz-back-btn">← 戻る</button>
+                <button id="wiz-discard-btn" type="button" class="wiz-discard-btn">最初からやり直す</button>
             </footer>
+        </div>
+
+        <!-- 設定ドロワー（オーバーレイ＋パネル） -->
+        <div id="wiz-settings-overlay" class="wiz-settings-overlay" hidden></div>
+        <div id="wiz-settings-drawer" class="wiz-settings-drawer" hidden>
+            <div class="wiz-settings-hd">
+                <span class="wiz-settings-title">設定</span>
+                <button id="wiz-settings-close" type="button" class="wiz-settings-close">✕</button>
+            </div>
+            <div class="wiz-settings-body">
+                <label class="wiz-settings-lbl" for="wiz-copy-url">保存後にクリップボードへコピーするURL</label>
+                <input type="text" id="wiz-copy-url" class="wiz-input"
+                       placeholder="例: \\server\share\NCdata" />
+                <p class="wiz-settings-hint">Gコード保存ボタンを押したとき、このURLが自動でクリップボードにコピーされます。空欄の場合はコピーしません。</p>
+                <button id="wiz-settings-save" type="button" class="wiz-btn-primary">保存</button>
+            </div>
         </div>
 
         <!--
@@ -62,6 +80,7 @@
         <script src="テンプレート/data_template_M8_21.js"></script>
         <script src="テンプレート/data_template_M8_31.js"></script>
         <script src="テンプレート/data_template_J_M8_300.js"></script>
+        <script src="テンプレート/data_template_J_M8_200.js"></script>
         <script src="テンプレート/data_template_G18_40.js"></script>
         <script src="テンプレート/data_template_G18_42.js"></script>
         <script src="テンプレート/data_template_G18_62.js"></script>

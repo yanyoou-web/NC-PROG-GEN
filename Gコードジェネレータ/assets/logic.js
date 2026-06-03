@@ -112,7 +112,7 @@ function isM8WorkType(wt) {
 /** J_M8_300 (ASWD系): ドリルロジック = getDrillShiage10mmStepBlock
  *  ドリル深さは ASWD_SHOULDER_MM + CP + 1 で自動計算。CrossSmall スタイル固定 */
 function isJM8ASWDWorkType(wt) {
-    return wt === "J_M8_300"; // J_M8_200 追加予定
+    return wt === "J_M8_300" || wt === "J_M8_200";
 }
 
 /** 平底で使う内径ダイヤの公称径（mm）。テンプレの {{内径ダイヤΦ*}} と対応 */
@@ -175,6 +175,7 @@ const DRILL_DIA_MAP = {
     M8_21: 2.2,
     M8_31: 3.2,
     J_M8_300: 3.0,
+    J_M8_200: 2.0,
     G12B_G_ST_12175_8: 7.0,
     TOMESEN_M16: 7.0,
     TOMESEN_M18: 7,
@@ -1020,6 +1021,8 @@ function generateGCode(input, machineName) {
         if (typeof template_M8_31 !== "undefined") finalCode = template_M8_31;
     } else if (input.workType === "J_M8_300") {
         if (typeof template_J_M8_300 !== "undefined") finalCode = template_J_M8_300;
+    } else if (input.workType === "J_M8_200") {
+        if (typeof template_J_M8_200 !== "undefined") finalCode = template_J_M8_200;
     } else if (input.workType === "M40_MH") {
         if (typeof template_M40_MH !== "undefined") finalCode = template_M40_MH;
     } else if (input.workType === "M22_MH") {

@@ -59,7 +59,7 @@ var STYLE_LABELS = {
 var STYLE_NUMS = { Hirazoko:"1",Ichimonji:"2",Normal:"3",YoseRelay:"4",Yose:"5",CrossSmall:"6" };
 
 function getAvailableStyles(workType) {
-    if (workType==="J_M8_300") return ["CrossSmall"];
+    if (workType==="J_M8_300"||workType==="J_M8_200") return ["CrossSmall"];
     if (workType==="M8_21"||workType==="M8_31") return ["Ichimonji","YoseRelay","CrossSmall"];
     if (workType==="G18_40"||workType==="G18_42"||workType==="G18_40_MH"||workType==="G18_42_MH")
         return ["YoseRelay","CrossSmall"];
@@ -81,7 +81,7 @@ var WORK_TYPE_GROUPS = [
     {label:"ねじ系 MH",items:[{value:"M12_MH",label:"M12-MH"},{value:"M15_MH",label:"M15-MH"},{value:"M18_MH",label:"M18-MH"},{value:"M22_MH",label:"M22-MH"},{value:"G78_MH",label:"G78-MH"},{value:"M40_MH",label:"M40-MH"}]},
     {label:"G18系",    items:[{value:"G18_40",label:"φ4.0"},{value:"G18_42",label:"φ4.2"},{value:"G18_62",label:"φ6.2"},{value:"G18_655",label:"φ6.55"},{value:"G18_6175",label:"φ6.175"},{value:"G18_40_MH",label:"φ4.0 MH"},{value:"G18_42_MH",label:"φ4.2 MH"},{value:"G18_62_MH",label:"φ6.2 MH"},{value:"G18_655_MH",label:"φ6.55 MH"},{value:"G18_6175_MH",label:"φ6.175 MH"}]},
     {label:"M42X3系",  items:[{value:"M42X3_25175",label:"φ25.175 ST"},{value:"M42X3_25175_16",label:"→φ16"},{value:"M42X3_25175_20",label:"→φ20"},{value:"M42X3_25175_22",label:"→φ22"}]},
-    {label:"M8系",     items:[{value:"M8_21",label:"S-M8 φ2.1"},{value:"M8_31",label:"S-M8 φ3.1"},{value:"J_M8_300",label:"次世代M8 φ3.0"}]},
+    {label:"M8系",     items:[{value:"M8_21",label:"S-M8 φ2.1"},{value:"M8_31",label:"S-M8 φ3.1"},{value:"J_M8_300",label:"次世代M8 φ3.0"},{value:"J_M8_200",label:"次世代M8 φ2.0"}]},
     {label:"トメセン",  items:[{value:"TOMESEN_M16",label:"M16"},{value:"TOMESEN_M18",label:"M18"},{value:"TOMESEN_M22",label:"M22"},{value:"TOMESEN_M24",label:"M24"},{value:"TOMESEN_M35",label:"M35"}]},
     {label:"特殊",     items:[{value:"G12B_G_ST_12175_8",label:"G12B-ST-12.175-8"}]},
     {label:"チューブ", items:[{value:"Tube",label:"チューブ"}]},
@@ -516,11 +516,14 @@ function buildDepthsScreen() {
     // ドリル深さ: 自動 or 手動
     var autoVal=computeDrillDepthAuto();
     var drillHtml;
-    if (!isManual && autoVal!==null) {
-        // 自動計算値を表示（readonly）
+    if (!isManual) {
+        // 自動計算モード: autoVal が null（IP未入力）のときはプレースホルダーを表示
+        var autoValContent = autoVal !== null
+            ? escapeHtml(autoVal)+' mm <span class="depth-auto-badge">自動計算</span>'
+            : '<span style="color:var(--text-sub)">上の項目を入力すると自動計算されます</span>';
         drillHtml='<label class="wiz-lbl">ドリル深さ</label>'
             +'<div class="depth-auto-row" id="drill-depth-auto-row">'
-            +'<span class="depth-auto-val" id="drill-depth-auto-val">'+escapeHtml(autoVal)+' mm <span class="depth-auto-badge">自動計算</span></span>'
+            +'<span class="depth-auto-val" id="drill-depth-auto-val">'+autoValContent+'</span>'
             +'<button class="depth-manual-link" data-action="toggle-drill-manual">手動で変更</button>'
             +'</div>';
     } else {
@@ -532,7 +535,7 @@ function buildDepthsScreen() {
             +'<input class="wiz-input depth-cross-field" id="drill-depth" type="text" inputmode="decimal"'
             +' value="'+escapeHtml(wizardState.drillDepth)+'" />'
             +'<div class="depth-quick-row">'+quickBtns+'</div>'
-            +(autoVal!==null?'<button class="depth-manual-link" data-action="toggle-drill-manual">自動計算に戻す（'+escapeHtml(autoVal)+'mm）</button>':"");
+            +'<button class="depth-manual-link" data-action="toggle-drill-manual">自動計算に戻す'+(autoVal!==null?'（'+escapeHtml(autoVal)+'mm）':'')+'</button>';
     }
 
     // 一文字（M12・M8以外）: CP入力が必要
@@ -617,7 +620,7 @@ function buildDepthsScreen() {
     return '<div class="wiz-question"><h2 class="wiz-q-title">加工深さを入力してください</h2>'
         +'<div class="wiz-form">'
         +'<label class="wiz-lbl">ドリルモード</label><div class="wiz-grid wiz-grid--2">'+drillModeCards+'</div>'
-        +drillHtml+idHtml+cpHtml+m12Html+okuHtml
+        +idHtml+cpHtml+drillHtml+m12Html+okuHtml
         +'</div><button class="wiz-btn-primary" data-action="next-depths">次へ →</button></div>';
 }
 
@@ -780,7 +783,7 @@ function updateDrillDepthDisplay() {
         autoValEl.innerHTML=escapeHtml(newVal)+' mm <span class="depth-auto-badge">自動計算</span>';
         wizardState.drillDepth=newVal;
     } else {
-        autoValEl.innerHTML='<span style="color:var(--text-sub)">入力値を確認中...</span>';
+        autoValEl.innerHTML='<span style="color:var(--text-sub)">上の項目を入力すると自動計算されます</span>';
     }
 }
 function bindDepthInputs() {
@@ -849,13 +852,29 @@ function importStateJson() {
 
 // ========== Section 10: イベント処理 ==========
 
+/* ---------- 設定: localStorage ---------- */
+var SETTINGS_KEY = "nc_v2_copy_url";
+function loadCopyUrl() { return localStorage.getItem(SETTINGS_KEY) || ""; }
+function saveCopyUrl(v) { localStorage.setItem(SETTINGS_KEY, v); }
+
+function doRestart() {
+    wizardState={machine:null,workType:null,tubeSpec:"",tubeLength:"",internalStyle:null,
+        yoseMethod:"2",yoseAngle:"60",yoseD:"",yoseTotalLength:"",yosePartnerDepth:"",
+        maxOD:"",calcMode:"normal",valStockA:"",valStockB:"",valEccA:"",valEccB:"",valCornW:"",valCornH:"",
+        ateLength:"",drillMode:"G74",drillDepth:"",drillDepthManual:false,idDepth:"",
+        mhOdTool:"外径荒",g12bNoseR:"none",m12FinishType:"hss",m12CrossMethod:"hss_oku",g18CrossMethod:"hgdr_oku",
+        valPartnerD:"",cpVal:"",okuBiteEnabled:false,m99Mode:"off",
+        drawNumA:"",drawNumB:"2",drawRev:"NONE",processNum:"1",workerName:""};
+    screenStack=[]; renderScreen("start");
+}
+
 function handleAction(action, value) {
     switch(action) {
         case "start": screenStack=[]; advance("start"); break;
         case "select-machine":   wizardState.machine=value; advance("q-machine"); break;
         case "select-worktype":
             wizardState.workType=value;
-            wizardState.internalStyle=value==="J_M8_300"?"CrossSmall":null;
+            wizardState.internalStyle=(value==="J_M8_300"||value==="J_M8_200")?"CrossSmall":null;
             wizardState.drillDepthManual=false;
             advance("q-worktype"); break;
         case "select-tube-spec":   wizardState.tubeSpec=value; wizardState.tubeLength=""; advance("q-tube-spec"); break;
@@ -914,7 +933,7 @@ function handleAction(action, value) {
             wizardState.valCornW =(document.getElementById("calc-corn-w")||{value:""}).value;
             wizardState.valCornH =(document.getElementById("calc-corn-h")||{value:""}).value;
             var r=computeMaxOdResult();
-            if(r!==null){wizardState.maxOD=r;var inp=document.getElementById("maxod-direct-input");if(inp)inp.value=r;showToast("外径最大径を "+r+" mm に設定しました");}
+            if(r!==null){wizardState.maxOD=r;var inp=document.getElementById("maxod-direct-input");if(inp)inp.value=r;var det=document.querySelector(".wiz-calc-details");if(det)det.open=false;showToast("外径最大径を "+r+" mm に設定しました");}
             else showToast("入力値を確認してください");
             break;
         }
@@ -1004,19 +1023,21 @@ function handleAction(action, value) {
             var url2=URL.createObjectURL(blob2);
             var a2=document.createElement("a"); a2.href=url2; a2.download=buildFileName();
             document.body.appendChild(a2);a2.click();document.body.removeChild(a2);URL.revokeObjectURL(url2);
+            var copyTarget=loadCopyUrl();
+            if (copyTarget) {
+                navigator.clipboard.writeText(copyTarget)
+                    .then(function(){showToast("保存しました ✓  URLをコピーしました");})
+                    .catch(function(){showToast("保存しました（URLコピー失敗）");});
+            } else {
+                showToast("Gコードを保存しました");
+            }
             break;
         }
         case "export-json": exportStateJson(); break;
         case "import-json": importStateJson(); break;
         case "restart":
-            wizardState={machine:null,workType:null,tubeSpec:"",tubeLength:"",internalStyle:null,
-                yoseMethod:"2",yoseAngle:"60",yoseD:"",yoseTotalLength:"",yosePartnerDepth:"",
-                maxOD:"",calcMode:"normal",valStockA:"",valStockB:"",valEccA:"",valEccB:"",valCornW:"",valCornH:"",
-                ateLength:"",drillMode:"G74",drillDepth:"",drillDepthManual:false,idDepth:"",
-                mhOdTool:"外径荒",g12bNoseR:"none",m12FinishType:"hss",m12CrossMethod:"hss_oku",g18CrossMethod:"hgdr_oku",
-                valPartnerD:"",cpVal:"",okuBiteEnabled:false,m99Mode:"off",
-                drawNumA:"",drawNumB:"2",drawRev:"NONE",processNum:"1",workerName:""};
-            screenStack=[]; renderScreen("start"); break;
+            if (!window.confirm("入力内容がすべて消えます。最初からやり直しますか？")) break;
+            doRestart(); break;
     }
 }
 
@@ -1116,7 +1137,6 @@ function runGeneration() {
         +'<pre id="resultArea" class="wiz-gcode" data-plain="'+escapeHtml(plain)+'">'+(result.displayHtml||escapeHtml(plain))+'</pre>'
         +'</div>'
         +'<div class="wiz-result-actions">'
-        +'<button class="wiz-btn-secondary" data-action="copy-gcode">コピー</button>'
         +'<button class="wiz-btn-secondary" data-action="save-gcode">Gコード保存</button>'
         +'<button class="wiz-btn-secondary" data-action="export-json">入力値保存 (JSON)</button>'
         +'<button class="wiz-btn-outline"   data-action="restart">最初からやり直す</button>'
@@ -1163,6 +1183,48 @@ function validatePositive(el) {
 
 document.addEventListener("DOMContentLoaded", function() {
     var backBtn=$id("wiz-back-btn"); if(backBtn) backBtn.addEventListener("click",goBack);
+
+    // ページ離脱・タブ閉じの確認（入力開始後のみ）
+    window.addEventListener("beforeunload", function(e) {
+        if (screenStack.length === 0) return;
+        e.preventDefault();
+        e.returnValue = "";
+    });
+
+    // 設定ドロワー（⚙ボタン）
+    var settingsBtn   = $id("wiz-settings-btn");
+    var settingsClose = $id("wiz-settings-close");
+    var settingsSave  = $id("wiz-settings-save");
+    var settingsOverlay = $id("wiz-settings-overlay");
+    var settingsDrawer  = $id("wiz-settings-drawer");
+    var copyUrlInput  = $id("wiz-copy-url");
+
+    function openSettings() {
+        if (copyUrlInput) copyUrlInput.value = loadCopyUrl();
+        if (settingsDrawer)  settingsDrawer.hidden  = false;
+        if (settingsOverlay) settingsOverlay.hidden = false;
+    }
+    function closeSettings() {
+        if (settingsDrawer)  settingsDrawer.hidden  = true;
+        if (settingsOverlay) settingsOverlay.hidden = true;
+    }
+
+    if (settingsBtn)     settingsBtn.addEventListener("click", openSettings);
+    if (settingsClose)   settingsClose.addEventListener("click", closeSettings);
+    if (settingsOverlay) settingsOverlay.addEventListener("click", closeSettings);
+    if (settingsSave)    settingsSave.addEventListener("click", function() {
+        saveCopyUrl(copyUrlInput ? copyUrlInput.value.trim() : "");
+        showToast("設定を保存しました");
+        closeSettings();
+    });
+
+    // フッター「最初からやり直す」ボタン
+    var discardBtn=$id("wiz-discard-btn");
+    if (discardBtn) discardBtn.addEventListener("click", function() {
+        if (window.confirm("入力内容がすべて消えます。最初からやり直しますか？")) {
+            doRestart();
+        }
+    });
 
     // 全 data-action クリックを document で委譲捕捉
     document.addEventListener("click", function(e) {
