@@ -161,7 +161,7 @@ $replaced = $content -replace '置換前', '置換後'
 
 ## GUI v2 開発ルール
 
-> **GUI v2 とは：** 現行の入力画面（`index.html`）を将来的に置き換える、新しい「一問一答形式」の操作画面です。現行画面を守りながら、新しいファイルだけで並行開発を進めます。問題が起きたときはブランチを切り替えるだけで元の画面に即座に戻せます。
+> **GUI v2 とは：** 現行の入力画面（`index.html`）を将来的に置き換える、新しい「一問一答形式」の操作画面です。現行画面を守りながら、新しいファイル（`gui-v2.html`・`gui-v2.css`・`gui-v2.js`）だけで開発を進めます。`index.html`（旧画面）はそのまま残してあるため、`gui-v2.html` に問題が起きても旧画面を直接開けばすぐ使えます。
 
 ### 基本方針
 - 新しく作るファイルは `gui-v2.html`・`assets/gui-v2.css`・`assets/gui-v2.js` の3つのみ。
@@ -188,10 +188,6 @@ data.js → i18n.js → テンプレート群（42本）→ blocks.js → gui-v2
 - 呼び出す直前に `currentInternalStyle = state.internalStyle;` で加工スタイルの値を同期させること（`logic.js` が内部でこの値を参照するため）。
 - 戻り値は `{ displayHtml: "...", plainText: "..." }` の形式。`plainText` がコピー・保存に使う純粋なGコード文字列。
 - `restrictStyles`（現行 `app.js` でスタイル選択を制限する処理）の代わりに、`gui-v2.js` 内で `getAvailableStyles(workType)` という純粋な関数として再実装し、ウィザード画面の選択肢の絞り込みに使う。
-
-### 作業ブランチ
-- GUI v2 の開発は `refactor/gui-v2` ブランチで行う。
-- `main` ブランチには動作確認済みのものだけをマージする。
 
 ---
 

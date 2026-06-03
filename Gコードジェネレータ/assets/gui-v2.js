@@ -1097,7 +1097,7 @@ function runGeneration() {
             +'</div>';
         return;
     }
-    var wrap=document.getElementById("result-wrap"); if(!wrap) return;
+    wrap=document.getElementById("result-wrap"); if(!wrap) return;
     var plain=result.plainText||"";
 
     var rows=[
