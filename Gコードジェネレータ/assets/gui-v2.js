@@ -37,9 +37,10 @@ function ncFormat(val) {
     const num = parseFloat(val); if (isNaN(num)) return "";
     const s = num.toString(); return s.indexOf(".") === -1 ? s + "." : s;
 }
-function wrapHCalc(val)    { return (val===""||val===undefined) ? "" : escapeHtml(val); }
-function wrapHInput(val)   { return (val===""||val===undefined) ? "" : escapeHtml(val); }
-function wrapHMachine(val) { return (val===""||val===undefined) ? "" : escapeHtml(val); }
+function wrapH(val)        { return (val===""||val===undefined) ? "" : escapeHtml(val); }
+function wrapHCalc(val)    { return wrapH(val); }
+function wrapHInput(val)   { return wrapH(val); }
+function wrapHMachine(val) { return wrapH(val); }
 function gcodeDisplayHtmlToPlainText(htmlStr) {
     if (!htmlStr) return "";
     const d = document.createElement("div"); d.innerHTML = htmlStr;
@@ -1084,8 +1085,18 @@ function buildFileName() {
 
 function runGeneration() {
     currentInternalStyle=wizardState.internalStyle||"";
-    var input=buildInputFromState();
-    var result=generateGCode(input,wizardState.machine);
+    var input, result;
+    try {
+        input=buildInputFromState();
+        result=generateGCode(input,wizardState.machine);
+    } catch(e) {
+        var wrap=document.getElementById("result-wrap"); if(!wrap) return;
+        wrap.innerHTML='<div style="background:#330000;border:2px solid #ff4444;padding:15px;color:#ffcccc;border-radius:6px;">'
+            +'<h3 style="margin-top:0;color:#ff4444;">⚠ 生成エラー（内部例外）</h3>'
+            +'<pre style="white-space:pre-wrap;">'+escapeHtml(String(e))+'</pre>'
+            +'</div>';
+        return;
+    }
     var wrap=document.getElementById("result-wrap"); if(!wrap) return;
     var plain=result.plainText||"";
 
