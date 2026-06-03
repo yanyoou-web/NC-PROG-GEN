@@ -534,22 +534,31 @@ function buildDepthsScreen() {
             +(autoVal!==null?'<button class="depth-manual-link" data-action="toggle-drill-manual">自動計算に戻す（'+escapeHtml(autoVal)+'mm）</button>':"");
     }
 
-    // 内径深さ / IP（ヨセ中継は自動。交差穴では「IP = 原点〜穴中心距離」として使用）
-    var idAutoVal=isRelay?computeIdDepthForRelay():null;
-    var idLabel = isCross
-        ? 'IP（原点〜穴中心距離）(mm)<span class="depth-ip-hint"> ← CP = IP − 相手径/2</span>'
+    // 一文字（M12・M8以外）: CP入力が必要
+    var isIchimonjiNeedsCp = st==="Ichimonji" && !isM12Like(wt) && !(typeof isM8WorkType==="function" && isM8WorkType(wt));
+
+    // 内径深さ / IP（ヨセ中継は自動。交差穴・一文字CP では「IP = 原点〜穴中心距離」として使用）
+    var idAutoVal = isRelay ? computeIdDepthForRelay()
+                 : wt==="Tube" ? computeIdDepthForTube()
+                 : null;
+    var idLabel = (isCross || isIchimonjiNeedsCp)
+        ? (isCross
+            ? 'IP（原点〜穴中心距離）(mm)<span class="depth-ip-hint"> ← CP = IP − 相手径/2</span>'
+            : 'IP（原点〜一文字位置）(mm)<span class="depth-ip-hint"> ← CP = IP − ドリル径/2</span>')
         : '内径深さ (mm)';
     var idHtml;
     if (idAutoVal!==null) {
+        var idAutoLabel = wt==="Tube" ? "自動（規格値）" : "自動計算";
         idHtml='<label class="wiz-lbl">内径深さ</label>'
-            +'<div class="depth-auto-row"><span class="depth-auto-val">'+escapeHtml(idAutoVal)+' mm <span class="depth-auto-badge">自動計算</span></span></div>';
+            +'<div class="depth-auto-row"><span class="depth-auto-val">'+escapeHtml(idAutoVal)+' mm <span class="depth-auto-badge">'+idAutoLabel+'</span></span></div>';
+        wizardState.idDepth = idAutoVal;
     } else {
         idHtml='<label class="wiz-lbl" for="id-depth">'+idLabel+'</label>'
             +'<input class="wiz-input depth-cross-field" id="id-depth" type="text" inputmode="decimal"'
             +' value="'+escapeHtml(wizardState.idDepth)+'" />';
     }
 
-    // 交差穴: IP（内径交差点）+ 相手径 + CP表示 + CrossSmall仕上げ深さ参考値
+    // 交差穴 / 一文字CP: IP + 相手径 + CP表示
     var cpHtml="";
     if (isCross) {
         var cpComp=computeCP(wizardState.idDepth,wizardState.valPartnerD);
@@ -564,6 +573,14 @@ function buildDepthsScreen() {
             +'<input class="wiz-input" id="depth-cp-display" type="text" readonly value="'+escapeHtml(cpComp)+'"'
             +' style="background:#1a2030;color:#7ec8e3;font-weight:bold;" />'
             +finishDepthHint;
+    } else if (isIchimonjiNeedsCp) {
+        // 一文字（M12・M8以外）: IP + ドリル径 → CP自動計算（getIchimonjiBlock に渡す）
+        var cpCompI = computeCP(wizardState.idDepth, wizardState.valPartnerD);
+        cpHtml='<label class="wiz-lbl" for="depth-partner-d">ドリル径 Φ (mm)</label>'
+            +'<input class="wiz-input depth-cross-field" id="depth-partner-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valPartnerD)+'" />'
+            +'<label class="wiz-lbl">CP値 = IP − ドリル径/2（自動計算）</label>'
+            +'<input class="wiz-input" id="depth-cp-display" type="text" readonly value="'+escapeHtml(cpCompI)+'"'
+            +' style="background:#1a2030;color:#7ec8e3;font-weight:bold;" />';
     }
 
     // M12固有
@@ -635,10 +652,23 @@ function computeCP(idDepth,partnerD) {
     return (d-p/2).toFixed(3);
 }
 
+/* チューブ内径深さ自動計算（tubeData[spec].id から取得） */
+function computeIdDepthForTube() {
+    if (wizardState.workType !== "Tube") return null;
+    if (typeof tubeData === "undefined" || !tubeData[wizardState.tubeSpec]) return null;
+    return String(tubeData[wizardState.tubeSpec].id);
+}
+
 /* ドリル深さ自動計算（logic.js の関数を使用）
    DOM が存在する場合は DOM の現在値を優先して参照する */
 function computeDrillDepthAuto() {
     var wt=wizardState.workType, st=wizardState.internalStyle;
+
+    // Tube: ドリル深さ = チューブ長さ
+    if (wt === "Tube") {
+        var tl = parseFloat(wizardState.tubeLength);
+        return !isNaN(tl) ? String(tl) : null;
+    }
 
     // 内径深さ: DOM 優先（同一画面でリアルタイム計算するため）
     var idDomEl=document.getElementById("id-depth");
@@ -765,6 +795,11 @@ function initDrillAutoCalc() {
         if (av!==null) wizardState.drillDepth=av;
     }
     computeIdDepthForRelay(); // YoseRelay: idDepthを自動セット
+    // Tube: idDepthをtubeDataから自動セット
+    if (wizardState.workType === "Tube") {
+        var tubId = computeIdDepthForTube();
+        if (tubId !== null) wizardState.idDepth = tubId;
+    }
 }
 
 // ========== Section 9: JSON インポート/エクスポート ==========
