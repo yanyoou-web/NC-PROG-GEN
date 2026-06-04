@@ -139,7 +139,14 @@ function getNextScreen(currentId) {
     }
     if (currentId==="q-yose-detail") { if (needsOptionsScreen()) return "q-options"; return "q-atelength"; }
     if (currentId==="q-options")    return "q-atelength";
-    if (currentId==="q-atelength")  return "q-maxod";
+    if (currentId==="q-atelength") {
+        if (isMHWorkType(wizardState.workType)) {
+            wizardState.maxOD  = "";
+            wizardState.m99Mode = "on";
+            return "q-depths";
+        }
+        return "q-maxod";
+    }
     if (currentId==="q-maxod")      return "q-depths";
     if (currentId==="q-depths")     return "q-drawnum";
     if (currentId==="q-drawnum")    return "result";
@@ -255,12 +262,50 @@ function buildScreenHTML(id) {
         case "q-depths":       return buildDepthsScreen();
         case "q-drawnum":      return buildDrawNumScreen();
         case "result":         return buildResultScreen();
+        case "history":        return buildHistoryScreen();
         default: return "<p>不明な画面</p>";
     }
 }
 function card(value,label,action,selected,extraClass) {
     var c="wiz-card"+(extraClass?" "+extraClass:"")+(selected?" selected":"");
     return '<button class="'+c+'" data-action="'+action+'" data-value="'+escapeHtml(value)+'"><span class="wiz-card__label">'+escapeHtml(label)+'</span></button>';
+}
+
+/* ---- 履歴 ---- */
+function buildHistoryScreen() {
+    var hist = loadHistory();
+    if (hist.length === 0) {
+        return '<div class="wiz-history">'
+            +'<h2 class="wiz-q-title">生成履歴</h2>'
+            +'<p class="wiz-history__empty">まだ生成履歴がありません。<br>Gコードを生成すると自動的に記録されます。</p>'
+            +'</div>';
+    }
+    var items = hist.map(function(entry, idx) {
+        var st = entry.state || {};
+        var dt = "";
+        if (entry.generatedAt) {
+            var d = new Date(entry.generatedAt);
+            dt = d.getFullYear()+"/"
+                +String(d.getMonth()+1).padStart(2,"0")+"/"
+                +String(d.getDate()).padStart(2,"0")
+                +" "+String(d.getHours()).padStart(2,"0")+":"
+                +String(d.getMinutes()).padStart(2,"0");
+        }
+        var drawNum = "PM-"+(st.drawNumA||"---")+"-"+(st.drawNumB||"")
+            +(st.drawRev&&st.drawRev!=="NONE"?st.drawRev:"");
+        var wt = st.workType==="Tube"?"チューブ":(getWorkTypeShortLabel(st.workType)||st.workType||"");
+        var style = STYLE_LABELS_SHORT[st.internalStyle]||"";
+        var sub = [st.machine, wt, style, st.workerName].filter(Boolean).join(" › ");
+        return '<button class="wiz-history-item" data-action="restore-history" data-value="'+idx+'">'
+            +'<span class="wiz-history-item__num">'+escapeHtml(drawNum)+'</span>'
+            +'<span class="wiz-history-item__sub">'+escapeHtml(sub)+'</span>'
+            +'<span class="wiz-history-item__dt">'+escapeHtml(dt)+'</span>'
+            +'</button>';
+    }).join("");
+    return '<div class="wiz-history">'
+        +'<h2 class="wiz-q-title">生成履歴 <span class="wiz-history__count">（直近'+hist.length+'件）</span></h2>'
+        +'<div class="wiz-history-list">'+items+'</div>'
+        +'</div>';
 }
 
 /* ---- スタート ---- */
@@ -270,7 +315,10 @@ function buildStartScreen() {
         +'<h1 class="wiz-start__title">NCプログラム作成</h1>'
         +''
         +'<button class="wiz-btn-primary wiz-start__btn" data-action="start">開始する</button>'
-        +'<button class="wiz-btn-outline wiz-start__import" data-action="import-json">前回の入力を読み込む (JSON)</button>'
+        +'<div class="wiz-start__import-row">'
+        +'<button class="wiz-btn-outline wiz-start__import" data-action="import-json">JSONから読み込む</button>'
+        +'<button class="wiz-btn-outline wiz-start__import" data-action="show-history">生成履歴</button>'
+        +'</div>'
         +'</div>';
 }
 
@@ -839,7 +887,9 @@ function importStateJson() {
                     if (wizardState.internalStyle==="YoseRelay"||wizardState.internalStyle==="Yose") stack.push("q-yose-detail");
                     if (isMHWorkType(wizardState.workType)||wizardState.workType==="G12B_G_ST_12175_8") stack.push("q-options");
                 }
-                stack.push("q-atelength","q-maxod","q-depths");
+                stack.push("q-atelength");
+                if (!isMHWorkType(wizardState.workType)) stack.push("q-maxod");
+                stack.push("q-depths");
                 screenStack=stack;
                 renderScreen("q-drawnum");
                 showToast("インポート完了: "+file.name);
@@ -854,6 +904,21 @@ function importStateJson() {
 
 /* ---------- 設定: localStorage ---------- */
 var SETTINGS_KEY = "nc_v2_copy_url";
+var HISTORY_KEY  = "nc_v2_history";
+
+function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); }
+    catch(e) { return []; }
+}
+function saveToHistory(state) {
+    var hist = loadHistory();
+    hist.unshift({
+        state: Object.assign({}, state),
+        generatedAt: new Date().toISOString()
+    });
+    if (hist.length > 100) hist = hist.slice(0, 100);
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(hist)); } catch(e) { /* 容量超過時は無視 */ }
+}
 function loadCopyUrl() { return localStorage.getItem(SETTINGS_KEY) || ""; }
 function saveCopyUrl(v) { localStorage.setItem(SETTINGS_KEY, v); }
 
@@ -1035,6 +1100,31 @@ function handleAction(action, value) {
         }
         case "export-json": exportStateJson(); break;
         case "import-json": importStateJson(); break;
+        case "show-history":
+            screenStack.push("start"); renderScreen("history"); break;
+        case "restore-history": {
+            var idx = parseInt(value, 10);
+            var hist2 = loadHistory();
+            if (isNaN(idx) || idx < 0 || idx >= hist2.length) { showToast("履歴データが見つかりません"); break; }
+            var entry = hist2[idx];
+            var st2 = entry.state || {};
+            Object.keys(wizardState).forEach(function(k){ if (k in st2) wizardState[k] = st2[k]; });
+            var stack2 = ["start","q-machine","q-worktype"];
+            if (wizardState.workType==="Tube") {
+                stack2.push("q-tube-spec","q-tube-length");
+            } else {
+                stack2.push("q-style");
+                if (wizardState.internalStyle==="YoseRelay"||wizardState.internalStyle==="Yose") stack2.push("q-yose-detail");
+                if (isMHWorkType(wizardState.workType)||wizardState.workType==="G12B_G_ST_12175_8") stack2.push("q-options");
+            }
+            stack2.push("q-atelength");
+            if (!isMHWorkType(wizardState.workType)) stack2.push("q-maxod");
+            stack2.push("q-depths");
+            screenStack = stack2;
+            renderScreen("q-drawnum");
+            showToast("履歴から復元しました");
+            break;
+        }
         case "restart":
             if (!window.confirm("入力内容がすべて消えます。最初からやり直しますか？")) break;
             doRestart(); break;
@@ -1130,6 +1220,8 @@ function runGeneration() {
         ["図番","PM-"+(wizardState.drawNumA||"")+"-"+(wizardState.drawNumB||"")+(wizardState.drawRev!=="NONE"?wizardState.drawRev:"")+" =No,"+(wizardState.processNum||"")],
         ["作成者",wizardState.workerName],
     ].map(function(r){return '<div class="wiz-sum-row"><span class="wiz-sum-key">'+escapeHtml(r[0])+'</span><span class="wiz-sum-val">'+escapeHtml(r[1]||"")+'</span></div>';}).join("");
+
+    saveToHistory(wizardState);
 
     wrap.innerHTML=
         '<details class="wiz-summary"><summary>入力内容を確認</summary>'+rows+'</details>'

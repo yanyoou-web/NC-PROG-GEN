@@ -19,7 +19,7 @@ const ROOT = join(__dirname, "..");
 
 // ─── logic.js から replaceMap のキーセットを抽出 ──────────────────────────────
 // replaceMap は generateGCode (logic.js) に定義されている
-const appSrc = readFileSync(join(ROOT, "Gコードジェネレータ", "assets", "logic.js"), "utf8");
+const appSrc = readFileSync(join(ROOT, "Gコードジェネレータ", "assets", "v1", "logic.js"), "utf8");
 
 // 1) 固定キー: replaceMap セクションを抽出してキーを収集
 const replaceMapSectionRe = /const replaceMap\s*=\s*\{([\s\S]*?)\};/;
@@ -38,7 +38,7 @@ if (rmMatch) {
 
 // 2) 動的キー: replaceMap[key] = ... で追加されるもの（機械変数・Tube変数など）
 //    data.js から機械定義のキーを抽出
-const dataSrc = readFileSync(join(ROOT, "Gコードジェネレータ", "assets", "data.js"), "utf8");
+const dataSrc = readFileSync(join(ROOT, "Gコードジェネレータ", "assets", "v1", "data.js"), "utf8");
 const machineKeys = new Set();
 // NCL044 ブロック内のキーを取得（最初の機械定義のキーを代表として使用）
 const ncl044Match = dataSrc.match(/NCL044\s*:\s*\{([\s\S]*?)\},/);

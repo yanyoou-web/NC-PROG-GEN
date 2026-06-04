@@ -687,7 +687,85 @@ body {
 .wiz-start__import {
     font-size: 0.82rem;
     padding: 9px 20px;
+    margin-top: 0;
+}
+
+/* ---------- スタート画面: JSON + 履歴 横並び行 ---------- */
+.wiz-start__import-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
     margin-top: -4px;
+}
+.wiz-start__import-row .wiz-start__import {
+    flex: 1 1 auto;
+    min-width: 120px;
+    max-width: 200px;
+}
+
+/* ---------- 履歴画面 ---------- */
+.wiz-history {
+    width: 100%;
+}
+.wiz-history__count {
+    font-size: 0.78rem;
+    color: var(--text-sub);
+    font-weight: 400;
+}
+.wiz-history__empty {
+    text-align: center;
+    color: var(--text-sub);
+    font-size: 0.88rem;
+    margin-top: 32px;
+    line-height: 1.8;
+}
+.wiz-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-top: 12px;
+}
+.wiz-history-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 2px 12px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color var(--trans), background var(--trans);
+    width: 100%;
+}
+.wiz-history-item:hover {
+    border-color: var(--accent);
+    background: var(--bg-hover, rgba(99,102,241,0.06));
+}
+.wiz-history-item__num {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    grid-column: 1;
+    grid-row: 1;
+}
+.wiz-history-item__sub {
+    font-size: 0.78rem;
+    color: var(--text-sub);
+    grid-column: 1;
+    grid-row: 2;
+}
+.wiz-history-item__dt {
+    font-size: 0.75rem;
+    color: var(--text-sub);
+    grid-column: 2;
+    grid-row: 1 / 3;
+    white-space: nowrap;
 }
 
 /* ---------- SVG 図解内入力欄 ---------- */

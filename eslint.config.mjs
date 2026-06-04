@@ -57,7 +57,7 @@ export default [
         clearTimeout: 'readonly',
         clearInterval: 'readonly',
         FileReader: 'readonly',
-        // data.js globals
+        // data.js / data-v2.js globals
         machines: 'readonly',
         tubeData: 'readonly',
         // テンプレートグローバル（テンプレートディレクトリから自動生成）
@@ -89,9 +89,17 @@ export default [
     }
   },
   {
-    files: ['Gコードジェネレータ/assets/data.js'],
+    files: ['Gコードジェネレータ/assets/v1/data.js', 'Gコードジェネレータ/assets/data-v2.js'],
     rules: {
       'no-redeclare': 'off'
+    }
+  },
+  {
+    files: ['Gコードジェネレータ/assets/logic-v2.js'],
+    languageOptions: {
+      globals: {
+        isMHWorkType: 'readonly'
+      }
     }
   }
 ];
