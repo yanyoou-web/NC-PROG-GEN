@@ -1,54 +1,19 @@
 /* =========================================================
    gui-v2.js — NCプログラム作成 ウィザードコントローラー
    ---------------------------------------------------------
-   読み込み順: gui-v2.js を logic.js より先に読み込むこと。
-   logic.js が Section 1 の utils 関数をグローバルとして使用する。
+   読み込み順: gui-v2.js を validators-v2.js より後、logic.js より先に
+   読み込むこと。ncFormat 等の utils・入力チェック共通処理は
+   validators-v2.js に定義されている。
    ========================================================= */
 /* global navigator */
 /* global generateGCode */
 /* global isM8WorkType, isYoseMachiningStyle, isYoseRelayStyle */
 /* global calcSpecialDrillZ, calcYoseRelayMetrics, calcCrossSmallFinishDepth */
 /* global DRILL_DIA_MAP */
-
-// ========== Section 1: utils（logic.js が依存するグローバル関数） ==========
-
-function evaluateFormula(str) {
-    if (!str) return "";
-    const sanitized = str.replace(/[^0-9+\-*/.()]/g, "");
-    try { const r = new Function("return " + sanitized)(); return isNaN(r) ? str : r; }
-    catch (e) { return str; }
-}
-function parseSimpleNumberOrFormula(str) {
-    if (str === null || str === undefined) return NaN;
-    const raw = String(str).trim();
-    if (!raw) return NaN;
-    if (/^[-+]?(?:\d+\.?\d*|\.\d+)$/.test(raw)) return Number(raw);
-    if (!/^[0-9+\-*/().\s]+$/.test(raw)) return NaN;
-    const ev = evaluateFormula(raw);
-    return typeof ev === "number" && isFinite(ev) ? ev : NaN;
-}
-function escapeHtml(str) {
-    if (!str) return "";
-    return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
-}
-function ncFormat(val) {
-    if (val === "" || val === null || val === undefined) return "";
-    const num = parseFloat(val); if (isNaN(num)) return "";
-    const s = num.toString(); return s.indexOf(".") === -1 ? s + "." : s;
-}
-function wrapH(val)        { return (val===""||val===undefined) ? "" : escapeHtml(val); }
-function wrapHCalc(val)    { return wrapH(val); }
-function wrapHInput(val)   { return wrapH(val); }
-function wrapHMachine(val) { return wrapH(val); }
-function gcodeDisplayHtmlToPlainText(htmlStr) {
-    if (!htmlStr) return "";
-    const d = document.createElement("div"); d.innerHTML = htmlStr;
-    return (d.innerText||"").replace(/\u00a0/g," ");
-}
-const $id = function(id){ return document.getElementById(id); };
-var currentInternalStyle = "";
-function isDebugModeOn() { return false; }
+/* global escapeHtml, ncFormat, wrapH, wrapHCalc, wrapHInput, wrapHMachine */
+/* global gcodeDisplayHtmlToPlainText, $id, currentInternalStyle, isDebugModeOn */
+/* global evaluateFormula, parseSimpleNumberOrFormula */
+/* global VALIDATOR_CATEGORIES, stripDisallowedChars, setupEraseGuard */
 
 // ========== Section 2: スタイル制約 ==========
 

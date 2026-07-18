@@ -1,6 +1,6 @@
 /**
  * test-calc-functions.mjs
- * app.js の純粋計算関数のユニットテスト。
+ * app.js / validators-v2.js の純粋計算関数のユニットテスト。
  * Node.js 18+ の組み込みテストランナーを使用。
  *
  * 使い方:
@@ -10,32 +10,35 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import vm from "node:vm";
+import { fileURLToPath } from "node:url";
 
-// ─── テスト対象の純粋関数を app.js と同じロジックで再実装 ───────────────────
-// （app.js はブラウザグローバルに依存するため直接 import は不可。
-//   数式ロジックのみを抽出してテスト対象とする）
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const VALIDATORS_JS = path.join(__dirname, "..", "Gコードジェネレータ", "assets", "validators-v2.js");
 
-function ncFormat(str) {
-    if (str === null || str === undefined || str === "") return "";
-    const n = parseFloat(str);
-    if (isNaN(n)) return String(str);
-    const fixed = n.toFixed(3);
-    // 整数部が 0 の場合は 0 を省略: "0.500" → ".500"
-    return fixed.replace(/^0\./, ".").replace(/^-0\./, "-.");
+// ─── validators-v2.js を実ファイルから読み込む ─────────────────────────────
+// （ブラウザ用のグローバル関数定義ファイルのため、verify-tube-x6u2.mjs と同じ
+//   vm 読み込み方式を使う。これにより「本物と別のロジックをテストしてしまう」
+//   問題を避け、実際にアプリが使っている関数そのものを検証できる）
+
+function loadValidators() {
+    const code = fs.readFileSync(VALIDATORS_JS, "utf8");
+    const context = vm.createContext({ console, document: undefined });
+    vm.runInContext(
+        code + "\nvar __validatorsExport = { ncFormat, parseSimpleNumberOrFormula, evaluateFormula, evaluateExpression, stripDisallowedChars, VALIDATOR_CATEGORIES };",
+        context,
+    );
+    return context.__validatorsExport;
 }
 
-function parseSimpleNumberOrFormula(str) {
-    if (!str) return NaN;
-    const s = String(str).trim();
-    // 数式 "A*B/2" のような形式
-    const m = s.match(/^([0-9.]+)\s*\*\s*([0-9.]+)\s*\/\s*([0-9.]+)$/);
-    if (m) return (parseFloat(m[1]) * parseFloat(m[2])) / parseFloat(m[3]);
-    const m2 = s.match(/^([0-9.]+)\s*\*\s*([0-9.]+)$/);
-    if (m2) return parseFloat(m2[1]) * parseFloat(m2[2]);
-    const m3 = s.match(/^sqrt\(([0-9.]+)\s*\*\s*\*\s*2\s*\+\s*([0-9.]+)\s*\*\s*\*\s*2\)$/i);
-    if (m3) return Math.sqrt(parseFloat(m3[1]) ** 2 + parseFloat(m3[2]) ** 2);
-    return parseFloat(s);
-}
+const { ncFormat, parseSimpleNumberOrFormula, evaluateFormula, evaluateExpression, stripDisallowedChars } = loadValidators();
+
+// ─── ここから下は validators-v2.js の対象外（app.js 由来）の純粋関数を ─────
+// 同じロジックで再実装してテストする（app.js はブラウザグローバルに依存する
+// ため直接 import は不可。数式ロジック以外のここでの対象は入力チェックの
+// 範囲外のため、従来どおり再実装での検証とする）。
 
 function calcSpecialDrillZ(style, drillDia, baseDepth) {
     if (!drillDia || isNaN(baseDepth)) return null;
@@ -87,39 +90,121 @@ function getDrillBlock_logic(depth, mode) {
 
 // ─── テスト定義 ───────────────────────────────────────────────────────────────
 
-describe("ncFormat", () => {
-    test("整数値の先頭ゼロを省略する", () => {
-        assert.equal(ncFormat("0.5"), ".500");
-        assert.equal(ncFormat(0.5), ".500");
+describe("ncFormat（本番の validators-v2.js を直接テスト）", () => {
+    test("小数点がすでにあればそのまま", () => {
+        assert.equal(ncFormat("0.5"), "0.5");
+        assert.equal(ncFormat(0.5), "0.5");
+        assert.equal(ncFormat("25.1"), "25.1");
     });
-    test("負数の先頭ゼロを省略する", () => {
-        assert.equal(ncFormat(-0.5), "-.500");
+    test("整数値には末尾に小数点を付与する（X10500問題への対策）", () => {
+        assert.equal(ncFormat(12), "12.");
+        assert.equal(ncFormat("30"), "30.");
     });
-    test("1 以上の値はそのまま 3 桁小数", () => {
-        assert.equal(ncFormat("25.1"), "25.100");
-        assert.equal(ncFormat(12), "12.000");
+    test("負数もそのまま（小数点があれば付与しない）", () => {
+        assert.equal(ncFormat(-0.5), "-0.5");
+        assert.equal(ncFormat(-12), "-12.");
     });
-    test("空文字は空文字を返す", () => {
+    test("空文字・null・undefinedは空文字を返す", () => {
         assert.equal(ncFormat(""), "");
         assert.equal(ncFormat(null), "");
+        assert.equal(ncFormat(undefined), "");
     });
-    test("非数値はそのまま返す", () => {
-        assert.equal(ncFormat("ABC"), "ABC");
+    test("非数値は空文字を返す", () => {
+        assert.equal(ncFormat("ABC"), "");
     });
 });
 
-describe("parseSimpleNumberOrFormula", () => {
+describe("evaluateExpression（安全な四則演算パーサー）", () => {
+    test("基本的な四則演算", () => {
+        assert.equal(evaluateExpression("10.5+2.3"), 12.8);
+        assert.equal(evaluateExpression("50-27-7.5"), 15.5);
+        assert.equal(evaluateExpression("5*6"), 30);
+        assert.equal(evaluateExpression("30*2/2"), 30);
+    });
+    test("括弧・単項マイナスに対応", () => {
+        assert.equal(evaluateExpression("(1+2)*3"), 9);
+        assert.equal(evaluateExpression("-5+3"), -2);
+    });
+    test("「10//2」はエラーになる（旧実装はJSコメントと誤認識し10を返していた不具合）", () => {
+        assert.throws(() => evaluateExpression("10//2"));
+    });
+    test("ゼロ除算はInfinityを返す（呼び出し側でisFiniteチェックが必要）", () => {
+        assert.equal(evaluateExpression("5/0"), Infinity);
+    });
+    test("不正な形式はエラーになる", () => {
+        assert.throws(() => evaluateExpression("1.2.3"));
+        assert.throws(() => evaluateExpression("()"));
+        assert.throws(() => evaluateExpression(""));
+        assert.throws(() => evaluateExpression("10 20"));
+    });
+});
+
+describe("parseSimpleNumberOrFormula（本番の validators-v2.js を直接テスト）", () => {
     test("通常の数値をパース", () => {
         assert.equal(parseSimpleNumberOrFormula("30.1"), 30.1);
     });
-    test("乗算式をパース", () => {
+    test("四則演算の式をパース", () => {
         assert.equal(parseSimpleNumberOrFormula("5*6"), 30);
-    });
-    test("除算式をパース", () => {
         assert.equal(parseSimpleNumberOrFormula("30*2/2"), 30);
+        assert.equal(parseSimpleNumberOrFormula("50-27-7.5"), 15.5);
     });
-    test("無効な文字列は NaN", () => {
+    test("無効な文字列はNaN", () => {
         assert.ok(isNaN(parseSimpleNumberOrFormula("ABC")));
+    });
+    test("「10//2」はNaN（黙って10を返さない）", () => {
+        assert.ok(isNaN(parseSimpleNumberOrFormula("10//2")));
+    });
+    test("ゼロ除算はNaN（Infinityを返さない）", () => {
+        assert.ok(isNaN(parseSimpleNumberOrFormula("5/0")));
+    });
+    test("複数の小数点はNaN", () => {
+        assert.ok(isNaN(parseSimpleNumberOrFormula("1.2.3")));
+    });
+});
+
+describe("evaluateFormula（旧実装との互換ラッパー）", () => {
+    test("成功時は計算結果の数値を返す", () => {
+        assert.equal(evaluateFormula("10.5+2.3"), 12.8);
+    });
+    test("失敗時は元の文字列をそのまま返す（旧実装と同じ契約）", () => {
+        assert.equal(evaluateFormula("10//2"), "10//2");
+        assert.equal(evaluateFormula("5/0"), "5/0");
+    });
+    test("空文字は空文字", () => {
+        assert.equal(evaluateFormula(""), "");
+    });
+});
+
+describe("stripDisallowedChars（半角チェック・許可リスト方式）", () => {
+    test("ID分類: 半角数字以外はすべて除去", () => {
+        const r = stripDisallowedChars("123ABC", "ID");
+        assert.equal(r.cleaned, "123");
+        assert.equal(r.removed, true);
+    });
+    test("NUMERIC分類: 半角数字+記号はそのまま", () => {
+        const r = stripDisallowedChars("10.5+2.3", "NUMERIC");
+        assert.equal(r.cleaned, "10.5+2.3");
+        assert.equal(r.removed, false);
+    });
+    test("NUMERIC分類: 全角文字はすべて除去される", () => {
+        const r = stripDisallowedChars("１０．５", "NUMERIC");
+        assert.equal(r.cleaned, "");
+        assert.equal(r.removed, true);
+    });
+    test("FREE_TEXT分類: 半角文字はそのまま", () => {
+        const r = stripDisallowedChars("YAMADA", "FREE_TEXT");
+        assert.equal(r.cleaned, "YAMADA");
+        assert.equal(r.removed, false);
+    });
+    test("FREE_TEXT分類: 丸カッコはGコードのコメントを壊すため除去する", () => {
+        const r = stripDisallowedChars("YAMADA(memo)", "FREE_TEXT");
+        assert.equal(r.cleaned, "YAMADAmemo");
+        assert.equal(r.removed, true);
+    });
+    test("FREE_TEXT分類: %や;も除去する", () => {
+        const r = stripDisallowedChars("YAMADA%;", "FREE_TEXT");
+        assert.equal(r.cleaned, "YAMADA");
+        assert.equal(r.removed, true);
     });
 });
 
