@@ -98,6 +98,20 @@ var AUTHOR_PRESETS  = ["YAMADA","SAWADA","RIN","REI","TANIGUTI","MURAKAMI"];
 var DRAW_REV_OPTIONS = ["NONE","A","B","C","D","E"];
 var DRILL_QUICK_BTNS = [{v:"20.4",lbl:"20.4<br><small>φ29</small>"},{v:"16.8",lbl:"16.8<br><small>φ23</small>"},{v:"14.4",lbl:"14.4<br><small>φ19</small>"},{v:"11.4",lbl:"11.4<br><small>φ14</small>"},{v:"7.2",lbl:"7.2<br><small>φ7</small>"}];
 
+/* ドリルの刃長制限（mm）。物理的な工具の長さによる上限で、超えても加工自体は止めない（警告のみ）。
+   G18系・M8/ASWD系はワーク種別で一意に決まる。M12はHGDR工具のときのみG18系と同じ54mm制限が掛かる
+   （getDrillMaxDepthMMで判定、下記マップには含めない）。 */
+var DRILL_MAX_DEPTH_MM = {
+    G18_40:54, G18_42:54, G18_62:54, G18_655:54, G18_6175:54,
+    G18_40_MH:54, G18_42_MH:54, G18_62_MH:54, G18_655_MH:54, G18_6175_MH:54,
+    M8_21:24, M8_31:30, J_M8_300:30, J_M8_200:24,
+};
+function getDrillMaxDepthMM(wt) {
+    if (DRILL_MAX_DEPTH_MM[wt]!=null) return DRILL_MAX_DEPTH_MM[wt];
+    if (isM12Like(wt) && classifyDrillMode(wt)==="g1") return 54; // M12×HGDRはG18と同じ物理ドリル
+    return null;
+}
+
 // ========== Section 4: ウィザード状態 ==========
 
 var wizardState = {
@@ -124,6 +138,43 @@ function isMHWorkType(wt) {
 function isM12Like(wt)   { return wt==="M12"||wt==="M12_MH"; }
 function isG18Small(wt)  { return wt==="G18_40"||wt==="G18_42"||wt==="G18_40_MH"||wt==="G18_42_MH"; }
 function isCrossStyle(s) { return s==="CrossSmall"; }
+
+/* logic-v2.js のドリルブロック選択チェーンと同じ分類を行う。
+   "g1"        = HGDR工具（G18全種・M12×HGDR）→ G74/G1選択不可、常にG1単動固定
+   "step"      = HSS/ASWD工具（M8系・ASWD系・M12×HSS）→ 選択不可、常に10mmステップ固定
+   "selectable"= それ以外（内径加工バイト前提の下穴ドリル、M12×バイト含む）→ G74/G1をユーザーが選べる
+   M12/M12_MH は現在の加工方法（resolveM12Profile）の finishType で判定する
+   （"hss"=HSS工具、"baito"=普通の下穴ドリル、それ以外("hgdr"/"halfmoon")=HGDR工具）。 */
+function classifyDrillMode(wt) {
+    if (typeof usesG18DrillShiageG1Block==="function" && usesG18DrillShiageG1Block(wt)) return "g1";
+    if ((typeof isJM8ASWDWorkType==="function" && isJM8ASWDWorkType(wt)) ||
+        (typeof isM8WorkType==="function" && isM8WorkType(wt))) return "step";
+    if (isM12Like(wt)) {
+        var ft=resolveM12Profile().finishType;
+        if (ft==="hss") return "step";
+        if (ft==="baito") return "selectable";
+        return "g1";
+    }
+    return "selectable";
+}
+function isDrillModeFixed(wt) { return classifyDrillMode(wt)!=="selectable"; }
+function drillModeFixedLabel(wt) { return classifyDrillMode(wt)==="g1" ? "G1（単動）固定" : "10mmステップ送り固定"; }
+/* ドリルモード欄（q-depths画面）のHTML断片。固定/選択どちらの状態でも呼び直せる。 */
+function buildDrillModeSectionInner(wt) {
+    if (isDrillModeFixed(wt)) {
+        return '<label class="wiz-lbl">ドリルモード</label>'
+            +'<div class="depth-auto-row"><span class="depth-auto-val">'+escapeHtml(drillModeFixedLabel(wt))
+            +' <span class="depth-auto-badge">固定</span></span></div>';
+    }
+    var drillModeCards=[{v:"G74",l:"G74（サイクル）"},{v:"G1",l:"G1（単動）"}]
+        .map(function(o){return card(o.v,o.l,"select-drill-mode",wizardState.drillMode===o.v,"wiz-card--sm");}).join("");
+    return '<label class="wiz-lbl">ドリルモード</label><div class="wiz-grid wiz-grid--2">'+drillModeCards+'</div>';
+}
+/* M12/G18 の加工方法カードが変更された際、ドリルモード欄だけを再描画する（他の入力欄の値は保持） */
+function refreshDrillModeSection() {
+    var el=document.getElementById("drill-mode-section");
+    if (el) el.innerHTML=buildDrillModeSectionInner(wizardState.workType);
+}
 function needsOptionsScreen() { return isMHWorkType(wizardState.workType)||wizardState.workType==="G12B_G_ST_12175_8"; }
 
 function getNextScreen(currentId) {
@@ -557,9 +608,8 @@ function buildDepthsScreen() {
     var isRelay=st==="YoseRelay";
     var isManual=wizardState.drillDepthManual;
 
-    // ドリルモード
-    var drillModeCards=[{v:"G74",l:"G74（サイクル）"},{v:"G1",l:"G1（単動）"}]
-        .map(function(o){return card(o.v,o.l,"select-drill-mode",wizardState.drillMode===o.v,"wiz-card--sm");}).join("");
+    // ドリルモード（ワーク種別/加工方法によっては選択不可＝固定のため、その場合は選択UIではなく固定表示にする）
+    var drillModeHtml='<div id="drill-mode-section">'+buildDrillModeSectionInner(wt)+'</div>';
 
     // ドリル深さ: 自動 or 手動
     var autoVal=computeDrillDepthAuto();
@@ -640,7 +690,7 @@ function buildDepthsScreen() {
     if (isM12&&st==="Ichimonji") {
         var ftCards=[{v:"hss",l:"HSSドリル"},{v:"hgdr",l:"HGDRドリル"}]
             .map(function(o){return card(o.v,o.l,"select-m12-ft",wizardState.m12FinishType===o.v,"wiz-card--sm");}).join("");
-        m12Html='<label class="wiz-lbl">ドリル種類（一文字DR用）</label><div class="wiz-grid wiz-grid--2">'+ftCards+'</div>';
+        m12Html='<label class="wiz-lbl">ドリル種類</label><div class="wiz-grid wiz-grid--2">'+ftCards+'</div>';
     }
     if (isM12&&st==="CrossSmall") {
         var crossOps=[{v:"hss_oku",l:"HSSドリル + 奥バイト"},{v:"hgdr_oku",l:"HGDRドリル + 奥バイト"},{v:"hss_men",l:"HSSドリル + 一文字面取り"},{v:"hgdr_men",l:"HGDRドリル + 一文字面取り"},{v:"baito_oku",l:"バイト + 奥バイト"}]
@@ -665,10 +715,11 @@ function buildDepthsScreen() {
         okuHtml='<p class="depth-info-note">奥バイト面取り: '+(okuActive?"<strong>あり</strong>（相手径 6.0mm以上時のみ出力）":"なし")+'</p>';
     }
 
+    // 表示順は「原因→結果」: ドリル種類の選択(m12Html)が先、その結果決まるドリルモード表示(drillModeHtml)は後
     return '<div class="wiz-question"><h2 class="wiz-q-title">加工深さを入力してください</h2>'
         +'<div class="wiz-form">'
-        +'<label class="wiz-lbl">ドリルモード</label><div class="wiz-grid wiz-grid--2">'+drillModeCards+'</div>'
-        +idHtml+cpHtml+drillHtml+m12Html+okuHtml
+        +m12Html+drillModeHtml
+        +idHtml+cpHtml+drillHtml+okuHtml
         +'</div><button class="wiz-btn-primary" data-action="next-depths">次へ →</button></div>';
 }
 
@@ -1041,14 +1092,17 @@ function handleAction(action, value) {
         case "select-m12-ft":
             wizardState.m12FinishType=value;
             document.querySelectorAll("[data-action='select-m12-ft']").forEach(function(b){b.classList.toggle("selected",b.dataset.value===value);});
+            refreshDrillModeSection();
             break;
         case "select-m12-cross":
             wizardState.m12CrossMethod=value;
             document.querySelectorAll("[data-action='select-m12-cross']").forEach(function(b){b.classList.toggle("selected",b.dataset.value===value);});
+            refreshDrillModeSection();
             break;
         case "select-g18-cross":
             wizardState.g18CrossMethod=value;
             document.querySelectorAll("[data-action='select-g18-cross']").forEach(function(b){b.classList.toggle("selected",b.dataset.value===value);});
+            refreshDrillModeSection();
             break;
         case "next-depths":
             // 自動計算値を最終確定
@@ -1062,6 +1116,14 @@ function handleAction(action, value) {
             wizardState.valPartnerD=(document.getElementById("depth-partner-d")||{value:""}).value.trim();
             wizardState.cpVal=computeCP(wizardState.idDepth,wizardState.valPartnerD);
             // 奥バイトは m12CrossMethod から自動判定 - ここでは何もしない
+            // 刃長制限チェック（物理的な上限の警告のみ。進む/戻るは自由 = 生成は止めない）
+            {
+                var _maxDepth=getDrillMaxDepthMM(wizardState.workType);
+                var _dd=parseFloat(wizardState.drillDepth);
+                if (_maxDepth!=null && !isNaN(_dd) && _dd>_maxDepth) {
+                    window.alert("ドリル深さ "+_dd+"mm が刃長の上限（"+_maxDepth+"mm）を超えています。\n工具が底まで届かない可能性があるので、値を確認してください。\n（このまま進めることもできます）");
+                }
+            }
             advance("q-depths"); break;
         case "set-author":
             wizardState.workerName=value;
