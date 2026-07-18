@@ -1258,8 +1258,43 @@ function generateGCode(input, machineName) {
         };
     }
 
+    // ── 最終出力チェック（最終防衛ライン） ──
+    // ここまでの各チェックをすべて通過した後でも、組み立てられた命令文全体に
+    // 半角以外の文字や、壊れた丸カッコの対応が残っていないかを最後にもう一度
+    // 確認する。個々の入力欄チェックに漏れがあった場合の最後の砦。
+    const _finalPlainText = gcodeDisplayHtmlToPlainText(finalCode);
+    const _finalScanIssues = [];
+    if (/[^\x00-\x7E\r\n\t]/.test(_finalPlainText)) {
+        _finalScanIssues.push("生成された命令文に半角以外の文字が含まれています。入力欄を再確認してください。");
+    }
+    {
+        const openCount = (_finalPlainText.match(/\(/g) || []).length;
+        const closeCount = (_finalPlainText.match(/\)/g) || []).length;
+        if (openCount !== closeCount) {
+            _finalScanIssues.push(
+                "生成された命令文の丸カッコ「(」「)」の対応が崩れています。作成者名など自由入力欄を確認してください。"
+            );
+        }
+    }
+    if (_finalScanIssues.length > 0) {
+        if (!_isDbgMode) {
+            return {
+                displayHtml: `
+                <div style="background:#330000; border:2px solid #ff4444; padding:15px; color:#ffcccc; border-radius:6px; column-span: all;">
+                    <h3 style="margin-top:0; color:#ff4444;">⚠ 最終チェックエラー</h3>
+                    <ul style="padding-left:20px; line-height:1.6;">
+                        ${_finalScanIssues.map((msg) => `<li>${msg}</li>`).join("")}
+                    </ul>
+                </div>
+            `,
+                plainText: null,
+            };
+        }
+        _debugValidationWarning += `<div style="background:#332200; border:2px solid #ffaa00; padding:10px; color:#ffeecc; border-radius:6px; margin-bottom:6px; column-span:all; font-size:0.85em;"><strong>🛠 デバッグモード: 最終出力チェックで問題を検出（強制出力）</strong><ul style="padding-left:18px; margin:4px 0 0 0; line-height:1.5;">${_finalScanIssues.map((msg) => `<li>${escapeHtml(msg)}</li>`).join("")}</ul></div>`;
+    }
+
     return {
         displayHtml: _debugValidationWarning + finalCode,
-        plainText: gcodeDisplayHtmlToPlainText(finalCode),
+        plainText: _finalPlainText,
     };
 }
