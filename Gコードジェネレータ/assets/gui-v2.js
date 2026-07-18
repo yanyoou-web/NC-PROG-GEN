@@ -14,6 +14,7 @@
 /* global gcodeDisplayHtmlToPlainText, $id, currentInternalStyle, isDebugModeOn */
 /* global evaluateFormula, parseSimpleNumberOrFormula */
 /* global VALIDATOR_CATEGORIES, stripDisallowedChars, setupEraseGuard */
+/* global usesG18DrillShiageG1Block, isJM8ASWDWorkType */
 
 // ========== Section 2: スタイル制約 ==========
 

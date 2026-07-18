@@ -10,12 +10,15 @@
     "test:tube": "node scripts/verify-tube-x6u2.mjs",
     "test:calc": "node --test scripts/test-calc-functions.mjs",
     "test": "npm run test:tube && npm run test:calc",
+    "test:e2e": "node scripts/test-e2e-validation.mjs",
     "check:templates": "node scripts/check-template-placeholders.mjs",
+    "check:files": "node scripts/check-referenced-files-exist.mjs",
     "g-press": "node \"scripts/G＞PRESS.mjs\"",
-    "check": "npm run lint && npm run format:check && npm run test && npm run check:templates"
+    "check": "npm run lint && npm run format:check && npm run test && npm run check:templates && npm run check:files"
   },
   "devDependencies": {
     "eslint": "^10.2.1",
-    "prettier": "^3.8.3"
+    "prettier": "^3.8.3",
+    "playwright": "^1.56.1"
   }
 }
