@@ -978,6 +978,10 @@ function handleAction(action, value) {
             wizardState.yoseD        =(document.getElementById("yose-d")||{value:""}).value.trim();
             wizardState.yoseTotalLength=(document.getElementById("yose-total-len")||{value:""}).value.trim();
             wizardState.yosePartnerDepth=(document.getElementById("yose-partner-depth")||{value:""}).value.trim();
+            // 画面に表示されている入力欄は、値が入っているか確認してから次へ進む
+            if(document.getElementById("yose-d") && !wizardState.yoseD){showToast("相手径 Φdを入力してください");return;}
+            if(document.getElementById("yose-total-len") && !wizardState.yoseTotalLength){showToast("全長を入力してください");return;}
+            if(document.getElementById("yose-partner-depth") && !wizardState.yosePartnerDepth){showToast("相手径深さを入力してください");return;}
             advance("q-yose-detail"); break;
         case "select-mh-tool":
             wizardState.mhOdTool=value;
@@ -1082,6 +1086,17 @@ function handleAction(action, value) {
             wizardState.idDepth=(document.getElementById("id-depth")||{value:wizardState.idDepth}).value||wizardState.idDepth;
             wizardState.valPartnerD=(document.getElementById("depth-partner-d")||{value:""}).value.trim();
             wizardState.cpVal=computeCP(wizardState.idDepth,wizardState.valPartnerD);
+            // 画面に表示されている入力欄は、値が入っているか確認してから次へ進む
+            // （自動計算で埋まる項目は入力欄自体が表示されないため対象外）
+            if (document.getElementById("id-depth") && !wizardState.idDepth) {
+                showToast("内径深さを入力してください"); return;
+            }
+            if (document.getElementById("depth-partner-d") && !wizardState.valPartnerD) {
+                showToast(isCrossStyle(wizardState.internalStyle) ? "相手径を入力してください" : "ドリル径を入力してください"); return;
+            }
+            if (wizardState.drillDepthManual && !(document.getElementById("drill-depth")||{value:""}).value.trim()) {
+                showToast("ドリル深さを入力してください"); return;
+            }
             // 奥バイトは m12CrossMethod から自動判定 - ここでは何もしない
             // 刃長制限チェック（物理的な上限の警告のみ。進む/戻るは自由 = 生成は止めない）
             {

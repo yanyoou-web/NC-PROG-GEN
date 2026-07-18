@@ -272,6 +272,92 @@ async function main() {
         assert.ok(!result.includes("生成エラー"), "正常な入力ではエラーにならないこと");
     });
 
+    await test(browser, "一問一答: ヨセ詳細画面で相手径Φd未入力のまま次へ進もうとしても画面が変わらない", async (page) => {
+        await page.goto(`${baseUrl}/gui-v2.html`);
+        await page.click('[data-action="start"]');
+        await page.waitForTimeout(150);
+        await page.click('[data-action="select-machine"]');
+        await page.waitForTimeout(150);
+        await page.click('[data-action="select-worktype"][data-value="M42X3_25175"]');
+        await page.waitForTimeout(150);
+        await page.click('[data-action="select-style"][data-value="Yose"]');
+        await page.waitForSelector("#yose-d", { timeout: 5000 });
+        await page.click('[data-action="next-yose"]'); // 相手径Φdを空のまま次へ
+        await page.waitForTimeout(200);
+        const titleAfterEmpty = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
+        assert.ok(titleAfterEmpty.includes("ヨセ"), "未入力のままでは次の画面に進まないこと");
+
+        await page.fill("#yose-d", "10");
+        await page.click('[data-action="next-yose"]');
+        await page.waitForTimeout(200);
+        const titleAfterFilled = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
+        assert.ok(!titleAfterFilled.includes("ヨセ"), "入力すれば次の画面に進めること");
+    });
+
+    await test(browser, "一問一答: 加工深さ画面で内径深さ未入力のまま次へ進もうとしても画面が変わらない", async (page) => {
+        await page.goto(`${baseUrl}/gui-v2.html`);
+        await page.click('[data-action="start"]');
+        await page.waitForTimeout(150);
+        await page.click('[data-action="select-machine"]');
+        await page.waitForTimeout(150);
+        await page.click('[data-action="select-worktype"][data-value="M18"]');
+        await page.waitForTimeout(150);
+        await page.click('[data-action="select-style"][data-value="Normal"]');
+        await page.waitForTimeout(150);
+        await page.fill("#ate-input", "20");
+        await page.click('[data-action="next-atelength"]');
+        await page.waitForTimeout(150);
+        await page.fill("#maxod-direct-input", "30.1");
+        await page.click('[data-action="next-maxod"]');
+        await page.waitForSelector("#id-depth", { timeout: 5000 });
+
+        await page.click('.wiz-btn-primary[data-action="next-depths"]'); // 内径深さを空のまま次へ
+        await page.waitForTimeout(200);
+        const titleAfterEmpty = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
+        assert.ok(titleAfterEmpty.includes("加工深さ"), "未入力のままでは次の画面に進まないこと");
+
+        await page.fill("#id-depth", "15");
+        await page.click('.wiz-btn-primary[data-action="next-depths"]');
+        await page.waitForTimeout(200);
+        const titleAfterFilled = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
+        assert.ok(!titleAfterFilled.includes("加工深さ"), "入力すれば次の画面に進めること");
+    });
+
+    await test(
+        browser,
+        "一問一答: 内径深さが自動計算される場合（ヨセ中継）は入力欄が表示されず先へ進める",
+        async (page) => {
+            await page.goto(`${baseUrl}/gui-v2.html`);
+            await page.click('[data-action="start"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-machine"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-worktype"][data-value="M42X3_25175"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-style"][data-value="YoseRelay"]');
+            await page.waitForSelector("#yose-d", { timeout: 5000 });
+            await page.fill("#yose-d", "10");
+            await page.fill("#yose-total-len", "50");
+            await page.fill("#yose-partner-depth", "20");
+            await page.click('[data-action="next-yose"]');
+            await page.waitForTimeout(150);
+            await page.fill("#ate-input", "20");
+            await page.click('[data-action="next-atelength"]');
+            await page.waitForTimeout(150);
+            await page.fill("#maxod-direct-input", "30.1");
+            await page.click('[data-action="next-maxod"]');
+            await page.waitForSelector(".wiz-q-title", { timeout: 5000 });
+
+            const idDepthInputCount = await page.locator("#id-depth").count();
+            assert.equal(idDepthInputCount, 0, "自動計算される場合は内径深さの入力欄自体が表示されないこと");
+
+            await page.click('.wiz-btn-primary[data-action="next-depths"]');
+            await page.waitForTimeout(200);
+            const titleAfter = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
+            assert.ok(!titleAfter.includes("加工深さ"), "自動計算の場合はブロックされずに次へ進めること");
+        }
+    );
+
     await browser.close();
     server.close();
 
