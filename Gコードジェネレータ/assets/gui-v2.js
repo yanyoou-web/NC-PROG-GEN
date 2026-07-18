@@ -1,54 +1,20 @@
 /* =========================================================
    gui-v2.js — NCプログラム作成 ウィザードコントローラー
    ---------------------------------------------------------
-   読み込み順: gui-v2.js を logic.js より先に読み込むこと。
-   logic.js が Section 1 の utils 関数をグローバルとして使用する。
+   読み込み順: gui-v2.js を validators-v2.js より後、logic.js より先に
+   読み込むこと。ncFormat 等の utils・入力チェック共通処理は
+   validators-v2.js に定義されている。
    ========================================================= */
 /* global navigator */
 /* global generateGCode */
 /* global isM8WorkType, isYoseMachiningStyle, isYoseRelayStyle */
 /* global calcSpecialDrillZ, calcYoseRelayMetrics, calcCrossSmallFinishDepth */
 /* global DRILL_DIA_MAP */
-
-// ========== Section 1: utils（logic.js が依存するグローバル関数） ==========
-
-function evaluateFormula(str) {
-    if (!str) return "";
-    const sanitized = str.replace(/[^0-9+\-*/.()]/g, "");
-    try { const r = new Function("return " + sanitized)(); return isNaN(r) ? str : r; }
-    catch (e) { return str; }
-}
-function parseSimpleNumberOrFormula(str) {
-    if (str === null || str === undefined) return NaN;
-    const raw = String(str).trim();
-    if (!raw) return NaN;
-    if (/^[-+]?(?:\d+\.?\d*|\.\d+)$/.test(raw)) return Number(raw);
-    if (!/^[0-9+\-*/().\s]+$/.test(raw)) return NaN;
-    const ev = evaluateFormula(raw);
-    return typeof ev === "number" && isFinite(ev) ? ev : NaN;
-}
-function escapeHtml(str) {
-    if (!str) return "";
-    return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
-}
-function ncFormat(val) {
-    if (val === "" || val === null || val === undefined) return "";
-    const num = parseFloat(val); if (isNaN(num)) return "";
-    const s = num.toString(); return s.indexOf(".") === -1 ? s + "." : s;
-}
-function wrapH(val)        { return (val===""||val===undefined) ? "" : escapeHtml(val); }
-function wrapHCalc(val)    { return wrapH(val); }
-function wrapHInput(val)   { return wrapH(val); }
-function wrapHMachine(val) { return wrapH(val); }
-function gcodeDisplayHtmlToPlainText(htmlStr) {
-    if (!htmlStr) return "";
-    const d = document.createElement("div"); d.innerHTML = htmlStr;
-    return (d.innerText||"").replace(/\u00a0/g," ");
-}
-const $id = function(id){ return document.getElementById(id); };
-var currentInternalStyle = "";
-function isDebugModeOn() { return false; }
+/* global escapeHtml, ncFormat, wrapH, wrapHCalc, wrapHInput, wrapHMachine */
+/* global gcodeDisplayHtmlToPlainText, $id, currentInternalStyle, isDebugModeOn */
+/* global evaluateFormula, parseSimpleNumberOrFormula */
+/* global VALIDATOR_CATEGORIES, stripDisallowedChars, setupEraseGuard */
+/* global usesG18DrillShiageG1Block, isJM8ASWDWorkType */
 
 // ========== Section 2: スタイル制約 ==========
 
@@ -231,6 +197,7 @@ function renderScreen(screenId) {
         if (screenId==="q-maxod")  { bindCalcInputs(); initValidation(); }
         if (screenId==="q-depths") { initDrillAutoCalc(); bindDepthInputs(); initValidation(); }
         initValidation(); // 全画面でバリデーション対象を登録
+        initHalfWidthGuards(); // 全画面で半角チェック対象を登録
     },130);
 }
 var STYLE_LABELS_SHORT = {
@@ -424,8 +391,8 @@ function buildYoseDetailScreen() {
         .map(function(o){return card(o.v,o.l,"select-yose-method",wizardState.yoseMethod===o.v,"wiz-card--sm");}).join("");
     var angleCards=["75","60","45"].map(function(a){return card(a,a+"度","select-yose-angle",wizardState.yoseAngle===a,"wiz-card--sm");}).join("");
     var relayFields=isRelay
-        ?'<label class="wiz-lbl" for="yose-total-len">全長 (mm)</label><input class="wiz-input" id="yose-total-len" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yoseTotalLength)+'" />'
-         +'<label class="wiz-lbl" for="yose-partner-depth">相手径深さ (mm)</label><input class="wiz-input" id="yose-partner-depth" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yosePartnerDepth)+'" />'
+        ?'<label class="wiz-lbl" for="yose-total-len">全長 (mm)</label><input class="wiz-input validate-positive" id="yose-total-len" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yoseTotalLength)+'" />'
+         +'<label class="wiz-lbl" for="yose-partner-depth">相手径深さ (mm)</label><input class="wiz-input validate-positive" id="yose-partner-depth" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yosePartnerDepth)+'" />'
         :"";
     return '<div class="wiz-question">'
         +'<h2 class="wiz-q-title">'+(isRelay?"ヨセ中継":"ヨセ")+' の詳細を入力してください</h2>'
@@ -433,7 +400,7 @@ function buildYoseDetailScreen() {
         +'<label class="wiz-lbl">加工方法</label><div class="wiz-grid wiz-grid--2">'+methodCards+'</div>'
         +'<label class="wiz-lbl">テーパ角度</label><div class="wiz-grid wiz-grid--3">'+angleCards+'</div>'
         +'<label class="wiz-lbl" for="yose-d">相手径 Φd (mm)</label>'
-        +'<input class="wiz-input" id="yose-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yoseD)+'" />'
+        +'<input class="wiz-input validate-positive" id="yose-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yoseD)+'" />'
         +relayFields+'</div>'
         +'<button class="wiz-btn-primary" data-action="next-yose">次へ →</button></div>';
 }
@@ -464,7 +431,7 @@ function buildAteLengthScreen() {
     return '<div class="wiz-question"><h2 class="wiz-q-title">アテ長さを入力してください</h2>'
         +'<div class="wiz-presets">'+presets+'</div>'
         +'<div class="wiz-form"><label class="wiz-lbl" for="ate-input">直接入力 (mm)</label>'
-        +'<input class="wiz-input wiz-input--lg" id="ate-input" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.ateLength)+'" /></div>'
+        +'<input class="wiz-input wiz-input--lg validate-positive" id="ate-input" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.ateLength)+'" /></div>'
         +'<button class="wiz-btn-primary" data-action="next-atelength">次へ →</button></div>';
 }
 
@@ -630,7 +597,7 @@ function buildDepthsScreen() {
             return '<button class="depth-quick-btn" data-action="quick-drill" data-value="'+b.v+'">'+b.lbl+'</button>';
         }).join("");
         drillHtml='<label class="wiz-lbl">ドリル深さ (mm)</label>'
-            +'<input class="wiz-input depth-cross-field" id="drill-depth" type="text" inputmode="decimal"'
+            +'<input class="wiz-input depth-cross-field validate-positive" id="drill-depth" type="text" inputmode="decimal"'
             +' value="'+escapeHtml(wizardState.drillDepth)+'" />'
             +'<div class="depth-quick-row">'+quickBtns+'</div>'
             +'<button class="depth-manual-link" data-action="toggle-drill-manual">自動計算に戻す'+(autoVal!==null?'（'+escapeHtml(autoVal)+'mm）':'')+'</button>';
@@ -656,7 +623,7 @@ function buildDepthsScreen() {
         wizardState.idDepth = idAutoVal;
     } else {
         idHtml='<label class="wiz-lbl" for="id-depth">'+idLabel+'</label>'
-            +'<input class="wiz-input depth-cross-field" id="id-depth" type="text" inputmode="decimal"'
+            +'<input class="wiz-input depth-cross-field validate-positive" id="id-depth" type="text" inputmode="decimal"'
             +' value="'+escapeHtml(wizardState.idDepth)+'" />';
     }
 
@@ -670,7 +637,7 @@ function buildDepthsScreen() {
             if (fd!==null) finishDepthHint='<p class="depth-finish-hint">内径仕上深さ参考値: '+escapeHtml(fd)+' mm</p>';
         }
         cpHtml='<label class="wiz-lbl" for="depth-partner-d">相手径 Φ (mm)</label>'
-            +'<input class="wiz-input depth-cross-field" id="depth-partner-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valPartnerD)+'" />'
+            +'<input class="wiz-input depth-cross-field validate-positive" id="depth-partner-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valPartnerD)+'" />'
             +'<label class="wiz-lbl">CP値 = IP − 相手径/2（自動計算）</label>'
             +'<input class="wiz-input" id="depth-cp-display" type="text" readonly value="'+escapeHtml(cpComp)+'"'
             +' style="background:#1a2030;color:#7ec8e3;font-weight:bold;" />'
@@ -679,7 +646,7 @@ function buildDepthsScreen() {
         // 一文字（M12・M8以外）: IP + ドリル径 → CP自動計算（getIchimonjiBlock に渡す）
         var cpCompI = computeCP(wizardState.idDepth, wizardState.valPartnerD);
         cpHtml='<label class="wiz-lbl" for="depth-partner-d">ドリル径 Φ (mm)</label>'
-            +'<input class="wiz-input depth-cross-field" id="depth-partner-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valPartnerD)+'" />'
+            +'<input class="wiz-input depth-cross-field validate-positive" id="depth-partner-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valPartnerD)+'" />'
             +'<label class="wiz-lbl">CP値 = IP − ドリル径/2（自動計算）</label>'
             +'<input class="wiz-input" id="depth-cp-display" type="text" readonly value="'+escapeHtml(cpCompI)+'"'
             +' style="background:#1a2030;color:#7ec8e3;font-weight:bold;" />';
@@ -1305,7 +1272,10 @@ function initValidation() {
         if (el.dataset.valBound) return;
         el.dataset.valBound = "1";
         el.addEventListener("input", function() { validatePositive(el); });
-        el.addEventListener("blur",  function() { validatePositive(el); });
+        el.addEventListener("blur",  function() {
+            applyNumericFormulaOnBlur(el); // フォーカスアウト時に計算式を数値へ置き換える
+            validatePositive(el);
+        });
     });
 }
 function validatePositive(el) {
@@ -1317,13 +1287,13 @@ function validatePositive(el) {
         if (existing) existing.remove();
         return true;
     }
-    var num = parseFloat(v);
+    var num = parseSimpleNumberOrFormula(v);
     if (isNaN(num) || num <= 0) {
         el.classList.add("wiz-input--invalid");
         if (!existing) {
             var e = document.createElement("div");
             e.id = errId; e.className = "wiz-field-error";
-            e.textContent = "正の数値を入力してください";
+            e.textContent = "正の数値、または + - * / を使った計算式を入力してください";
             el.parentNode.insertBefore(e, el.nextSibling);
         }
         return false;
@@ -1331,6 +1301,41 @@ function validatePositive(el) {
     el.classList.remove("wiz-input--invalid");
     if (existing) existing.remove();
     return true;
+}
+// フォーカスアウト時、入力値が数値または計算式として解釈できれば、
+// 計算結果の数値そのものに置き換える（例:「10.5+2.3」→「12.8」）。
+// 解釈できない場合は何もしない（validatePositive 側でエラー表示される）。
+function applyNumericFormulaOnBlur(el) {
+    var v = el.value.trim();
+    if (v === "") return;
+    var num = parseSimpleNumberOrFormula(v);
+    if (!isNaN(num)) el.value = String(num);
+}
+
+// ---- 半角チェック（全角文字などを即座に消去する） ----
+// 分類は計画書の3種類に対応: ID=桁数値ID系 / NUMERIC=数値計測系 / FREE_TEXT=自由記述系
+var HALFWIDTH_GUARD_FIELDS = {
+    "v1a": "ID", "v1b": "ID", "v2": "ID",
+    "ate-input": "NUMERIC", "maxod-direct-input": "NUMERIC",
+    "calc-stock-a": "NUMERIC", "calc-stock-b": "NUMERIC",
+    "calc-ecc-a": "NUMERIC", "calc-ecc-b": "NUMERIC",
+    "calc-corn-w": "NUMERIC", "calc-corn-h": "NUMERIC",
+    "drill-depth": "NUMERIC", "id-depth": "NUMERIC", "depth-partner-d": "NUMERIC",
+    "yose-d": "NUMERIC", "yose-total-len": "NUMERIC", "yose-partner-depth": "NUMERIC",
+    "worker-name": "FREE_TEXT", "wiz-copy-url": "FREE_TEXT",
+};
+function flashHalfwidthGuard(el) {
+    el.classList.remove("wiz-input--hwflash");
+    void el.offsetWidth; // 同じ入力欄で連続して光らせられるよう、アニメーションを強制的に再生し直す
+    el.classList.add("wiz-input--hwflash");
+}
+function initHalfWidthGuards() {
+    Object.keys(HALFWIDTH_GUARD_FIELDS).forEach(function(id) {
+        var el = $id(id);
+        if (!el || el.dataset.hwGuardBound) return;
+        el.dataset.hwGuardBound = "1";
+        setupEraseGuard(el, HALFWIDTH_GUARD_FIELDS[id], flashHalfwidthGuard);
+    });
 }
 
 // ========== Section 13: 初期化 ==========

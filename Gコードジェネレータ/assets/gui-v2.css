@@ -820,6 +820,14 @@ body {
     padding-left: 2px;
 }
 
+/* ---------- 半角チェック：全角文字などを消去した際の枠線フラッシュ ----------
+   点滅（繰り返し）はさせず、1回だけ色が変わってすぐ元に戻る演出にする */
+@keyframes wizHalfwidthFlash {
+    0%   { border-color: var(--danger); box-shadow: 0 0 0 2px rgba(224, 85, 85, 0.35); }
+    100% { border-color: var(--border); box-shadow: none; }
+}
+.wiz-input--hwflash { animation: wizHalfwidthFlash 0.5s ease-out; }
+
 
 
 /* ---------- スクロールバー ---------- */

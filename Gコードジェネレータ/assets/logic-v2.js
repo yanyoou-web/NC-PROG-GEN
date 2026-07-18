@@ -12,6 +12,7 @@
  *   テンプレート群 … template_G78 / template_M40 / ...
  */
 /* global wrapH, wrapHCalc, wrapHInput, wrapHMachine, ncFormat, escapeHtml, parseSimpleNumberOrFormula */
+/* global stripDisallowedChars */
 /* global gcodeDisplayHtmlToPlainText */
 /* global getDrillShiageHGDRBlock, getDrillShiage10mmStepBlock, getIchimonjiBlock */
 /* global getIchimonjiHirazokoBlock, getOkuBiteBlock, getOkuBiteBlockG18 */
@@ -419,6 +420,36 @@ function generateGCode(input, machineName) {
         };
     }
 
+    // ── 数値・計算式フィールドの正規化（最終防衛ライン） ──
+    // 画面側はフォーカスアウト時に計算式を数値へ自動計算・置換するが（gui-v2.js
+    // の applyNumericFormulaOnBlur）、JSONインポート等その仕組みを経由しない
+    // 経路で値が渡ってくる可能性もある。ここで同じ evaluateFormula 系のロジック
+    // （parseSimpleNumberOrFormula）を使って正規化しておくことで、以降のチェック・
+    // 計算処理が常に同じ「計算済みの数値」を見るようにする。評価できない値は
+    // そのまま残し、後続のチェックでエラーとして検出させる。
+    const FORMULA_NORMALIZE_FIELDS = [
+        "maxOD",
+        "ateLength",
+        "valStockA",
+        "valStockB",
+        "valEccA",
+        "valEccB",
+        "valCornW",
+        "valCornH",
+        "drillDepth",
+        "idDepth",
+        "valPartnerD",
+        "yoseD",
+        "yoseTotalLength",
+        "yosePartnerDepth",
+    ];
+    FORMULA_NORMALIZE_FIELDS.forEach((key) => {
+        const raw = input[key];
+        if (raw === undefined || raw === null || String(raw).trim() === "") return;
+        const num = parseSimpleNumberOrFormula(raw);
+        if (!isNaN(num)) input[key] = String(num);
+    });
+
     // ▼▼▼ 追加: 数値入力バリデーション (Step 3) ▼▼▼
     const errors = [];
 
@@ -452,9 +483,21 @@ function generateGCode(input, machineName) {
     // ── 図番・作成者の必須チェック ──
     if (!input.drawNumA || String(input.drawNumA).trim() === "") {
         errors.push("[図番] が入力されていません。「PM-」の後の数字を入力してください。");
+    } else if (!/^[0-9]+$/.test(String(input.drawNumA).trim())) {
+        errors.push("[図番] は半角数字のみで入力してください。");
+    }
+    if (input.drawNumB && !/^[0-9]+$/.test(String(input.drawNumB).trim())) {
+        errors.push("[図番（-の後ろ）] は半角数字のみで入力してください。");
     }
     if (!input.workerName || String(input.workerName).trim() === "") {
         errors.push("[作成者] が入力されていません。作成者名を入力してください。");
+    } else if (
+        typeof stripDisallowedChars === "function" &&
+        stripDisallowedChars(String(input.workerName), "FREE_TEXT").removed
+    ) {
+        errors.push(
+            "[作成者] に使用できない文字が含まれています。半角文字のみを使用し、丸カッコ「(」「)」・「%」・「;」は使わないでください。"
+        );
     }
 
     // チェック対象リスト: { キー名, 表示名, 必須かどうか(省略可ならfalse) }
@@ -472,7 +515,7 @@ function generateGCode(input, machineName) {
         if (val === "" || val === undefined || val === null) {
             errors.push(`[${item.name}] が未入力です。画面上の「${item.name}」欄に半角数値を入力してください。`);
         } else {
-            const parsed = item.key === "maxOD" ? parseSimpleNumberOrFormula(val) : parseFloat(val);
+            const parsed = parseSimpleNumberOrFormula(val);
             if (isNaN(parsed) || !isFinite(parsed)) {
                 errors.push(
                     `[${item.name}] が数値として読めません。カンマや全角数字は使わず、例「30.1」のように半角で入力してください。`
@@ -493,7 +536,7 @@ function generateGCode(input, machineName) {
 
     // アテ長さは正の値であること（0 や負は加工長さとして無効）
     {
-        const ateLenNum = parseFloat(input.ateLength);
+        const ateLenNum = parseSimpleNumberOrFormula(input.ateLength);
         if (!isNaN(ateLenNum) && ateLenNum <= 0) {
             errors.push("[アテ長さ] は 0 より大きい値を入力してください。");
         }
@@ -503,8 +546,8 @@ function generateGCode(input, machineName) {
     if (input.calcMode === "corner") {
         const wStr = input.valCornW;
         const hStr = input.valCornH;
-        const w = parseFloat(wStr);
-        const h = parseFloat(hStr);
+        const w = parseSimpleNumberOrFormula(wStr);
+        const h = parseSimpleNumberOrFormula(hStr);
         if (wStr === "" || wStr === undefined || isNaN(w) || !isFinite(w)) {
             errors.push("[角あり] 「母材 幅 (W)」に半角数値を入力してください。（未入力だと角の径が計算されません）");
         } else if (w <= 0) {
@@ -523,18 +566,18 @@ function generateGCode(input, machineName) {
     // ヨセ加工の場合の必須チェック
     if (isYoseMachiningStyle(style) || isYoseRelayStyle(style)) {
         const styleLabel = isYoseRelayStyle(style) ? "ヨセ中継" : "ヨセ";
-        if (isNaN(parseFloat(input.yoseD))) errors.push(`[${styleLabel}: 相手径] が入力されていません。`);
+        if (isNaN(parseSimpleNumberOrFormula(input.yoseD))) errors.push(`[${styleLabel}: 相手径] が入力されていません。`);
         if (isNaN(parseFloat(input.yoseAngle))) errors.push(`[${styleLabel}: テーパ角度] が入力されていません。`);
         const yoseDCheck = validateYoseDDiameter(input);
         if (!yoseDCheck.ok) {
             errors.push(`[${styleLabel}: 相手径(Φd)] ${yoseDCheck.msg}`);
         }
         // YoseRelay は内径深さを自動計算するため手入力必須にしない
-        if (!isYoseRelayStyle(style) && input.workType !== "Tube" && isNaN(parseFloat(input.idDepth))) {
+        if (!isYoseRelayStyle(style) && input.workType !== "Tube" && isNaN(parseSimpleNumberOrFormula(input.idDepth))) {
             errors.push(`[内径深さ] が入力されていません（${styleLabel}計算に必要）。`);
         }
         if (isYoseRelayStyle(style)) {
-            if (isNaN(parseFloat(input.yosePartnerDepth))) {
+            if (isNaN(parseSimpleNumberOrFormula(input.yosePartnerDepth))) {
                 errors.push("[ヨセ中継: 相手径深さ] が入力されていません。");
             }
             const totalLen = resolveYoseTotalLength(input);
@@ -562,7 +605,7 @@ function generateGCode(input, machineName) {
         if (isNaN(parseFloat(input.cpVal))) errors.push("[CP (交差穴位置)] が計算されていません。");
     }
     if (style === "CrossSmall") {
-        if (isNaN(parseFloat(input.valPartnerD))) {
+        if (isNaN(parseSimpleNumberOrFormula(input.valPartnerD))) {
             errors.push("[相手径 (Φ)] が入力されていません。");
         } else {
             const crossSmallCheck = validateCrossSmallPartnerDia(input);
@@ -589,7 +632,7 @@ function generateGCode(input, machineName) {
         style !== "CrossSmall" &&
         input.workType !== "Tube"
     ) {
-        const idDepthNum = parseFloat(input.idDepth);
+        const idDepthNum = parseSimpleNumberOrFormula(input.idDepth);
         if (isNaN(idDepthNum)) {
             errors.push("[内径深さ] が入力されていません。");
         } else if (idDepthNum <= 7) {
@@ -598,7 +641,7 @@ function generateGCode(input, machineName) {
     }
     // Yose スタイル（非 Tube）でも内径深さが入力されていれば 7 超チェックを適用
     if (isYoseMachiningStyle(style) && input.workType !== "Tube") {
-        const idDepthNum = parseFloat(input.idDepth);
+        const idDepthNum = parseSimpleNumberOrFormula(input.idDepth);
         if (!isNaN(idDepthNum) && idDepthNum <= 7) {
             errors.push("[内径深さ] は 7 より大きい値を入力してください。");
         }
@@ -1215,8 +1258,43 @@ function generateGCode(input, machineName) {
         };
     }
 
+    // ── 最終出力チェック（最終防衛ライン） ──
+    // ここまでの各チェックをすべて通過した後でも、組み立てられた命令文全体に
+    // 半角以外の文字や、壊れた丸カッコの対応が残っていないかを最後にもう一度
+    // 確認する。個々の入力欄チェックに漏れがあった場合の最後の砦。
+    const _finalPlainText = gcodeDisplayHtmlToPlainText(finalCode);
+    const _finalScanIssues = [];
+    if (/[^\x00-\x7E\r\n\t]/.test(_finalPlainText)) {
+        _finalScanIssues.push("生成された命令文に半角以外の文字が含まれています。入力欄を再確認してください。");
+    }
+    {
+        const openCount = (_finalPlainText.match(/\(/g) || []).length;
+        const closeCount = (_finalPlainText.match(/\)/g) || []).length;
+        if (openCount !== closeCount) {
+            _finalScanIssues.push(
+                "生成された命令文の丸カッコ「(」「)」の対応が崩れています。作成者名など自由入力欄を確認してください。"
+            );
+        }
+    }
+    if (_finalScanIssues.length > 0) {
+        if (!_isDbgMode) {
+            return {
+                displayHtml: `
+                <div style="background:#330000; border:2px solid #ff4444; padding:15px; color:#ffcccc; border-radius:6px; column-span: all;">
+                    <h3 style="margin-top:0; color:#ff4444;">⚠ 最終チェックエラー</h3>
+                    <ul style="padding-left:20px; line-height:1.6;">
+                        ${_finalScanIssues.map((msg) => `<li>${msg}</li>`).join("")}
+                    </ul>
+                </div>
+            `,
+                plainText: null,
+            };
+        }
+        _debugValidationWarning += `<div style="background:#332200; border:2px solid #ffaa00; padding:10px; color:#ffeecc; border-radius:6px; margin-bottom:6px; column-span:all; font-size:0.85em;"><strong>🛠 デバッグモード: 最終出力チェックで問題を検出（強制出力）</strong><ul style="padding-left:18px; margin:4px 0 0 0; line-height:1.5;">${_finalScanIssues.map((msg) => `<li>${escapeHtml(msg)}</li>`).join("")}</ul></div>`;
+    }
+
     return {
         displayHtml: _debugValidationWarning + finalCode,
-        plainText: gcodeDisplayHtmlToPlainText(finalCode),
+        plainText: _finalPlainText,
     };
 }

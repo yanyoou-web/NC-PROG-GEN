@@ -48,14 +48,14 @@
 
         <!--
             スクリプト読み込み順（重要）:
-            1. data.js       … 機械定義・チューブ規格データ
-            2. i18n.js       … 多言語文字列（logic.js が内部で参照）
-            3. テンプレート群 … 各ワーク種別のGコードひな形
-            4. blocks.js     … Gコードブロック生成関数
-            5. gui-v2.js     … utils定義 + ウィザードコントローラー
-                               ★ logic.js より先に読む必要がある
-                               　（logic.js が ncFormat 等の utils を使用するため）
-            6. logic.js      … Gコード生成ロジック本体（generateGCode）
+            1. data.js         … 機械定義・チューブ規格データ
+            2. i18n.js         … 多言語文字列（logic.js が内部で参照）
+            3. テンプレート群   … 各ワーク種別のGコードひな形
+            4. blocks.js       … Gコードブロック生成関数
+            5. validators-v2.js… 入力チェック共通処理（ncFormat 等の utils を含む）
+                                 ★ gui-v2.js / logic.js より先に読む必要がある
+            6. gui-v2.js       … ウィザードコントローラー
+            7. logic.js        … Gコード生成ロジック本体（generateGCode）
         -->
         <script src="assets/data-v2.js"></script>
         <script src="assets/i18n-v2.js"></script>
@@ -98,6 +98,7 @@
         <script src="テンプレート/data_template_TOMESEN_M24.js"></script>
         <script src="テンプレート/data_template_TOMESEN_M35.js"></script>
         <script src="assets/blocks-v2.js"></script>
+        <script src="assets/validators-v2.js"></script>
         <script src="assets/gui-v2.js"></script>
         <script src="assets/logic-v2.js"></script>
     </body>
