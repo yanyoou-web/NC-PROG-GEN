@@ -690,7 +690,7 @@ function buildDepthsScreen() {
     if (isM12&&st==="Ichimonji") {
         var ftCards=[{v:"hss",l:"HSSドリル"},{v:"hgdr",l:"HGDRドリル"}]
             .map(function(o){return card(o.v,o.l,"select-m12-ft",wizardState.m12FinishType===o.v,"wiz-card--sm");}).join("");
-        m12Html='<label class="wiz-lbl">ドリル種類（一文字DR用）</label><div class="wiz-grid wiz-grid--2">'+ftCards+'</div>';
+        m12Html='<label class="wiz-lbl">ドリル種類</label><div class="wiz-grid wiz-grid--2">'+ftCards+'</div>';
     }
     if (isM12&&st==="CrossSmall") {
         var crossOps=[{v:"hss_oku",l:"HSSドリル + 奥バイト"},{v:"hgdr_oku",l:"HGDRドリル + 奥バイト"},{v:"hss_men",l:"HSSドリル + 一文字面取り"},{v:"hgdr_men",l:"HGDRドリル + 一文字面取り"},{v:"baito_oku",l:"バイト + 奥バイト"}]
