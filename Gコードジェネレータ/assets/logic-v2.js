@@ -82,6 +82,15 @@ function usesG18DrillShiageG1Block(wt) {
     );
 }
 
+/** M12/M12_MH の仕上げがHGDRドリルかどうか（m12FinishTypeは "hgdr" と "halfmoon" の
+ *  2通りの表記があるため、"hss"/"baito" 以外はすべてHGDR扱いとする）。
+ *  HGDRはG18系と同じ物理ドリルのため、G1固定・ペック/ステップなし・刃長制限も共通。 */
+function isM12HgdrFinish(wt, m12FinishType) {
+    if (wt !== "M12" && wt !== "M12_MH") return false;
+    const ft = m12FinishType || "hss";
+    return ft !== "hss" && ft !== "baito";
+}
+
 /** M42X3-ST-G-25.175 系（ストレート / φ20段付 / φ22段付 / φ16段付） */
 function isM42X3_25175WorkType(wt) {
     return wt === "M42X3_25175" || wt === "M42X3_25175_20" || wt === "M42X3_25175_22" || wt === "M42X3_25175_16";
@@ -864,12 +873,12 @@ function generateGCode(input, machineName) {
     const isCorner = input.calcMode === "corner";
 
     // ── ドリルブロック選択チェーン
-    //   1) G18系            → getDrillShiageHGDRBlock("G1")  [G74 なし固定]
+    //   1) G18系・M12×HGDR  → getDrillShiageHGDRBlock("G1")  [同一物理ドリルのためG74なし固定]
     //   2) ASWD / M8系      → getDrillShiage10mmStepBlock()  [10mm 刻みステップ]
     //   3) M12/M12_MH × HSS → getDrillShiage10mmStepBlock()  [10mm 刻みステップ]
-    //   4) それ以外          → getDrillShiageHGDRBlock(drillMode) [G74/G1 ユーザー選択]
+    //   4) それ以外（M12×バイト含む）→ getDrillShiageHGDRBlock(drillMode) [G74/G1 ユーザー選択]
     const drillBlockValue =
-        usesG18DrillShiageG1Block(input.workType)
+        usesG18DrillShiageG1Block(input.workType) || isM12HgdrFinish(input.workType, input.m12FinishType)
             ? getDrillShiageHGDRBlock(finalDrillDepth, "G1")
         : isJM8ASWDWorkType(input.workType) || isM8WorkType(input.workType)
             ? getDrillShiage10mmStepBlock(finalDrillDepth)
@@ -1171,7 +1180,7 @@ function generateGCode(input, machineName) {
         } else if (input.workType === "M12_MH") {
             _templateName = "template_M12" + (_ft === "baito" ? "BAITO" : _ft === "hss" ? "HSS" : "HGDR") + "_MH";
         }
-        const _drillBlockKind = usesG18DrillShiageG1Block(input.workType)
+        const _drillBlockKind = usesG18DrillShiageG1Block(input.workType) || isM12HgdrFinish(input.workType, input.m12FinishType)
             ? "getDrillShiageHGDRBlock(G1)"
             : isJM8ASWDWorkType(input.workType) || isM8WorkType(input.workType)
                 ? "getDrillShiage10mmStepBlock"
