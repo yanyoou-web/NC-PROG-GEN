@@ -196,6 +196,7 @@ function renderScreen(screenId) {
         if (screenId==="q-maxod")  { bindCalcInputs(); initValidation(); }
         if (screenId==="q-depths") { initDrillAutoCalc(); bindDepthInputs(); initValidation(); }
         initValidation(); // 全画面でバリデーション対象を登録
+        initHalfWidthGuards(); // 全画面で半角チェック対象を登録
     },130);
 }
 var STYLE_LABELS_SHORT = {
@@ -1296,6 +1297,32 @@ function validatePositive(el) {
     el.classList.remove("wiz-input--invalid");
     if (existing) existing.remove();
     return true;
+}
+
+// ---- 半角チェック（全角文字などを即座に消去する） ----
+// 分類は計画書の3種類に対応: ID=桁数値ID系 / NUMERIC=数値計測系 / FREE_TEXT=自由記述系
+var HALFWIDTH_GUARD_FIELDS = {
+    "v1a": "ID", "v1b": "ID", "v2": "ID",
+    "ate-input": "NUMERIC", "maxod-direct-input": "NUMERIC",
+    "calc-stock-a": "NUMERIC", "calc-stock-b": "NUMERIC",
+    "calc-ecc-a": "NUMERIC", "calc-ecc-b": "NUMERIC",
+    "calc-corn-w": "NUMERIC", "calc-corn-h": "NUMERIC",
+    "drill-depth": "NUMERIC", "id-depth": "NUMERIC", "depth-partner-d": "NUMERIC",
+    "yose-d": "NUMERIC", "yose-total-len": "NUMERIC", "yose-partner-depth": "NUMERIC",
+    "worker-name": "FREE_TEXT", "wiz-copy-url": "FREE_TEXT",
+};
+function flashHalfwidthGuard(el) {
+    el.classList.remove("wiz-input--hwflash");
+    void el.offsetWidth; // 同じ入力欄で連続して光らせられるよう、アニメーションを強制的に再生し直す
+    el.classList.add("wiz-input--hwflash");
+}
+function initHalfWidthGuards() {
+    Object.keys(HALFWIDTH_GUARD_FIELDS).forEach(function(id) {
+        var el = $id(id);
+        if (!el || el.dataset.hwGuardBound) return;
+        el.dataset.hwGuardBound = "1";
+        setupEraseGuard(el, HALFWIDTH_GUARD_FIELDS[id], flashHalfwidthGuard);
+    });
 }
 
 // ========== Section 13: 初期化 ==========
