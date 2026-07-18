@@ -124,6 +124,37 @@ function isMHWorkType(wt) {
 function isM12Like(wt)   { return wt==="M12"||wt==="M12_MH"; }
 function isG18Small(wt)  { return wt==="G18_40"||wt==="G18_42"||wt==="G18_40_MH"||wt==="G18_42_MH"; }
 function isCrossStyle(s) { return s==="CrossSmall"; }
+
+/* logic-v2.js のドリルブロック選択チェーン（①②③）に該当し、
+   ユーザーの drillMode（G74/G1）選択が無視されるワーク種別かどうか。
+   M12/M12_MH は現在の加工方法（resolveM12Profile）から実際の finishType を見て判定する。 */
+function isDrillModeFixed(wt) {
+    if (typeof usesG18DrillShiageG1Block==="function" && usesG18DrillShiageG1Block(wt)) return true;
+    if ((typeof isJM8ASWDWorkType==="function" && isJM8ASWDWorkType(wt)) ||
+        (typeof isM8WorkType==="function" && isM8WorkType(wt))) return true;
+    if (isM12Like(wt)) return resolveM12Profile().finishType==="hss";
+    return false;
+}
+function drillModeFixedLabel(wt) {
+    if (typeof usesG18DrillShiageG1Block==="function" && usesG18DrillShiageG1Block(wt)) return "G1（単動）固定";
+    return "10mmステップ送り固定";
+}
+/* ドリルモード欄（q-depths画面）のHTML断片。固定/選択どちらの状態でも呼び直せる。 */
+function buildDrillModeSectionInner(wt) {
+    if (isDrillModeFixed(wt)) {
+        return '<label class="wiz-lbl">ドリルモード</label>'
+            +'<div class="depth-auto-row"><span class="depth-auto-val">'+escapeHtml(drillModeFixedLabel(wt))
+            +' <span class="depth-auto-badge">固定</span></span></div>';
+    }
+    var drillModeCards=[{v:"G74",l:"G74（サイクル）"},{v:"G1",l:"G1（単動）"}]
+        .map(function(o){return card(o.v,o.l,"select-drill-mode",wizardState.drillMode===o.v,"wiz-card--sm");}).join("");
+    return '<label class="wiz-lbl">ドリルモード</label><div class="wiz-grid wiz-grid--2">'+drillModeCards+'</div>';
+}
+/* M12/G18 の加工方法カードが変更された際、ドリルモード欄だけを再描画する（他の入力欄の値は保持） */
+function refreshDrillModeSection() {
+    var el=document.getElementById("drill-mode-section");
+    if (el) el.innerHTML=buildDrillModeSectionInner(wizardState.workType);
+}
 function needsOptionsScreen() { return isMHWorkType(wizardState.workType)||wizardState.workType==="G12B_G_ST_12175_8"; }
 
 function getNextScreen(currentId) {
@@ -557,9 +588,8 @@ function buildDepthsScreen() {
     var isRelay=st==="YoseRelay";
     var isManual=wizardState.drillDepthManual;
 
-    // ドリルモード
-    var drillModeCards=[{v:"G74",l:"G74（サイクル）"},{v:"G1",l:"G1（単動）"}]
-        .map(function(o){return card(o.v,o.l,"select-drill-mode",wizardState.drillMode===o.v,"wiz-card--sm");}).join("");
+    // ドリルモード（ワーク種別/加工方法によっては選択不可＝固定のため、その場合は選択UIではなく固定表示にする）
+    var drillModeHtml='<div id="drill-mode-section">'+buildDrillModeSectionInner(wt)+'</div>';
 
     // ドリル深さ: 自動 or 手動
     var autoVal=computeDrillDepthAuto();
@@ -667,7 +697,7 @@ function buildDepthsScreen() {
 
     return '<div class="wiz-question"><h2 class="wiz-q-title">加工深さを入力してください</h2>'
         +'<div class="wiz-form">'
-        +'<label class="wiz-lbl">ドリルモード</label><div class="wiz-grid wiz-grid--2">'+drillModeCards+'</div>'
+        +drillModeHtml
         +idHtml+cpHtml+drillHtml+m12Html+okuHtml
         +'</div><button class="wiz-btn-primary" data-action="next-depths">次へ →</button></div>';
 }
@@ -1041,14 +1071,17 @@ function handleAction(action, value) {
         case "select-m12-ft":
             wizardState.m12FinishType=value;
             document.querySelectorAll("[data-action='select-m12-ft']").forEach(function(b){b.classList.toggle("selected",b.dataset.value===value);});
+            refreshDrillModeSection();
             break;
         case "select-m12-cross":
             wizardState.m12CrossMethod=value;
             document.querySelectorAll("[data-action='select-m12-cross']").forEach(function(b){b.classList.toggle("selected",b.dataset.value===value);});
+            refreshDrillModeSection();
             break;
         case "select-g18-cross":
             wizardState.g18CrossMethod=value;
             document.querySelectorAll("[data-action='select-g18-cross']").forEach(function(b){b.classList.toggle("selected",b.dataset.value===value);});
+            refreshDrillModeSection();
             break;
         case "next-depths":
             // 自動計算値を最終確定
