@@ -390,8 +390,8 @@ function buildYoseDetailScreen() {
         .map(function(o){return card(o.v,o.l,"select-yose-method",wizardState.yoseMethod===o.v,"wiz-card--sm");}).join("");
     var angleCards=["75","60","45"].map(function(a){return card(a,a+"度","select-yose-angle",wizardState.yoseAngle===a,"wiz-card--sm");}).join("");
     var relayFields=isRelay
-        ?'<label class="wiz-lbl" for="yose-total-len">全長 (mm)</label><input class="wiz-input" id="yose-total-len" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yoseTotalLength)+'" />'
-         +'<label class="wiz-lbl" for="yose-partner-depth">相手径深さ (mm)</label><input class="wiz-input" id="yose-partner-depth" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yosePartnerDepth)+'" />'
+        ?'<label class="wiz-lbl" for="yose-total-len">全長 (mm)</label><input class="wiz-input validate-positive" id="yose-total-len" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yoseTotalLength)+'" />'
+         +'<label class="wiz-lbl" for="yose-partner-depth">相手径深さ (mm)</label><input class="wiz-input validate-positive" id="yose-partner-depth" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yosePartnerDepth)+'" />'
         :"";
     return '<div class="wiz-question">'
         +'<h2 class="wiz-q-title">'+(isRelay?"ヨセ中継":"ヨセ")+' の詳細を入力してください</h2>'
@@ -399,7 +399,7 @@ function buildYoseDetailScreen() {
         +'<label class="wiz-lbl">加工方法</label><div class="wiz-grid wiz-grid--2">'+methodCards+'</div>'
         +'<label class="wiz-lbl">テーパ角度</label><div class="wiz-grid wiz-grid--3">'+angleCards+'</div>'
         +'<label class="wiz-lbl" for="yose-d">相手径 Φd (mm)</label>'
-        +'<input class="wiz-input" id="yose-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yoseD)+'" />'
+        +'<input class="wiz-input validate-positive" id="yose-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.yoseD)+'" />'
         +relayFields+'</div>'
         +'<button class="wiz-btn-primary" data-action="next-yose">次へ →</button></div>';
 }
@@ -430,7 +430,7 @@ function buildAteLengthScreen() {
     return '<div class="wiz-question"><h2 class="wiz-q-title">アテ長さを入力してください</h2>'
         +'<div class="wiz-presets">'+presets+'</div>'
         +'<div class="wiz-form"><label class="wiz-lbl" for="ate-input">直接入力 (mm)</label>'
-        +'<input class="wiz-input wiz-input--lg" id="ate-input" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.ateLength)+'" /></div>'
+        +'<input class="wiz-input wiz-input--lg validate-positive" id="ate-input" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.ateLength)+'" /></div>'
         +'<button class="wiz-btn-primary" data-action="next-atelength">次へ →</button></div>';
 }
 
@@ -596,7 +596,7 @@ function buildDepthsScreen() {
             return '<button class="depth-quick-btn" data-action="quick-drill" data-value="'+b.v+'">'+b.lbl+'</button>';
         }).join("");
         drillHtml='<label class="wiz-lbl">ドリル深さ (mm)</label>'
-            +'<input class="wiz-input depth-cross-field" id="drill-depth" type="text" inputmode="decimal"'
+            +'<input class="wiz-input depth-cross-field validate-positive" id="drill-depth" type="text" inputmode="decimal"'
             +' value="'+escapeHtml(wizardState.drillDepth)+'" />'
             +'<div class="depth-quick-row">'+quickBtns+'</div>'
             +'<button class="depth-manual-link" data-action="toggle-drill-manual">自動計算に戻す'+(autoVal!==null?'（'+escapeHtml(autoVal)+'mm）':'')+'</button>';
@@ -622,7 +622,7 @@ function buildDepthsScreen() {
         wizardState.idDepth = idAutoVal;
     } else {
         idHtml='<label class="wiz-lbl" for="id-depth">'+idLabel+'</label>'
-            +'<input class="wiz-input depth-cross-field" id="id-depth" type="text" inputmode="decimal"'
+            +'<input class="wiz-input depth-cross-field validate-positive" id="id-depth" type="text" inputmode="decimal"'
             +' value="'+escapeHtml(wizardState.idDepth)+'" />';
     }
 
@@ -636,7 +636,7 @@ function buildDepthsScreen() {
             if (fd!==null) finishDepthHint='<p class="depth-finish-hint">内径仕上深さ参考値: '+escapeHtml(fd)+' mm</p>';
         }
         cpHtml='<label class="wiz-lbl" for="depth-partner-d">相手径 Φ (mm)</label>'
-            +'<input class="wiz-input depth-cross-field" id="depth-partner-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valPartnerD)+'" />'
+            +'<input class="wiz-input depth-cross-field validate-positive" id="depth-partner-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valPartnerD)+'" />'
             +'<label class="wiz-lbl">CP値 = IP − 相手径/2（自動計算）</label>'
             +'<input class="wiz-input" id="depth-cp-display" type="text" readonly value="'+escapeHtml(cpComp)+'"'
             +' style="background:#1a2030;color:#7ec8e3;font-weight:bold;" />'
@@ -645,7 +645,7 @@ function buildDepthsScreen() {
         // 一文字（M12・M8以外）: IP + ドリル径 → CP自動計算（getIchimonjiBlock に渡す）
         var cpCompI = computeCP(wizardState.idDepth, wizardState.valPartnerD);
         cpHtml='<label class="wiz-lbl" for="depth-partner-d">ドリル径 Φ (mm)</label>'
-            +'<input class="wiz-input depth-cross-field" id="depth-partner-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valPartnerD)+'" />'
+            +'<input class="wiz-input depth-cross-field validate-positive" id="depth-partner-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valPartnerD)+'" />'
             +'<label class="wiz-lbl">CP値 = IP − ドリル径/2（自動計算）</label>'
             +'<input class="wiz-input" id="depth-cp-display" type="text" readonly value="'+escapeHtml(cpCompI)+'"'
             +' style="background:#1a2030;color:#7ec8e3;font-weight:bold;" />';
@@ -1271,7 +1271,10 @@ function initValidation() {
         if (el.dataset.valBound) return;
         el.dataset.valBound = "1";
         el.addEventListener("input", function() { validatePositive(el); });
-        el.addEventListener("blur",  function() { validatePositive(el); });
+        el.addEventListener("blur",  function() {
+            applyNumericFormulaOnBlur(el); // フォーカスアウト時に計算式を数値へ置き換える
+            validatePositive(el);
+        });
     });
 }
 function validatePositive(el) {
@@ -1283,13 +1286,13 @@ function validatePositive(el) {
         if (existing) existing.remove();
         return true;
     }
-    var num = parseFloat(v);
+    var num = parseSimpleNumberOrFormula(v);
     if (isNaN(num) || num <= 0) {
         el.classList.add("wiz-input--invalid");
         if (!existing) {
             var e = document.createElement("div");
             e.id = errId; e.className = "wiz-field-error";
-            e.textContent = "正の数値を入力してください";
+            e.textContent = "正の数値、または + - * / を使った計算式を入力してください";
             el.parentNode.insertBefore(e, el.nextSibling);
         }
         return false;
@@ -1297,6 +1300,15 @@ function validatePositive(el) {
     el.classList.remove("wiz-input--invalid");
     if (existing) existing.remove();
     return true;
+}
+// フォーカスアウト時、入力値が数値または計算式として解釈できれば、
+// 計算結果の数値そのものに置き換える（例:「10.5+2.3」→「12.8」）。
+// 解釈できない場合は何もしない（validatePositive 側でエラー表示される）。
+function applyNumericFormulaOnBlur(el) {
+    var v = el.value.trim();
+    if (v === "") return;
+    var num = parseSimpleNumberOrFormula(v);
+    if (!isNaN(num)) el.value = String(num);
 }
 
 // ---- 半角チェック（全角文字などを即座に消去する） ----
