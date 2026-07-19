@@ -387,8 +387,8 @@ function buildStyleScreen() {
     var cards=av.map(function(s){
         return '<button class="wiz-card wiz-card--style'+(wizardState.internalStyle===s?" selected":"")
             +'" data-action="select-style" data-value="'+escapeHtml(s)+'">'
-            +'<div class="card-icon">'+(STYLE_ICON_HTML[s]||"")+'</div>'
             +'<span class="wiz-card__num">'+(STYLE_NUMS[s]||"")+'</span>'
+            +'<div class="card-icon">'+(STYLE_ICON_HTML[s]||"")+'</div>'
             +'<span class="wiz-card__label">'+escapeHtml(STYLE_LABELS[s]||s)+'</span></button>';
     }).join("");
     return '<div class="wiz-question"><h2 class="wiz-q-title">加工スタイルを選んでください</h2>'
