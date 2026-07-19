@@ -8,6 +8,7 @@
 /* global navigator */
 /* global generateGCode */
 /* global validateBasicSelections, validateCommonNumericFields, validateStyleSpecificRules */
+/* global validateCrossSmallPartnerDia */
 /* global isM8WorkType, isYoseMachiningStyle, isYoseRelayStyle */
 /* global calcSpecialDrillZ, calcYoseRelayMetrics, calcCrossSmallFinishDepth */
 /* global DRILL_DIA_MAP */
@@ -836,7 +837,16 @@ function buildDepthsScreen() {
         +'<div class="wiz-form">'
         +m12Html+drillModeHtml
         +idHtml+cpHtml+drillHtml+okuHtml
-        +'</div><button class="wiz-btn-primary" data-action="next-depths">次へ →</button></div>';
+        +'</div><div id="depths-style-warning"></div>'
+        +'<button class="wiz-btn-primary" data-action="next-depths">次へ →</button></div>';
+}
+
+/* 交差穴（小径）相手径±0.5mmルール抵触時: 「通常バイト加工」への切替導線 */
+function buildStyleSwitchWarningHTML(msg) {
+    return '<div class="depths-style-warning">'
+        +'<p class="depths-style-warning__msg">'+escapeHtml(msg)+'</p>'
+        +'<button class="depths-style-warning__btn" data-action="switch-to-normal-style">'
+        +escapeHtml(STYLE_LABELS.Normal)+'に切り替える</button></div>';
 }
 
 /* ---- Q7: 図番・作成者（M99P100はQ5へ移動済み） ---- */
@@ -1279,12 +1289,24 @@ function handleAction(action, value) {
             // 重複させない（ここまでの画面で入力済みの図番・作成者チェックはまだ対象外）。
             if (typeof validateBasicSelections==="function") {
                 var _earlyInput=buildInputFromState();
+                var _warnEl=document.getElementById("depths-style-warning");
+                if (isCrossStyle(wizardState.internalStyle)) {
+                    var _crossCheck=validateCrossSmallPartnerDia(_earlyInput);
+                    if (_warnEl) _warnEl.innerHTML=_crossCheck.ok?"":buildStyleSwitchWarningHTML(_crossCheck.msg);
+                    if (!_crossCheck.ok) { showToast(_crossCheck.msg); return; }
+                } else if (_warnEl) {
+                    _warnEl.innerHTML="";
+                }
                 var _earlyErrors=validateBasicSelections(_earlyInput)
                     .concat(validateCommonNumericFields(_earlyInput))
                     .concat(validateStyleSpecificRules(_earlyInput));
                 if (_earlyErrors.length) { showToast(_earlyErrors[0]); return; }
             }
             advance("q-depths"); break;
+        case "switch-to-normal-style":
+            wizardState.internalStyle="Normal";
+            renderScreen("q-depths");
+            break;
         case "set-author":
             wizardState.workerName=value;
             var wi=document.getElementById("worker-name"); if(wi) wi.value=value; break;

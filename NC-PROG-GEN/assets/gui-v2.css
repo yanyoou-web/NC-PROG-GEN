@@ -1136,6 +1136,32 @@ body {
     padding: 6px 10px;
     border-radius: 0 4px 4px 0;
 }
+.depths-style-warning {
+    font-size: 0.80rem;
+    color: var(--text);
+    background: rgba(224, 136, 85, 0.1);
+    border-left: 3px solid #e08855;
+    border-radius: 0 4px 4px 0;
+    padding: 10px 12px;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.depths-style-warning__msg { line-height: 1.4; }
+.depths-style-warning__btn {
+    background: none;
+    border: 1.5px solid #e08855;
+    color: #e08855;
+    border-radius: var(--radius-sm);
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    align-self: flex-start;
+    transition: background var(--trans), color var(--trans);
+}
+.depths-style-warning__btn:hover { background: #e08855; color: var(--bg-page); }
 
 /* ---------- スタート画面: インポートボタン ---------- */
 .wiz-start__import {
