@@ -170,7 +170,7 @@ var WORK_TYPE_GROUPS = [
     {label:"M8系",     items:[{value:"M8_21",label:"S-M8 φ2.1"},{value:"M8_31",label:"S-M8 φ3.1"},{value:"J_M8_300",label:"次世代M8 φ3.0"},{value:"J_M8_200",label:"次世代M8 φ2.0"}]},
     {label:"トメセン",  items:[{value:"TOMESEN_M16",label:"M16"},{value:"TOMESEN_M18",label:"M18"},{value:"TOMESEN_M22",label:"M22"},{value:"TOMESEN_M24",label:"M24"},{value:"TOMESEN_M35",label:"M35"}]},
     {label:"特殊",     items:[{value:"G12B_G_ST_12175_8",label:"G12B-ST-12.175-8"}]},
-    {label:"チューブ", items:[{value:"Tube",label:"チューブ"}]},
+    {label:"チューブ", items:[{value:"Tube",label:"チューブ"},{value:"Tube_MH",label:"チューブ MH"}]},
 ];
 var ATE_PRESETS = [
     {value:"42.5",label:"42.5（15角）",kaku:true},{value:"41",label:"41（18角）",kaku:true},
@@ -219,11 +219,13 @@ var screenStack = [];
 
 function isMHWorkType(wt) {
     return wt==="M12_MH"||wt==="M15_MH"||wt==="M18_MH"||wt==="M22_MH"||wt==="M40_MH"||wt==="G78_MH"||
-           wt==="G18_40_MH"||wt==="G18_42_MH"||wt==="G18_62_MH"||wt==="G18_655_MH"||wt==="G18_6175_MH";
+           wt==="G18_40_MH"||wt==="G18_42_MH"||wt==="G18_62_MH"||wt==="G18_655_MH"||wt==="G18_6175_MH"||
+           wt==="Tube_MH";
 }
 function isM12Like(wt)   { return wt==="M12"||wt==="M12_MH"; }
 function isG18Small(wt)  { return wt==="G18_40"||wt==="G18_42"||wt==="G18_40_MH"||wt==="G18_42_MH"; }
 function isCrossStyle(s) { return s==="CrossSmall"; }
+function isTubeWorkType(wt) { return wt==="Tube"||wt==="Tube_MH"; }
 
 /* logic-v2.js のドリルブロック選択チェーンと同じ分類を行う。
    "g1"        = HGDR工具（G18全種・M12×HGDR）→ G74/G1選択不可、常にG1単動固定
@@ -266,9 +268,9 @@ function needsOptionsScreen() { return isMHWorkType(wizardState.workType)||wizar
 function getNextScreen(currentId) {
     if (currentId==="start")        return "q-machine";
     if (currentId==="q-machine")    return "q-worktype";
-    if (currentId==="q-worktype") { if (wizardState.workType==="Tube") return "q-tube-spec"; return "q-style"; }
+    if (currentId==="q-worktype") { if (isTubeWorkType(wizardState.workType)) return "q-tube-spec"; return "q-style"; }
     if (currentId==="q-tube-spec")  return "q-tube-length";
-    if (currentId==="q-tube-length")return "q-atelength";
+    if (currentId==="q-tube-length")return "q-style";
     if (currentId==="q-style") {
         if (wizardState.internalStyle==="YoseRelay"||wizardState.internalStyle==="Yose") return "q-yose-detail";
         if (needsOptionsScreen()) return "q-options";
@@ -278,7 +280,12 @@ function getNextScreen(currentId) {
     if (currentId==="q-options")    return "q-atelength";
     if (currentId==="q-atelength") {
         if (isMHWorkType(wizardState.workType)) {
-            wizardState.maxOD  = "";
+            if (isTubeWorkType(wizardState.workType)) {
+                var tSpec = (typeof tubeData!=="undefined") ? tubeData[wizardState.tubeSpec] : null;
+                wizardState.maxOD = tSpec ? String(tSpec.od) : "";
+            } else {
+                wizardState.maxOD = "";
+            }
             wizardState.m99Mode = "on";
             return "q-depths";
         }
@@ -343,7 +350,7 @@ function buildCrumbBarHTML() {
         var wl=wizardState.workType==="Tube"?"チューブ":getWorkTypeShortLabel(wizardState.workType);
         chips.push(wl);
     }
-    if (wizardState.workType==="Tube"&&wizardState.tubeSpec)
+    if (isTubeWorkType(wizardState.workType)&&wizardState.tubeSpec)
         chips.push(wizardState.tubeSpec+(wizardState.tubeLength?" "+wizardState.tubeLength+"mm":""));
     if (wizardState.internalStyle)
         chips.push(STYLE_LABELS_SHORT[wizardState.internalStyle]||wizardState.internalStyle);
@@ -734,7 +741,7 @@ function buildDepthsScreen() {
 
     // 内径深さ / IP（ヨセ中継は自動。交差穴・一文字CP では「IP = 原点〜穴中心距離」として使用）
     var idAutoVal = isRelay ? computeIdDepthForRelay()
-                 : wt==="Tube" ? computeIdDepthForTube()
+                 : isTubeWorkType(wt) ? computeIdDepthForTube()
                  : null;
     var idLabel = (isCross || isIchimonjiNeedsCp)
         ? (isCross
@@ -743,7 +750,7 @@ function buildDepthsScreen() {
         : '内径深さ (mm)';
     var idHtml;
     if (idAutoVal!==null) {
-        var idAutoLabel = wt==="Tube" ? "自動（規格値）" : "自動計算";
+        var idAutoLabel = isTubeWorkType(wt) ? "自動（規格値）" : "自動計算";
         idHtml='<label class="wiz-lbl">内径深さ</label>'
             +'<div class="depth-auto-row"><span class="depth-auto-val">'+escapeHtml(idAutoVal)+' mm <span class="depth-auto-badge">'+idAutoLabel+'</span></span></div>';
         wizardState.idDepth = idAutoVal;
@@ -850,7 +857,7 @@ function computeCP(idDepth,partnerD) {
 
 /* チューブ内径深さ自動計算（tubeData[spec].id から取得） */
 function computeIdDepthForTube() {
-    if (wizardState.workType !== "Tube") return null;
+    if (!isTubeWorkType(wizardState.workType)) return null;
     if (typeof tubeData === "undefined" || !tubeData[wizardState.tubeSpec]) return null;
     return String(tubeData[wizardState.tubeSpec].id);
 }
@@ -1024,13 +1031,10 @@ function importStateJson() {
                 Object.keys(wizardState).forEach(function(k){ if (k in data&&!k.startsWith("_")) wizardState[k]=data[k]; });
                 // 戻るスタックをインポートデータのパスに応じて動的に構築
                 var stack=["start","q-machine","q-worktype"];
-                if (wizardState.workType==="Tube") {
-                    stack.push("q-tube-spec","q-tube-length");
-                } else {
-                    stack.push("q-style");
-                    if (wizardState.internalStyle==="YoseRelay"||wizardState.internalStyle==="Yose") stack.push("q-yose-detail");
-                    if (isMHWorkType(wizardState.workType)||wizardState.workType==="G12B_G_ST_12175_8") stack.push("q-options");
-                }
+                if (isTubeWorkType(wizardState.workType)) stack.push("q-tube-spec","q-tube-length");
+                stack.push("q-style");
+                if (wizardState.internalStyle==="YoseRelay"||wizardState.internalStyle==="Yose") stack.push("q-yose-detail");
+                if (needsOptionsScreen()) stack.push("q-options");
                 stack.push("q-atelength");
                 if (!isMHWorkType(wizardState.workType)) stack.push("q-maxod");
                 stack.push("q-depths");
@@ -1291,13 +1295,10 @@ function handleAction(action, value) {
             var st2 = entry.state || {};
             Object.keys(wizardState).forEach(function(k){ if (k in st2) wizardState[k] = st2[k]; });
             var stack2 = ["start","q-machine","q-worktype"];
-            if (wizardState.workType==="Tube") {
-                stack2.push("q-tube-spec","q-tube-length");
-            } else {
-                stack2.push("q-style");
-                if (wizardState.internalStyle==="YoseRelay"||wizardState.internalStyle==="Yose") stack2.push("q-yose-detail");
-                if (isMHWorkType(wizardState.workType)||wizardState.workType==="G12B_G_ST_12175_8") stack2.push("q-options");
-            }
+            if (isTubeWorkType(wizardState.workType)) stack2.push("q-tube-spec","q-tube-length");
+            stack2.push("q-style");
+            if (wizardState.internalStyle==="YoseRelay"||wizardState.internalStyle==="Yose") stack2.push("q-yose-detail");
+            if (needsOptionsScreen()) stack2.push("q-options");
             stack2.push("q-atelength");
             if (!isMHWorkType(wizardState.workType)) stack2.push("q-maxod");
             stack2.push("q-depths");
@@ -1407,7 +1408,7 @@ function runGeneration() {
 
     var rows=[
         ["機械",wizardState.machine],["ワーク種別",wizardState.workType],
-        ["加工スタイル",wizardState.workType==="Tube"?"（チューブ）":(STYLE_LABELS[wizardState.internalStyle]||wizardState.internalStyle||"")],
+        ["加工スタイル",STYLE_LABELS[wizardState.internalStyle]||wizardState.internalStyle||""],
         ["M99P100",wizardState.m99Mode],["アテ長さ",wizardState.ateLength+" mm"],
         ["外径最大径",wizardState.maxOD+" mm"],["ドリル深さ",wizardState.drillDepth+" mm"],
         [isCrossStyle(wizardState.internalStyle)?"IP（穴中心距離）":"内径深さ", wizardState.idDepth+" mm"],
