@@ -15,7 +15,7 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_JS = path.join(__dirname, "..", "Gコードジェネレータ", "assets", "data-v2.js");
+const DATA_JS = path.join(__dirname, "..", "NC-PROG-GEN", "assets", "data-v2.js");
 
 function loadTubeDataFromDataJs() {
   const code = fs.readFileSync(DATA_JS, "utf8");

@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
-const APP_DIR = join(ROOT, "Gコードジェネレータ");
+const APP_DIR = join(ROOT, "NC-PROG-GEN");
 
 const HTML_FILES = ["gui-v2.html"];
 

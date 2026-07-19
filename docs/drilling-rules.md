@@ -13,10 +13,10 @@
 >
 > 抽出元:
 >
-> - `Gコードジェネレータ/assets/logic-v2.js`（ドリルブロック選択チェーン・ドリル深さ計算）
-> - `Gコードジェネレータ/assets/blocks-v2.js`（Gコードブロック本体）
-> - `Gコードジェネレータ/assets/gui-v2.js`（UI側の固定判定・プロファイル解決・刃長制限警告）
-> - `Gコードジェネレータ/テンプレート/data_template_*.js`（実際の使用工具の裏付け）
+> - `NC-PROG-GEN/assets/logic-v2.js`（ドリルブロック選択チェーン・ドリル深さ計算）
+> - `NC-PROG-GEN/assets/blocks-v2.js`（Gコードブロック本体）
+> - `NC-PROG-GEN/assets/gui-v2.js`（UI側の固定判定・プロファイル解決・刃長制限警告）
+> - `NC-PROG-GEN/テンプレート/data_template_*.js`（実際の使用工具の裏付け）
 
 ---
 

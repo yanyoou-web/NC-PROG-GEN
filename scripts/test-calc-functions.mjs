@@ -16,7 +16,7 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const VALIDATORS_JS = path.join(__dirname, "..", "Gコードジェネレータ", "assets", "validators-v2.js");
+const VALIDATORS_JS = path.join(__dirname, "..", "NC-PROG-GEN", "assets", "validators-v2.js");
 
 // ─── validators-v2.js を実ファイルから読み込む ─────────────────────────────
 // （ブラウザ用のグローバル関数定義ファイルのため、verify-tube-x6u2.mjs と同じ

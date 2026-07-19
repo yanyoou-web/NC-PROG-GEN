@@ -19,7 +19,7 @@ const ROOT = join(__dirname, "..");
 
 // ─── logic-v2.js から replaceMap のキーセットを抽出 ────────────────────────────
 // replaceMap は generateGCode (logic-v2.js) に定義されている
-const appSrc = readFileSync(join(ROOT, "Gコードジェネレータ", "assets", "logic-v2.js"), "utf8");
+const appSrc = readFileSync(join(ROOT, "NC-PROG-GEN", "assets", "logic-v2.js"), "utf8");
 
 // 1) 固定キー: replaceMap セクションを抽出してキーを収集
 const replaceMapSectionRe = /const replaceMap\s*=\s*\{([\s\S]*?)\};/;
@@ -38,7 +38,7 @@ if (rmMatch) {
 
 // 2) 動的キー: replaceMap[key] = ... で追加されるもの（機械変数・Tube変数など）
 //    data-v2.js から機械定義のキーを抽出
-const dataSrc = readFileSync(join(ROOT, "Gコードジェネレータ", "assets", "data-v2.js"), "utf8");
+const dataSrc = readFileSync(join(ROOT, "NC-PROG-GEN", "assets", "data-v2.js"), "utf8");
 const machineKeys = new Set();
 // NCL044 ブロック内のキーを取得（最初の機械定義のキーを代表として使用）
 const ncl044Match = dataSrc.match(/NCL044\s*:\s*\{([\s\S]*?)\},/);
@@ -87,7 +87,7 @@ machineKeys.forEach((k) => staticKeys.add(k));
 staticKeys.add("M53/M61/M408");
 
 // ─── 全テンプレートのプレースホルダーを抽出 ─────────────────────────────────
-const templateDir = join(ROOT, "Gコードジェネレータ", "テンプレート");
+const templateDir = join(ROOT, "NC-PROG-GEN", "テンプレート");
 const templateFiles = readdirSync(templateDir).filter((f) => f.endsWith(".js"));
 
 let totalIssues = 0;
