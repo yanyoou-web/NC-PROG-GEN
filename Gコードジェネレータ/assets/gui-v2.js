@@ -15,6 +15,7 @@
 /* global evaluateFormula, parseSimpleNumberOrFormula */
 /* global VALIDATOR_CATEGORIES, stripDisallowedChars, setupEraseGuard */
 /* global usesG18DrillShiageG1Block, isJM8ASWDWorkType */
+/* global drawPreview */
 
 // ========== Section 2: スタイル制約 ==========
 
@@ -1254,6 +1255,19 @@ function runGeneration() {
     }
     wrap=document.getElementById("result-wrap"); if(!wrap) return;
     var plain=result.plainText||"";
+    var isGenError=(result.plainText===null||result.plainText===undefined);
+    var gcodeHtml=result.displayHtml||escapeHtml(plain);
+    // 生成成功時のみ、Gコード行をツールパスからジャンプできるよう1行ずつ<span>でラップする
+    var gcodeAreaHtml=isGenError
+        ? gcodeHtml
+        : gcodeHtml.split("\n").map(function(l,i){return '<span class="gc-line" data-ln="'+(i+1)+'">'+l+'</span>';}).join("\n");
+    // previewContainerはバリデーションエラー時（Gコード本体が無い）には出さない
+    var previewHtml=isGenError ? "" :
+        '<div id="previewContainer">'
+        +'<div class="preview-heading" title="ドラッグでパネルを移動"></div>'
+        +'<canvas id="simCanvas" width="600" height="330"></canvas>'
+        +'<div id="previewResizeGrip" class="preview-resize-grip" title="ドラッグしてサイズ変更" aria-hidden="true"></div>'
+        +'</div>';
 
     var rows=[
         ["機械",wizardState.machine],["ワーク種別",wizardState.workType],
@@ -1270,13 +1284,16 @@ function runGeneration() {
     wrap.innerHTML=
         '<details class="wiz-summary"><summary>入力内容を確認</summary>'+rows+'</details>'
         +'<div class="wiz-gcode-wrap">'
-        +'<pre id="resultArea" class="wiz-gcode" data-plain="'+escapeHtml(plain)+'">'+(result.displayHtml||escapeHtml(plain))+'</pre>'
+        +'<pre id="resultArea" class="wiz-gcode" data-plain="'+escapeHtml(plain)+'">'+gcodeAreaHtml+'</pre>'
         +'</div>'
+        +previewHtml
         +'<div class="wiz-result-actions">'
         +'<button class="wiz-btn-secondary" data-action="save-gcode">Gコード保存</button>'
         +'<button class="wiz-btn-secondary" data-action="export-json">入力値保存 (JSON)</button>'
         +'<button class="wiz-btn-outline"   data-action="restart">最初からやり直す</button>'
         +'</div>';
+
+    if (!isGenError && typeof drawPreview==="function") drawPreview(true);
 }
 
 
