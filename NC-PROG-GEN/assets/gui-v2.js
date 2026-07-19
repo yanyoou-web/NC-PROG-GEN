@@ -773,17 +773,24 @@ function buildDepthsScreen() {
     var cpHtml="";
     if (isCross) {
         var cpComp=computeCP(wizardState.idDepth,wizardState.valPartnerD);
-        var finishDepthHint="";
-        if (st==="CrossSmall" && cpComp) {
-            var fd=computeCrossSmallFinishDepthHint(cpComp, wizardState.valPartnerD);
-            if (fd!==null) finishDepthHint='<p class="depth-finish-hint">内径仕上深さ参考値: '+escapeHtml(fd)+' mm</p>';
+        // 交差穴(小径)の内径深さ = CP + B + 1 は calcCrossSmallFinishDepth で計算できるため、
+        // 「参考値」ではなく他の項目と同じ自動計算バッジ表示にする（IP・相手径から常時追随）
+        var finishDepthHtml="";
+        if (st==="CrossSmall") {
+            var fd=cpComp?computeCrossSmallFinishDepthHint(cpComp, wizardState.valPartnerD):null;
+            finishDepthHtml='<label class="wiz-lbl">内径深さ（自動計算）</label>'
+                +'<div class="depth-auto-row"><span class="depth-auto-val" id="cross-finish-depth-val">'
+                +(fd!==null
+                    ? escapeHtml(fd)+' mm <span class="depth-auto-badge">自動計算</span>'
+                    : '<span style="color:var(--text-sub)">IP・相手径を入力すると自動計算されます</span>')
+                +'</span></div>';
         }
         cpHtml='<label class="wiz-lbl" for="depth-partner-d">相手径 Φ (mm)</label>'
             +'<input class="wiz-input depth-cross-field validate-positive" id="depth-partner-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valPartnerD)+'" />'
             +'<label class="wiz-lbl">CP値 = IP − 相手径/2（自動計算）</label>'
             +'<input class="wiz-input" id="depth-cp-display" type="text" readonly value="'+escapeHtml(cpComp)+'"'
             +' style="background:#1a2030;color:#7ec8e3;font-weight:bold;" />'
-            +finishDepthHint;
+            +finishDepthHtml;
     } else if (isIchimonjiNeedsCp) {
         // 一文字（M12・M8以外）: IP + ドリル径 → CP自動計算（getIchimonjiBlock に渡す）
         var cpCompI = computeCP(wizardState.idDepth, wizardState.valPartnerD);
@@ -973,12 +980,14 @@ function updateCPDisplay() {
     var id=(document.getElementById("id-depth")||{value:""}).value;
     var pd=(document.getElementById("depth-partner-d")||{value:""}).value;
     var el=document.getElementById("depth-cp-display"); if(el) el.value=computeCP(id,pd);
-    // CrossSmall 仕上げ深さ参考値も更新
+    // CrossSmall 内径深さ（自動計算）も更新
     var cpV=computeCP(id,pd);
-    var hint=document.querySelector(".depth-finish-hint");
-    if (hint&&wizardState.internalStyle==="CrossSmall"&&cpV) {
-        var fd=computeCrossSmallFinishDepthHint(cpV, pd);
-        hint.textContent=fd?"内径仕上深さ参考値: "+fd+" mm":"";
+    var finishValEl=document.getElementById("cross-finish-depth-val");
+    if (finishValEl&&wizardState.internalStyle==="CrossSmall") {
+        var fd=cpV?computeCrossSmallFinishDepthHint(cpV, pd):null;
+        finishValEl.innerHTML = fd!==null
+            ? escapeHtml(fd)+' mm <span class="depth-auto-badge">自動計算</span>'
+            : '<span style="color:var(--text-sub)">IP・相手径を入力すると自動計算されます</span>';
     }
     // drillDepth 自動計算表示も更新
     updateDrillDepthDisplay();
