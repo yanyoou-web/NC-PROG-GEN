@@ -263,12 +263,7 @@ function refreshDrillModeSection() {
     var el=document.getElementById("drill-mode-section");
     if (el) el.innerHTML=buildDrillModeSectionInner(wizardState.workType);
 }
-/* チューブMHは外径荒バイトを{{MH外径荒}}ではなく固定の{{外径荒}}で使うため、
-   mhOdToolを選ばせるMHオプション画面(q-options)には意味が無いのでスキップする */
-function needsOptionsScreen() {
-    return (isMHWorkType(wizardState.workType)&&!isTubeWorkType(wizardState.workType))
-        ||wizardState.workType==="G12B_G_ST_12175_8";
-}
+function needsOptionsScreen() { return isMHWorkType(wizardState.workType)||wizardState.workType==="G12B_G_ST_12175_8"; }
 
 function getNextScreen(currentId) {
     if (currentId==="start")        return "q-machine";
