@@ -465,13 +465,6 @@ function buildMaxODScreen() {
     // 計算式テキスト（モードに応じて切替、this値を使用ボタンの直上）
     var formulaMap={normal:"√(A² + B²)",eccentric:"√((A×2)² + (B×2)²)",corner:"√(((W/2+H)×2)² + W²)",ate:""};
     var formulaHtml=formulaMap[calcMode]?'<p class="calc-formula-label">'+formulaMap[calcMode]+'</p>':"";
-    // 角ありモード注記: この式の結果は {{最大径+角}} にそのまま入るが、
-    // {{最大径+3}}・{{最大径-5}} は母材幅Wのみで再計算した値（W×√2 基準、Hを含まない）が
-    // 別ロジックで入る（generateOutput() の calcCorner / calcMax2 / calcMax1 を参照）。
-    // モード切替は set-calc-mode ハンドラが直接DOM更新するため、要素は常に描画し
-    // 表示/非表示だけ calc-panel--hidden で切り替える（.calc-formula-label と同じ方式）
-    var cornerNoteHtml='<p class="calc-hint calc-corner-note'+(calcMode!=="corner"?" calc-panel--hidden":"")+'">'
-        +'※ この計算結果は {{最大径+角}} にそのまま入りますが、{{最大径+3}}（{{最大径-5}}も同様）は母材幅Wのみで再計算した値（W×√2 基準）が入ります。Hは反映されません。</p>';
 
     // M99P100（Tube以外）— 自動計算ツールの下に配置
     var m99Html="";
@@ -491,7 +484,6 @@ function buildMaxODScreen() {
         +'<div class="wiz-calc-body"><div class="wiz-grid wiz-grid--4">'+modeCards+'</div>'
         +pN+pE+pC+pA
         +formulaHtml
-        +cornerNoteHtml
         +'<div class="calc-result-row"><div id="calc-result-preview" class="calc-result-preview calc-result-preview--right"></div>'
         +'<button class="wiz-btn-secondary" data-action="apply-maxod-calc">この値を使用</button></div></div></details>'
         +m99Html
@@ -1031,9 +1023,6 @@ function handleAction(action, value) {
                 var fl=document.querySelector(".calc-formula-label");
                 if(fl){fl.textContent=fmap[value]||"";}
             })();
-            // 角ありモード注記の表示切替（{{最大径+角}}/{{最大径+3}}が別ロジックで計算される旨）
-            var cn=document.querySelector(".calc-corner-note");
-            if(cn){cn.classList.toggle("calc-panel--hidden",value!=="corner");}
             updateCalcPreview(); break;
         case "apply-maxod-calc": {
             wizardState.valStockA=(document.getElementById("calc-stock-a")||{value:""}).value;
