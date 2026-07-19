@@ -263,7 +263,12 @@ function refreshDrillModeSection() {
     var el=document.getElementById("drill-mode-section");
     if (el) el.innerHTML=buildDrillModeSectionInner(wizardState.workType);
 }
-function needsOptionsScreen() { return isMHWorkType(wizardState.workType)||wizardState.workType==="G12B_G_ST_12175_8"; }
+/* チューブMHは外径荒バイトを{{MH外径荒}}ではなく固定の{{外径荒}}で使うため、
+   mhOdToolを選ばせるMHオプション画面(q-options)には意味が無いのでスキップする */
+function needsOptionsScreen() {
+    return (isMHWorkType(wizardState.workType)&&!isTubeWorkType(wizardState.workType))
+        ||wizardState.workType==="G12B_G_ST_12175_8";
+}
 
 function getNextScreen(currentId) {
     if (currentId==="start")        return "q-machine";
@@ -1034,7 +1039,7 @@ function importStateJson() {
                 if (isTubeWorkType(wizardState.workType)) stack.push("q-tube-spec","q-tube-length");
                 stack.push("q-style");
                 if (wizardState.internalStyle==="YoseRelay"||wizardState.internalStyle==="Yose") stack.push("q-yose-detail");
-                if (isMHWorkType(wizardState.workType)||wizardState.workType==="G12B_G_ST_12175_8") stack.push("q-options");
+                if (needsOptionsScreen()) stack.push("q-options");
                 stack.push("q-atelength");
                 if (!isMHWorkType(wizardState.workType)) stack.push("q-maxod");
                 stack.push("q-depths");
@@ -1298,7 +1303,7 @@ function handleAction(action, value) {
             if (isTubeWorkType(wizardState.workType)) stack2.push("q-tube-spec","q-tube-length");
             stack2.push("q-style");
             if (wizardState.internalStyle==="YoseRelay"||wizardState.internalStyle==="Yose") stack2.push("q-yose-detail");
-            if (isMHWorkType(wizardState.workType)||wizardState.workType==="G12B_G_ST_12175_8") stack2.push("q-options");
+            if (needsOptionsScreen()) stack2.push("q-options");
             stack2.push("q-atelength");
             if (!isMHWorkType(wizardState.workType)) stack2.push("q-maxod");
             stack2.push("q-depths");
