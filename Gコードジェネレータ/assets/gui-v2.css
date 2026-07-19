@@ -525,6 +525,214 @@ body {
     flex-wrap: wrap;
 }
 
+/* ---------- ツールパスプレビュー ---------- */
+#previewContainer {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-sizing: border-box;
+    padding: 10px;
+    margin-bottom: 14px;
+    text-align: left;
+}
+/* 画面追従: 左上固定（リサイズ時は左上を基準に右下へ広がる）。グリップはパネル内右下 */
+#previewContainer.preview-sticky {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    margin-bottom: 0;
+    background: rgba(22, 28, 40, 0.97);
+    border-color: var(--border-sel);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    min-width: 300px;
+    min-height: 200px;
+    max-width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+    width: 640px;
+    height: 420px;
+}
+#previewContainer.preview-sticky .preview-heading {
+    margin-bottom: 6px;
+    cursor: move;
+    user-select: none;
+    min-height: 10px;
+}
+#previewContainer.preview-sticky #toolBtnArea {
+    margin-bottom: 6px;
+}
+#previewContainer.preview-sticky #simCanvas {
+    width: 100%;
+    max-width: 100%;
+}
+/* 見出し文言は無し。画面追従時のみドラッグ用の帯として高さを確保 */
+.preview-heading {
+    margin: 0;
+    font-size: 0;
+    line-height: 0;
+    overflow: hidden;
+}
+.preview-resize-grip {
+    display: none;
+}
+#previewContainer.preview-sticky .preview-resize-grip {
+    display: block;
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: 20px;
+    height: 20px;
+    z-index: 20;
+    cursor: nwse-resize;
+    background: linear-gradient(
+        -45deg,
+        transparent 0%,
+        transparent 35%,
+        var(--text-sub) 35%,
+        var(--text-sub) 38%,
+        transparent 38%,
+        transparent 62%,
+        var(--text-sub) 62%,
+        var(--text-sub) 65%,
+        transparent 65%
+    );
+    border-radius: 0 0 2px 0;
+    touch-action: none;
+}
+#previewContainer.preview-sticky .preview-resize-grip:hover {
+    background: linear-gradient(
+        -45deg,
+        transparent 0%,
+        transparent 35%,
+        var(--accent) 35%,
+        var(--accent) 38%,
+        transparent 38%,
+        transparent 62%,
+        var(--accent) 62%,
+        var(--accent) 65%,
+        transparent 65%
+    );
+}
+#simCanvas {
+    display: block;
+    width: 100%;
+    background: #161c28;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: crosshair;
+    touch-action: none;
+}
+
+/* Gコード行ジャンプ: ツールパスダブルクリックで点滅ハイライト */
+.gc-line {
+    display: inline;
+    border-radius: 2px;
+}
+@keyframes gc-line-flash {
+    0% {
+        background: rgba(255, 210, 0, 0.95);
+        color: #111;
+        box-shadow:
+            0 0 0 3px rgba(255, 210, 0, 0.9),
+            0 0 18px 4px rgba(255, 180, 0, 0.7);
+    }
+    12% {
+        background: rgba(255, 120, 0, 0.85);
+        color: #fff;
+        box-shadow:
+            0 0 0 3px rgba(255, 120, 0, 0.8),
+            0 0 22px 6px rgba(255, 100, 0, 0.6);
+    }
+    24% {
+        background: rgba(255, 210, 0, 0.95);
+        color: #111;
+        box-shadow:
+            0 0 0 3px rgba(255, 210, 0, 0.9),
+            0 0 18px 4px rgba(255, 180, 0, 0.7);
+    }
+    36% {
+        background: rgba(255, 120, 0, 0.85);
+        color: #fff;
+        box-shadow:
+            0 0 0 3px rgba(255, 120, 0, 0.8),
+            0 0 22px 6px rgba(255, 100, 0, 0.6);
+    }
+    50% {
+        background: rgba(255, 210, 0, 0.9);
+        color: #111;
+        box-shadow:
+            0 0 0 3px rgba(255, 210, 0, 0.8),
+            0 0 14px 3px rgba(255, 180, 0, 0.5);
+    }
+    72% {
+        background: rgba(255, 210, 0, 0.6);
+        color: #ddd;
+        box-shadow:
+            0 0 0 2px rgba(255, 210, 0, 0.5),
+            0 0 8px 2px rgba(255, 180, 0, 0.3);
+    }
+    100% {
+        background: transparent;
+        color: inherit;
+        box-shadow: none;
+    }
+}
+.gc-line-blink {
+    animation: gc-line-flash 5s ease-out forwards;
+}
+
+/* プレビューツールバー */
+#toolBtnArea.wiz-preview-toolbar-area {
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.wiz-preview-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    width: 100%;
+}
+.wiz-preview-toolbar-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
+.wiz-preview-toolbar-group--path-toggles {
+    gap: 2px;
+}
+.wiz-preview-toolbar-group--nblocks {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.wiz-preview-btn {
+    padding: 4px 9px;
+    font-size: 0.72rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    cursor: pointer;
+    transition: background var(--trans), border-color var(--trans), color var(--trans);
+    flex: 0 0 auto;
+}
+.wiz-preview-btn:hover {
+    background: var(--bg-card-h);
+}
+.wiz-preview-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+.wiz-preview-nblock-btn {
+    min-width: 0;
+    padding: 3px 8px;
+}
+
 /* ---------- トースト通知 ---------- */
 .wiz-toast {
     position: fixed;
