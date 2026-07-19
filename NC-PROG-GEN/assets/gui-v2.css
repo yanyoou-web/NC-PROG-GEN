@@ -275,11 +275,11 @@ body {
     min-height: 48px;
 }
 .wiz-card--style {
-    min-height: 84px;
+    min-height: 152px;
 }
 .wiz-card--style .card-icon {
-    width: 40px;
-    height: 40px;
+    width: 80px;
+    height: 80px;
 }
 .wiz-card__num {
     font-size: 1.1rem;
