@@ -1511,11 +1511,17 @@ function validatePositive(el) {
 // フォーカスアウト時、入力値が数値または計算式として解釈できれば、
 // 計算結果の数値そのものに置き換える（例:「10.5+2.3」→「12.8」）。
 // 解釈できない場合は何もしない（validatePositive 側でエラー表示される）。
+// 値をJSから書き換えるだけでは input イベントが発火しないため、CP値・内径深さ等の
+// 連動表示（updateCPDisplay 等、"input" イベント購読側）が入力途中の古い値のまま
+// 固まってしまう。そのため値を書き換えた後に input イベントを明示的に発火させる。
 function applyNumericFormulaOnBlur(el) {
     var v = el.value.trim();
     if (v === "") return;
     var num = parseSimpleNumberOrFormula(v);
-    if (!isNaN(num)) el.value = String(num);
+    if (!isNaN(num)) {
+        el.value = String(num);
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+    }
 }
 
 // ---- 半角チェック（全角文字などを即座に消去する） ----

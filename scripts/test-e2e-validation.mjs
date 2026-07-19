@@ -451,6 +451,45 @@ async function main() {
         }
     );
 
+    await test(
+        browser,
+        "交差穴: IPに計算式を入力してフォーカスを外すと、CP値と内径深さが最終的な値まで追随すること",
+        async (page) => {
+            await page.goto(`${baseUrl}/gui-v2.html`);
+            await page.click('[data-action="start"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-machine"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-worktype"][data-value="M18"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-style"][data-value="CrossSmall"]');
+            await page.waitForTimeout(150);
+            await page.fill("#ate-input", "20");
+            await page.click('[data-action="next-atelength"]');
+            await page.waitForTimeout(150);
+            await page.fill("#maxod-direct-input", "30.1");
+            await page.click('[data-action="next-maxod"]');
+            await page.waitForTimeout(150);
+
+            // 相手径を先に確定してから、IPに計算式（15+5 → 20）を入力してフォーカスを外す
+            await page.fill("#depth-partner-d", "12");
+            await page.waitForTimeout(100);
+            await page.locator("#id-depth").click();
+            await page.keyboard.type("15+5");
+            await page.locator(".wiz-q-title").click(); // CP/内径深さを監視していない要素へフォーカスを外す
+            await page.waitForTimeout(200);
+
+            const ipValue = await page.inputValue("#id-depth");
+            assert.equal(ipValue, "20", "計算式はフォーカスアウト時に計算結果へ置き換わること");
+
+            const cpValue = await page.inputValue("#depth-cp-display");
+            assert.equal(cpValue, "14.000", "CP値が最終的なIP(20)基準の値まで追随すること（入力途中の値のまま固まらないこと）");
+
+            const finishText = await page.evaluate(() => document.getElementById("cross-finish-depth-val")?.innerHTML || "");
+            assert.ok(finishText.includes("16.528"), `内径深さ（自動計算）も最終的な値まで追随すること (実際: ${finishText})`);
+        }
+    );
+
     await browser.close();
     server.close();
 
