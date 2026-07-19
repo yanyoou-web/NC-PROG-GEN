@@ -7,11 +7,12 @@
    ========================================================= */
 /* global navigator */
 /* global generateGCode */
+/* global validateBasicSelections, validateCommonNumericFields, validateStyleSpecificRules */
 /* global isM8WorkType, isYoseMachiningStyle, isYoseRelayStyle */
 /* global calcSpecialDrillZ, calcYoseRelayMetrics, calcCrossSmallFinishDepth */
 /* global DRILL_DIA_MAP */
-/* global escapeHtml, ncFormat, wrapH, wrapHCalc, wrapHInput, wrapHMachine */
-/* global gcodeDisplayHtmlToPlainText, $id, currentInternalStyle, isDebugModeOn */
+/* global escapeHtml, ncFormat, wrapH */
+/* global gcodeDisplayHtmlToPlainText, $id, currentInternalStyle */
 /* global evaluateFormula, parseSimpleNumberOrFormula */
 /* global VALIDATOR_CATEGORIES, stripDisallowedChars, setupEraseGuard */
 /* global usesG18DrillShiageG1Block, isJM8ASWDWorkType */
@@ -24,6 +25,15 @@ var STYLE_LABELS = {
     YoseRelay:"ヨセ中継", Yose:"ヨセ", CrossSmall:"交差穴（小径）",
 };
 var STYLE_NUMS = { Hirazoko:"1",Ichimonji:"2",Normal:"3",YoseRelay:"4",Yose:"5",CrossSmall:"6" };
+/* v1(assets/v1/style.css)のcard-iconをv2へ移植したもの。CSS本体はgui-v2.css参照 */
+var STYLE_ICON_HTML = {
+    Hirazoko:  '<div class="icon-hole-flat"></div>',
+    Ichimonji: '<div class="icon-hole-ichi"></div>',
+    Normal:    '<div class="icon-parallel-lines"></div>',
+    YoseRelay: '<div class="icon-convergence icon-convergence--yose-relay"><div class="icon-convergence-lines icon-convergence-lines--relay"></div></div>',
+    Yose:      '<div class="icon-convergence icon-convergence--yose"><div class="icon-convergence-lines"></div></div>',
+    CrossSmall:'<div class="icon-hole-cross"></div>',
+};
 
 function getAvailableStyles(workType) {
     if (workType==="J_M8_300"||workType==="J_M8_200") return ["CrossSmall"];
@@ -377,6 +387,7 @@ function buildStyleScreen() {
     var cards=av.map(function(s){
         return '<button class="wiz-card wiz-card--style'+(wizardState.internalStyle===s?" selected":"")
             +'" data-action="select-style" data-value="'+escapeHtml(s)+'">'
+            +'<div class="card-icon">'+(STYLE_ICON_HTML[s]||"")+'</div>'
             +'<span class="wiz-card__num">'+(STYLE_NUMS[s]||"")+'</span>'
             +'<span class="wiz-card__label">'+escapeHtml(STYLE_LABELS[s]||s)+'</span></button>';
     }).join("");
@@ -1106,6 +1117,16 @@ function handleAction(action, value) {
                 if (_maxDepth!=null && !isNaN(_dd) && _dd>_maxDepth) {
                     window.alert("ドリル深さ "+_dd+"mm が刃長の上限（"+_maxDepth+"mm）を超えています。\n工具が底まで届かない可能性があるので、値を確認してください。\n（このまま進めることもできます）");
                 }
+            }
+            // 業種固有ルールの早期チェック（idDepth>7、CrossSmall相手径±0.5mmルール、yoseD範囲など）。
+            // logic-v2.js の generateGCode() 最終ゲートと同じ判定関数を再利用し、ロジックを
+            // 重複させない（ここまでの画面で入力済みの図番・作成者チェックはまだ対象外）。
+            if (typeof validateBasicSelections==="function") {
+                var _earlyInput=buildInputFromState();
+                var _earlyErrors=validateBasicSelections(_earlyInput)
+                    .concat(validateCommonNumericFields(_earlyInput))
+                    .concat(validateStyleSpecificRules(_earlyInput));
+                if (_earlyErrors.length) { showToast(_earlyErrors[0]); return; }
             }
             advance("q-depths"); break;
         case "set-author":

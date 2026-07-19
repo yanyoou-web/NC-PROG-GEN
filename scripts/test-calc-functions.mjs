@@ -27,13 +27,13 @@ function loadValidators() {
     const code = fs.readFileSync(VALIDATORS_JS, "utf8");
     const context = vm.createContext({ console, document: undefined });
     vm.runInContext(
-        code + "\nvar __validatorsExport = { ncFormat, parseSimpleNumberOrFormula, evaluateFormula, evaluateExpression, stripDisallowedChars, VALIDATOR_CATEGORIES };",
+        code + "\nvar __validatorsExport = { ncFormat, parseSimpleNumberOrFormula, evaluateFormula, evaluateExpression, stripDisallowedChars, toHankaku, VALIDATOR_CATEGORIES };",
         context,
     );
     return context.__validatorsExport;
 }
 
-const { ncFormat, parseSimpleNumberOrFormula, evaluateFormula, evaluateExpression, stripDisallowedChars } = loadValidators();
+const { ncFormat, parseSimpleNumberOrFormula, evaluateFormula, evaluateExpression, stripDisallowedChars, toHankaku } = loadValidators();
 
 // ─── ここから下は validators-v2.js の対象外（app.js 由来）の純粋関数を ─────
 // 同じロジックで再実装してテストする（app.js はブラウザグローバルに依存する
@@ -181,20 +181,39 @@ describe("stripDisallowedChars（半角チェック・許可リスト方式）",
         assert.equal(r.cleaned, "123");
         assert.equal(r.removed, true);
     });
+    test("ID分類: 全角数字は半角に変換される（除去ではない）", () => {
+        const r = stripDisallowedChars("１２３", "ID");
+        assert.equal(r.cleaned, "123");
+        assert.equal(r.removed, false);
+        assert.equal(r.changed, true);
+    });
     test("NUMERIC分類: 半角数字+記号はそのまま", () => {
         const r = stripDisallowedChars("10.5+2.3", "NUMERIC");
         assert.equal(r.cleaned, "10.5+2.3");
         assert.equal(r.removed, false);
+        assert.equal(r.changed, false);
     });
-    test("NUMERIC分類: 全角文字はすべて除去される", () => {
-        const r = stripDisallowedChars("１０．５", "NUMERIC");
-        assert.equal(r.cleaned, "");
+    test("NUMERIC分類: 全角数字・記号は半角に変換される（除去ではない）", () => {
+        const r = stripDisallowedChars("１０．５＋２．３", "NUMERIC");
+        assert.equal(r.cleaned, "10.5+2.3");
+        assert.equal(r.removed, false);
+        assert.equal(r.changed, true);
+    });
+    test("NUMERIC分類: 変換しても許可文字にならないものは除去される", () => {
+        // 全角カタカナは変換対象外（toHankakuの対象範囲外）のためそのまま除去される
+        const r = stripDisallowedChars("１０ｱ５", "NUMERIC");
+        assert.equal(r.cleaned, "105");
         assert.equal(r.removed, true);
     });
     test("FREE_TEXT分類: 半角文字はそのまま", () => {
         const r = stripDisallowedChars("YAMADA", "FREE_TEXT");
         assert.equal(r.cleaned, "YAMADA");
         assert.equal(r.removed, false);
+    });
+    test("FREE_TEXT分類: 全角数字は変換されず除去される（漢字氏名に変換は意味をなさないため対象外）", () => {
+        const r = stripDisallowedChars("１２３", "FREE_TEXT");
+        assert.equal(r.cleaned, "");
+        assert.equal(r.removed, true);
     });
     test("FREE_TEXT分類: 丸カッコはGコードのコメントを壊すため除去する", () => {
         const r = stripDisallowedChars("YAMADA(memo)", "FREE_TEXT");
@@ -205,6 +224,21 @@ describe("stripDisallowedChars（半角チェック・許可リスト方式）",
         const r = stripDisallowedChars("YAMADA%;", "FREE_TEXT");
         assert.equal(r.cleaned, "YAMADA");
         assert.equal(r.removed, true);
+    });
+});
+
+describe("toHankaku（全角→半角変換）", () => {
+    test("全角数字を半角に変換", () => {
+        assert.equal(toHankaku("１２３"), "123");
+    });
+    test("全角の四則演算記号・小数点を変換", () => {
+        assert.equal(toHankaku("１２－３＋４．５"), "12-3+4.5");
+    });
+    test("全角スペースを半角スペースに変換", () => {
+        assert.equal(toHankaku("１２　３"), "12 3");
+    });
+    test("空文字はそのまま", () => {
+        assert.equal(toHankaku(""), "");
     });
 });
 

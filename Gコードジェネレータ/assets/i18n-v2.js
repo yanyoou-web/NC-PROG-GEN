@@ -59,17 +59,13 @@
             style1: "1. 内径バイト平底",
             style2: "2. 一文字DR平底",
             style3: "3. 通常バイト加工",
-            styleNormalNote: "自動計算されないモードで任意深さに設定可能\n同内径プログラムなどに使用してください",
             style4: "4. ヨセ中継",
             style5Relay: "5. ヨセ",
-            yoseRelayNote: "ヨセ中継: 1工程目内径深さの計算専用です。",
             style5: "5. 交差穴\n加工径大",
             style6: "6. 横穴＆中バリ処理",
             style8: "8. 中継\n(未実装)",
             cpDist: "原点〜相手中心距離",
             cpPartnerD: "相手径 (Φ)",
-            cpUsesIdDepthHint:
-                "※ CP計算の「原点〜相手中心距離」は、右列の「内径深さ (図面値)」と同じ寸法です（そちらにのみ入力してください）。",
             cpAuto: "CP (自動計算)",
             cpPlaceholder: "自動計算",
             okuTitle: "奥バイト面取り (M12専用)",
@@ -84,26 +80,6 @@
             yoseLength: "ヨセ長さ",
             yoseTaiLength: "対ヨセ長さ",
             maxOD: "外径最大径",
-            maxOdFocusHint:
-                "※ 図面の外径最大径を半角数値で入力。算出する場合はこの欄をクリックして最大径 計算モードを開いてください。",
-            ateLengthFocusHint:
-                "※ チャックのアテ長さ。プリセット(15角=42.5 など）を選ぶか、半角数値で直接入力。最大径計算モード「アテ長さ」選択時に外径最大径の自動算出に使われます。",
-            valStockAFocusHint:
-                "※ 通常モード: 素材の外径寸法 A を半角 mm で入力。B と合わせて √(A²+B²) で外径最大径を算出します。",
-            valStockBFocusHint:
-                "※ 通常モード: 素材の外径寸法 B を半角 mm で入力。A と合わせて √(A²+B²) で外径最大径を算出します。",
-            valAFocusHint: "※ 偏心モード: 軸中心から加工中心までの距離 A(横方向)を半角で入力。",
-            valBFocusHint: "※ 偏心モード: 軸中心から加工中心までの距離 B(縦方向)を半角で入力。",
-            valCornWFocusHint: "※ 角ありモード: 素材の幅寸法を半角 mm で入力。",
-            valCornHFocusHint: "※ 角ありモード: 角の追加高さ寸法を半角 mm で入力。",
-            idDepthFocusHint:
-                "※ 図面の内径深さ（穴の深さ）を半角 mm で入力。交差穴（加工径小）スタイルでは穴交差点の距離 IP を入力してください。",
-            yoseDFocusHint:
-                "※ ヨセ／ヨセ中継の相手径(Φd)。図面値を半角で入力",
-            yoseTotalLengthFocusHint:
-                "※ワークの全長を半角 mm で入力。",
-            yosePartnerDepthFocusHint:
-                "※2工程目の相手径深さを半角 mm で入力。",
             btnMaxOdCalc: "計算",
             btnMaxOdApply: "適用",
             btnMaxOdCalcClose: "閉じる",

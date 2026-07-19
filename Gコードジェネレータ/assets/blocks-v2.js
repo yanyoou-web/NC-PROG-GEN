@@ -14,7 +14,7 @@
  *   × function名（getDrillShiageHGDRBlock など）
  *       → テンプレートファイルや画面と紐付いています
  *   × JavaScript の構文記号（{ } ( ) => , ; など）
- *   × wrapH / ncFormat の呼び出し行（画面のハイライト処理）
+ *   × wrapH / ncFormat の呼び出し行（画面表示用のエスケープ処理）
  *
  * ── ブロック一覧 ────────────────────────────────────────────
  *  getDrillShiageHGDRBlock      汎用ドリル仕上げ（G74 ペック / G1 単動）
@@ -28,9 +28,9 @@
  *  combineTubeFlatBottomFinishLine  チューブ N3 平底仕上げ行の結合
  * ────────────────────────────────────────────────────────────
  *
- * 読み込み順（index.html）: data.js → operator-hints.js → i18n.js
- *                            → テンプレート群 → blocks.js ← ここ
- *                            → logic.js → app.js → preview.js → debug.js
+ * 読み込み順（gui-v2.html）: data-v2.js → i18n-v2.js → テンプレート群
+ *                            → blocks-v2.js ← ここ → validators-v2.js
+ *                            → gui-v2.js → logic-v2.js → preview-v2.js
  */
 
 /* global wrapH, ncFormat */              // アプリ内部の数値フォーマット関数（変更不要）

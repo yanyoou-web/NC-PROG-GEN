@@ -27,3 +27,10 @@
 - `npm run test:tube` が成功する。
 - 代表ケース（M12 / Tube / Cross）で生成結果が崩れない。
 - エラー時にメッセージが入力項目と一致する。
+
+## 関連ドキュメント
+
+- `docs/drilling-rules.md` — ドリル加工の分岐ルール
+- `docs/debug-template.md` — 不具合報告テンプレート
+- `docs/v1-v2-feature-gap.md` — v1（従来版）にあり v2 に無い機能の一覧（v1削除前の判断材料）
+- `docs/v1-legacy-reference.md` — v1から今後の開発に役立つ仕様・コードを整理したアーカイブ

@@ -3,7 +3,7 @@
    ---------------------------------------------------------
    読み込み順: gui-v2.js より前（logic-v2.js より前）に読み込むこと。
    gui-v2.js / logic-v2.js の両方がここで定義するグローバル関数
-   （ncFormat, escapeHtml, wrapH*, evaluateFormula,
+   （ncFormat, escapeHtml, wrapH, evaluateFormula,
      parseSimpleNumberOrFormula, $id など）に依存する。
 
    旧 gui-v2.js の「Section 1: utils」をこのファイルに移設し、
@@ -22,10 +22,7 @@ function ncFormat(val) {
     const num = parseFloat(val); if (isNaN(num)) return "";
     const s = num.toString(); return s.indexOf(".") === -1 ? s + "." : s;
 }
-function wrapH(val)        { return (val===""||val===undefined) ? "" : escapeHtml(val); }
-function wrapHCalc(val)    { return wrapH(val); }
-function wrapHInput(val)   { return wrapH(val); }
-function wrapHMachine(val) { return wrapH(val); }
+function wrapH(val) { return (val===""||val===undefined) ? "" : escapeHtml(val); }
 function gcodeDisplayHtmlToPlainText(htmlStr) {
     if (!htmlStr) return "";
     const d = document.createElement("div"); d.innerHTML = htmlStr;
@@ -33,7 +30,6 @@ function gcodeDisplayHtmlToPlainText(htmlStr) {
 }
 const $id = function(id){ return document.getElementById(id); };
 var currentInternalStyle = "";
-function isDebugModeOn() { return false; }
 
 // ========== B. 計算式の安全な評価 ==========
 //
@@ -150,12 +146,28 @@ function parseSimpleNumberOrFormula(str) {
 // 入力欄を3種類に分類し、それぞれ「使ってよい文字」を許可リスト方式で定義する。
 // 許可リストに無い文字は、全角文字に限らずすべて排除する
 // （ゼロ幅文字など想定外の紛れ込みにも対応するため）。
+//
+// ID / NUMERIC は変換前置き（全角→半角）を行う: 全角数字・四則演算記号は半角と1対1で
+// 対応するため誤変換の心配がなく、v1(toHankaku)と同様に「入力した瞬間に半角へ揃う」
+// 挙動のほうが使い勝手が良い。FREE_TEXT（作成者名など）は対象外
+// （全角の氏名・漢字に「半角変換」は意味をなさないため、使えない文字は消すのみ）。
+
+/**
+ * 全角英数記号を半角に変換する（v1 assets/v1/app.js の toHankaku を移植）。
+ * ID/NUMERICカテゴリの変換前置きにのみ使う。
+ */
+function toHankaku(str) {
+    if (!str) return str;
+    return String(str)
+        .replace(/[Ａ-Ｚａ-ｚ０-９！-～]/g, function (s) { return String.fromCharCode(s.charCodeAt(0) - 0xfee0); })
+        .replace(/　/g, " ");
+}
 
 var VALIDATOR_CATEGORIES = {
     // A. 桁数値ID系（図番・工程Noなど）: 半角数字のみ
-    ID: { test: function(ch) { return ch >= "0" && ch <= "9"; } },
+    ID: { test: function(ch) { return ch >= "0" && ch <= "9"; }, convert: true },
     // B. 数値計測系（長さ・直径など）: 半角数字 + 小数点 + 四則演算 + 括弧 + 半角スペース
-    NUMERIC: { test: function(ch) { return /[0-9+\-*/.() ]/.test(ch); } },
+    NUMERIC: { test: function(ch) { return /[0-9+\-*/.() ]/.test(ch); }, convert: true },
     // C. 自由記述系（作成者名など）: 半角の印字可能文字のうち、
     //    G-codeのコメント( )や特殊記号(% ;)を壊す文字は禁止
     FREE_TEXT: { test: function(ch) {
@@ -165,13 +177,15 @@ var VALIDATOR_CATEGORIES = {
 };
 
 /**
- * 文字列から、指定した分類で許可されていない文字を取り除く。
- * 戻り値: { cleaned: 除去後の文字列, removed: 1文字でも除去したか }
+ * 文字列から、指定した分類で許可されていない文字を取り除く（ID/NUMERICは事前に全角→半角変換）。
+ * 戻り値: { cleaned: 変換・除去後の文字列, removed: 除去不能な文字が1文字でもあったか,
+ *          changed: 変換または除去により元の文字列と異なる結果になったか }
  */
 function stripDisallowedChars(str, categoryName) {
     var category = VALIDATOR_CATEGORIES[categoryName];
     if (!category) throw new Error("未知の入力欄分類です: " + categoryName);
-    var input = String(str == null ? "" : str);
+    var raw = String(str == null ? "" : str);
+    var input = category.convert ? toHankaku(raw) : raw;
     var out = "";
     var removed = false;
     for (var i = 0; i < input.length; i++) {
@@ -179,20 +193,21 @@ function stripDisallowedChars(str, categoryName) {
         if (category.test(ch)) out += ch;
         else removed = true;
     }
-    return { cleaned: out, removed: removed };
+    return { cleaned: out, removed: removed, changed: out !== raw };
 }
 
 /**
- * テキスト入力欄に「半角以外・許可されていない文字を即座に消す」ガードを設定する。
- * 日本語入力(IME)で変換中は妨げず、確定した瞬間だけチェックする。
+ * テキスト入力欄に「全角→半角変換（ID/NUMERICのみ）＋許可されていない文字を即座に消す」
+ * ガードを設定する。日本語入力(IME)で変換中は妨げず、確定した瞬間だけチェックする。
  * 貼り付け（ペースト）にも対応する。
- * 文字が消された場合は onReject(el) を呼び出す（枠線を光らせる等の表示に使う）。
+ * 除去不能な文字があった場合のみ onReject(el) を呼び出す（枠線を光らせる等の表示に使う）。
+ * 変換のみで済んだ場合（例:「１２３」→「123」）はonRejectを呼ばない。
  */
 function setupEraseGuard(el, categoryName, onReject) {
     function process() {
         var before = el.value;
         var result = stripDisallowedChars(before, categoryName);
-        if (result.removed) {
+        if (result.changed) {
             var pos = el.selectionStart;
             el.value = result.cleaned;
             if (typeof pos === "number") {
@@ -200,7 +215,7 @@ function setupEraseGuard(el, categoryName, onReject) {
                 var newPos = Math.max(0, pos - diff);
                 try { el.setSelectionRange(newPos, newPos); } catch (e) { /* 一部のinput type等では非対応のため無視 */ }
             }
-            if (typeof onReject === "function") onReject(el);
+            if (result.removed && typeof onReject === "function") onReject(el);
         }
     }
     el.addEventListener("input", function(e) {

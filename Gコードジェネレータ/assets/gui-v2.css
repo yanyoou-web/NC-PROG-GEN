@@ -305,6 +305,181 @@ body {
 }
 .wiz-card.selected .wiz-card__label { color: var(--accent); }
 
+/* ---------- 加工スタイル選択カードのアイコン（v1 assets/v1/style.css の card-icon を移植） ---------- */
+.card-icon {
+    width: 32px;
+    height: 32px;
+    position: relative;
+}
+.icon-parallel-lines {
+    width: 30px;
+    height: 24px;
+    position: relative;
+    box-sizing: border-box;
+}
+.icon-parallel-lines::before,
+.icon-parallel-lines::after {
+    content: "";
+    position: absolute;
+    width: 60%;
+    height: 2px;
+    background-color: var(--text-sub);
+    left: 50%;
+    transform: translateX(-50%);
+}
+.icon-parallel-lines::before { top: 3px; }
+.icon-parallel-lines::after { top: 18px; }
+
+.icon-hole-flat {
+    width: 32px;
+    height: 24px;
+    border: 2px solid var(--text-sub);
+    border-right: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-sizing: border-box;
+}
+.icon-hole-flat::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: var(--text-sub);
+}
+
+.icon-hole-ichi {
+    width: 20px;
+    height: 26px;
+    border: 2px solid var(--accent);
+    border-top: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+.icon-hole-ichi::before {
+    content: "T2";
+    position: absolute;
+    font-size: 10px;
+    color: var(--accent);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.icon-hole-cross {
+    width: 30px;
+    height: 30px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+.icon-hole-cross::before {
+    content: "";
+    position: absolute;
+    left: 9px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--text-sub);
+}
+.icon-hole-cross::after {
+    content: "";
+    position: absolute;
+    right: -5px;
+    top: 0;
+    bottom: 0;
+    width: 14px;
+    background:
+        linear-gradient(var(--text-sub), var(--text-sub)) top left / 2px 8px no-repeat,
+        linear-gradient(var(--text-sub), var(--text-sub)) 0 6px / 100% 2px no-repeat,
+        linear-gradient(var(--text-sub), var(--text-sub)) bottom left / 2px 8px no-repeat,
+        linear-gradient(var(--text-sub), var(--text-sub)) left bottom 6px / 100% 2px no-repeat;
+}
+
+.icon-convergence {
+    width: 32px;
+    height: 28px;
+    position: relative;
+    box-sizing: border-box;
+}
+.icon-convergence-lines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+.icon-convergence--yose::before,
+.icon-convergence--yose::after {
+    content: "";
+    position: absolute;
+    width: 55%;
+    height: 2px;
+    background-color: var(--text-sub);
+    right: 0;
+    left: auto;
+}
+.icon-convergence--yose::before { top: 6px; }
+.icon-convergence--yose::after { bottom: -6px; }
+.icon-convergence--yose .icon-convergence-lines::before,
+.icon-convergence--yose .icon-convergence-lines::after {
+    content: "";
+    position: absolute;
+    width: 45%;
+    height: 2px;
+    background-color: var(--text-sub);
+    left: 0;
+    right: auto;
+}
+.icon-convergence--yose .icon-convergence-lines::before {
+    top: 6px;
+    transform: rotate(-45deg);
+    transform-origin: right bottom;
+}
+.icon-convergence--yose .icon-convergence-lines::after {
+    bottom: -6px;
+    transform: rotate(45deg);
+    transform-origin: right top;
+}
+.icon-convergence--yose-relay::before,
+.icon-convergence--yose-relay::after {
+    content: "";
+    position: absolute;
+    width: 55%;
+    height: 2px;
+    background-color: var(--text-sub);
+    left: 0;
+    right: auto;
+}
+.icon-convergence--yose-relay::before { top: 6px; }
+.icon-convergence--yose-relay::after { bottom: -6px; }
+.icon-convergence--yose-relay .icon-convergence-lines.icon-convergence-lines--relay::before,
+.icon-convergence--yose-relay .icon-convergence-lines.icon-convergence-lines--relay::after {
+    content: "";
+    position: absolute;
+    width: 45%;
+    height: 2px;
+    background-color: var(--text-sub);
+    left: 55%;
+    right: auto;
+}
+.icon-convergence--yose-relay .icon-convergence-lines.icon-convergence-lines--relay::before {
+    top: 6px;
+    transform: rotate(30deg);
+    transform-origin: left center;
+}
+.icon-convergence--yose-relay .icon-convergence-lines.icon-convergence-lines--relay::after {
+    bottom: -6px;
+    transform: rotate(-30deg);
+    transform-origin: left center;
+}
+
 /* ---------- グループ ---------- */
 .wiz-group {
     display: flex;
