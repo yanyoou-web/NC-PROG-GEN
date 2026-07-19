@@ -25,6 +25,7 @@ var STYLE_LABELS = {
     YoseRelay:"ヨセ中継", Yose:"ヨセ", CrossSmall:"交差穴（小径）",
 };
 var STYLE_NUMS = { Hirazoko:"1",Ichimonji:"2",Normal:"3",YoseRelay:"4",Yose:"5",CrossSmall:"6" };
+var ALL_STYLES = ["Hirazoko","Ichimonji","Normal","YoseRelay","Yose","CrossSmall"];
 /* v1(assets/v1/style.css)のcard-iconをv2へ移植したもの。CSS本体はgui-v2.css参照 */
 var STYLE_ICON_HTML = {
     Hirazoko:  '<div class="icon-hole-flat"></div>',
@@ -384,9 +385,14 @@ function buildTubeLengthScreen() {
 /* ---- Q3: スタイル ---- */
 function buildStyleScreen() {
     var av=getAvailableStyles(wizardState.workType);
-    var cards=av.map(function(s){
-        return '<button class="wiz-card wiz-card--style'+(wizardState.internalStyle===s?" selected":"")
-            +'" data-action="select-style" data-value="'+escapeHtml(s)+'">'
+    var cards=ALL_STYLES.map(function(s){
+        var enabled=av.indexOf(s)!==-1;
+        var cls="wiz-card wiz-card--style"
+            +(wizardState.internalStyle===s?" selected":"")
+            +(enabled?"":" wiz-card--disabled");
+        return '<button class="'+cls+'"'
+            +(enabled?' data-action="select-style" data-value="'+escapeHtml(s)+'"':' disabled')
+            +'>'
             +'<span class="wiz-card__num">'+(STYLE_NUMS[s]||"")+'</span>'
             +'<div class="card-icon">'+(STYLE_ICON_HTML[s]||"")+'</div>'
             +'<span class="wiz-card__label">'+escapeHtml(STYLE_LABELS[s]||s)+'</span></button>';
@@ -975,6 +981,7 @@ function handleAction(action, value) {
         case "select-tube-spec":   wizardState.tubeSpec=value; wizardState.tubeLength=""; advance("q-tube-spec"); break;
         case "select-tube-length": wizardState.tubeLength=value; advance("q-tube-length"); break;
         case "select-style":
+            if (getAvailableStyles(wizardState.workType).indexOf(value)===-1) break;
             wizardState.internalStyle=value; wizardState.drillDepthManual=false; advance("q-style"); break;
         case "select-yose-method":
             wizardState.yoseMethod=value;
