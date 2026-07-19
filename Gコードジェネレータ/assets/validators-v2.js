@@ -3,7 +3,7 @@
    ---------------------------------------------------------
    読み込み順: gui-v2.js より前（logic-v2.js より前）に読み込むこと。
    gui-v2.js / logic-v2.js の両方がここで定義するグローバル関数
-   （ncFormat, escapeHtml, wrapH*, evaluateFormula,
+   （ncFormat, escapeHtml, wrapH, evaluateFormula,
      parseSimpleNumberOrFormula, $id など）に依存する。
 
    旧 gui-v2.js の「Section 1: utils」をこのファイルに移設し、
@@ -22,10 +22,7 @@ function ncFormat(val) {
     const num = parseFloat(val); if (isNaN(num)) return "";
     const s = num.toString(); return s.indexOf(".") === -1 ? s + "." : s;
 }
-function wrapH(val)        { return (val===""||val===undefined) ? "" : escapeHtml(val); }
-function wrapHCalc(val)    { return wrapH(val); }
-function wrapHInput(val)   { return wrapH(val); }
-function wrapHMachine(val) { return wrapH(val); }
+function wrapH(val) { return (val===""||val===undefined) ? "" : escapeHtml(val); }
 function gcodeDisplayHtmlToPlainText(htmlStr) {
     if (!htmlStr) return "";
     const d = document.createElement("div"); d.innerHTML = htmlStr;
@@ -33,7 +30,6 @@ function gcodeDisplayHtmlToPlainText(htmlStr) {
 }
 const $id = function(id){ return document.getElementById(id); };
 var currentInternalStyle = "";
-function isDebugModeOn() { return false; }
 
 // ========== B. 計算式の安全な評価 ==========
 //

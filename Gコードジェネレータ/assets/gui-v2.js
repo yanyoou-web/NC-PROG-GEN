@@ -10,8 +10,8 @@
 /* global isM8WorkType, isYoseMachiningStyle, isYoseRelayStyle */
 /* global calcSpecialDrillZ, calcYoseRelayMetrics, calcCrossSmallFinishDepth */
 /* global DRILL_DIA_MAP */
-/* global escapeHtml, ncFormat, wrapH, wrapHCalc, wrapHInput, wrapHMachine */
-/* global gcodeDisplayHtmlToPlainText, $id, currentInternalStyle, isDebugModeOn */
+/* global escapeHtml, ncFormat, wrapH */
+/* global gcodeDisplayHtmlToPlainText, $id, currentInternalStyle */
 /* global evaluateFormula, parseSimpleNumberOrFormula */
 /* global VALIDATOR_CATEGORIES, stripDisallowedChars, setupEraseGuard */
 /* global usesG18DrillShiageG1Block, isJM8ASWDWorkType */

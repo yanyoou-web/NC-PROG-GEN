@@ -11,14 +11,12 @@
  *   app.js utils … wrapH / ncFormat / escapeHtml / gcodeDisplayHtmlToPlainText
  *   テンプレート群 … template_G78 / template_M40 / ...
  */
-/* global wrapH, wrapHCalc, wrapHInput, wrapHMachine, ncFormat, escapeHtml, parseSimpleNumberOrFormula */
+/* global wrapH, ncFormat, escapeHtml, parseSimpleNumberOrFormula */
 /* global stripDisallowedChars */
 /* global gcodeDisplayHtmlToPlainText */
 /* global getDrillShiageHGDRBlock, getDrillShiage10mmStepBlock, getIchimonjiBlock */
 /* global getIchimonjiHirazokoBlock, getOkuBiteBlock, getOkuBiteBlockG18 */
 /* global computeFlatBottomExitLine, combineTubeFlatBottomFinishLine */
-/* global _ncDebugLastInput, _ncDebugLastReplaceMap, _ncDebugLastTemplateKeys, _ncDebugLastUnresolved */
-/* global _ncDebugLastCalcValues, isDebugModeOn */
 /* global $id, currentInternalStyle */
 // ========== 生成ロジック ==========
 /**
@@ -663,24 +661,19 @@ function generateGCode(input, machineName) {
         }
     }
 
-    const _isDbgMode = typeof isDebugModeOn === "function" && isDebugModeOn();
-    let _debugValidationWarning = "";
     if (errors.length > 0) {
-        if (!_isDbgMode) {
-            // ▼ styleに column-span: all; を追加して、2段組みを貫通させる
-            return {
-                displayHtml: `
-                <div style="background:#330000; border:2px solid #ff4444; padding:15px; color:#ffcccc; border-radius:6px; column-span: all;">
-                    <h3 style="margin-top:0; color:#ff4444;">⚠ 生成エラー (入力値を確認してください)</h3>
-                    <ul style="padding-left:20px; line-height:1.6;">
-                        ${errors.map((msg) => `<li>${msg}</li>`).join("")}
-                    </ul>
-                </div>
-            `,
-                plainText: null,
-            };
-        }
-        _debugValidationWarning = `<div style="background:#332200; border:2px solid #ffaa00; padding:10px; color:#ffeecc; border-radius:6px; margin-bottom:6px; column-span:all; font-size:0.85em;"><strong>🛠 デバッグモード: 未入力項目あり（強制出力）</strong><ul style="padding-left:18px; margin:4px 0 0 0; line-height:1.5;">${errors.map((msg) => `<li>${escapeHtml(msg)}</li>`).join("")}</ul></div>`;
+        // ▼ styleに column-span: all; を追加して、2段組みを貫通させる
+        return {
+            displayHtml: `
+            <div style="background:#330000; border:2px solid #ff4444; padding:15px; color:#ffcccc; border-radius:6px; column-span: all;">
+                <h3 style="margin-top:0; color:#ff4444;">⚠ 生成エラー (入力値を確認してください)</h3>
+                <ul style="padding-left:20px; line-height:1.6;">
+                    ${errors.map((msg) => `<li>${msg}</li>`).join("")}
+                </ul>
+            </div>
+        `,
+            plainText: null,
+        };
     }
     // ▲▲▲ バリデーションここまで ▲▲▲
 
@@ -931,35 +924,35 @@ function generateGCode(input, machineName) {
 
     const replaceMap = {
         // ── 入力ヘッダ情報
-        入力_図番: wrapHInput(fullDrawStr),
-        入力_工程No: wrapHInput(input.processNum),
-        入力_作成者: wrapHInput(input.workerName),
-        入力_アテ長さ: wrapHInput(ncFormat(input.ateLength)),
-        入力_日付: wrapHInput(today),
+        入力_図番: wrapH(fullDrawStr),
+        入力_工程No: wrapH(input.processNum),
+        入力_作成者: wrapH(input.workerName),
+        入力_アテ長さ: wrapH(ncFormat(input.ateLength)),
+        入力_日付: wrapH(today),
 
         // ── 外径仕上
-        "最大径-5": wrapHCalc(ncFormat(calcMax1)),
-        "最大径+角": isCorner ? "X" + wrapHCalc(ncFormat(calcCorner)) : "X" + wrapHCalc(ncFormat(calcMax2)) + "(-X-)",
-        "最大径+3": isCorner ? "X" + wrapHCalc(ncFormat(calcMax2)) + "F.3\n" : "",
+        "最大径-5": wrapH(ncFormat(calcMax1)),
+        "最大径+角": isCorner ? "X" + wrapH(ncFormat(calcCorner)) : "X" + wrapH(ncFormat(calcMax2)) + "(-X-)",
+        "最大径+3": isCorner ? "X" + wrapH(ncFormat(calcMax2)) + "F.3\n" : "",
         最大径50: "",
 
         // ── 内径
-        入力_内径深さ: wrapHCalc(ncFormat(finalFinishDepth)),
+        入力_内径深さ: wrapH(ncFormat(finalFinishDepth)),
         DRILL_BLOCK: drillBlockValue,
         内バリ処理: okuBiteMentoriBlock,
 
         // ── 内径バイト固定値
-        BAITO_IN_S: wrapHMachine("500"),
-        BAITO_IN_APX: wrapHMachine("5."),
-        BAITO_IN_X: wrapHMachine("4."),
-        BAITO_IN_CHAMFER_Z: wrapHMachine("3."),
-        BAITO_IN_MID_Z: wrapHMachine("7.5"),
+        BAITO_IN_S: wrapH("500"),
+        BAITO_IN_APX: wrapH("5."),
+        BAITO_IN_X: wrapH("4."),
+        BAITO_IN_CHAMFER_Z: wrapH("3."),
+        BAITO_IN_MID_Z: wrapH("7.5"),
 
         // ── 平底
         平底_内径仕上出口: flatBottomExitLine,
 
         // ── その他
-        M99P100: wrapHInput(valM99),
+        M99P100: wrapH(valM99),
 
         // ── ヨセ
         ヨセパス: yosePath,
@@ -968,7 +961,7 @@ function generateGCode(input, machineName) {
 
     // 機械変数のマッピング
     for (let key in machineConfig) {
-        replaceMap[key] = machineConfig[key] ? wrapHMachine(machineConfig[key]) : "";
+        replaceMap[key] = machineConfig[key] ? wrapH(machineConfig[key]) : "";
     }
 
     // MH外径荒: MH系テンプレートで外径荒/外径溝を切り替えるプレースホルダー
@@ -977,7 +970,7 @@ function generateGCode(input, machineName) {
         const _mhToolKey = input.mhOdTool && _isMH ? input.mhOdTool : "外径荒";
         replaceMap["MH外径荒"] = _isMH
             ? machineConfig[_mhToolKey]
-                ? wrapHMachine(machineConfig[_mhToolKey])
+                ? wrapH(machineConfig[_mhToolKey])
                 : ""
             : "";
     }
@@ -1002,9 +995,9 @@ function generateGCode(input, machineName) {
                     plainText: null,
                 };
             }
-            replaceMap["チューブ内径バイト"] = wrapHMachine(toolT);
+            replaceMap["チューブ内径バイト"] = wrapH(toolT);
 
-            replaceMap["チューブ_平底_仕上一行"] = wrapHCalc(
+            replaceMap["チューブ_平底_仕上一行"] = wrapH(
                 combineTubeFlatBottomFinishLine(tSpec.toolDia, flatBottomExitLine)
             );
 
@@ -1012,34 +1005,34 @@ function generateGCode(input, machineName) {
             const ID = tSpec.id;
             const R = tSpec.r;
             const D_Drill_Str = tSpec.drill;
-            replaceMap["入力_外径"] = wrapHInput(ncFormat(OD));
-            replaceMap["入力_内径"] = wrapHInput(ncFormat(ID));
-            replaceMap["入力_長さ"] = wrapHInput(ncFormat(L));
-            replaceMap["入力_R"] = wrapHInput(ncFormat(R));
-            replaceMap["ドリル"] = wrapHInput(D_Drill_Str);
+            replaceMap["入力_外径"] = wrapH(ncFormat(OD));
+            replaceMap["入力_内径"] = wrapH(ncFormat(ID));
+            replaceMap["入力_長さ"] = wrapH(ncFormat(L));
+            replaceMap["入力_R"] = wrapH(ncFormat(R));
+            replaceMap["ドリル"] = wrapH(D_Drill_Str);
 
             let drillVal = 0;
             if (D_Drill_Str && D_Drill_Str.startsWith("DR")) drillVal = parseFloat(D_Drill_Str.replace("DR", ""));
 
-            replaceMap["L"] = wrapHCalc(ncFormat(L.toFixed(3)));
-            replaceMap["母材幅"] = wrapHCalc(ncFormat((OD / Math.SQRT2).toFixed(3)));
-            replaceMap["チューブ_外径荒加工径"] = wrapHCalc(ncFormat((OD + R + R + 2.6).toFixed(3)));
-            replaceMap["チューブ_端面始点"] = input.m99p100 ? "" : wrapHCalc(ncFormat((OD + R + R + 4.6).toFixed(3)));
+            replaceMap["L"] = wrapH(ncFormat(L.toFixed(3)));
+            replaceMap["母材幅"] = wrapH(ncFormat((OD / Math.SQRT2).toFixed(3)));
+            replaceMap["チューブ_外径荒加工径"] = wrapH(ncFormat((OD + R + R + 2.6).toFixed(3)));
+            replaceMap["チューブ_端面始点"] = input.m99p100 ? "" : wrapH(ncFormat((OD + R + R + 4.6).toFixed(3)));
             const _mcNum = parseFloat(tSpec.MC);
             replaceMap["MC丸"] = input.m99p100
                 ? !isNaN(_mcNum)
-                    ? wrapHCalc(ncFormat(_mcNum.toFixed(3)))
+                    ? wrapH(ncFormat(_mcNum.toFixed(3)))
                     : "テンプレート未設定"
                 : "";
-            replaceMap["OD+0.1"] = wrapHCalc(ncFormat((OD + 0.1).toFixed(3)));
-            replaceMap["Drill-1"] = wrapHCalc(ncFormat((drillVal - 1.0).toFixed(3)));
-            replaceMap["ID+0.6"] = wrapHCalc(ncFormat((ID + 0.6).toFixed(3)));
-            replaceMap["OD-0.6"] = wrapHCalc(ncFormat((OD - 0.6).toFixed(3)));
-            replaceMap["L-R"] = wrapHCalc(ncFormat((L - R).toFixed(3)));
-            replaceMap["L-0.3"] = wrapHCalc(ncFormat((L - 0.3).toFixed(3)));
-            replaceMap["L-0.5"] = wrapHCalc(ncFormat((L - 0.5).toFixed(3)));
-            replaceMap["OD+2R"] = wrapHCalc(ncFormat((OD + R + R).toFixed(3)));
-            replaceMap["OD+2R+0.1"] = wrapHCalc(ncFormat((OD + R + R + 0.1).toFixed(3)));
+            replaceMap["OD+0.1"] = wrapH(ncFormat((OD + 0.1).toFixed(3)));
+            replaceMap["Drill-1"] = wrapH(ncFormat((drillVal - 1.0).toFixed(3)));
+            replaceMap["ID+0.6"] = wrapH(ncFormat((ID + 0.6).toFixed(3)));
+            replaceMap["OD-0.6"] = wrapH(ncFormat((OD - 0.6).toFixed(3)));
+            replaceMap["L-R"] = wrapH(ncFormat((L - R).toFixed(3)));
+            replaceMap["L-0.3"] = wrapH(ncFormat((L - 0.3).toFixed(3)));
+            replaceMap["L-0.5"] = wrapH(ncFormat((L - 0.5).toFixed(3)));
+            replaceMap["OD+2R"] = wrapH(ncFormat((OD + R + R).toFixed(3)));
+            replaceMap["OD+2R+0.1"] = wrapH(ncFormat((OD + R + R + 0.1).toFixed(3)));
         }
     } else if (input.workType === "M40") {
         if (typeof template_M40 !== "undefined") finalCode = template_M40;
@@ -1049,7 +1042,7 @@ function generateGCode(input, machineName) {
             finalCode = finalCode.replace("N22X{{最大径-5}}F.35", "N22X56.F.35");
             // 残った {{最大径-5}} (line 20) を空にし、{{最大径50}} で "50." を出力
             replaceMap["最大径-5"] = "";
-            replaceMap["最大径50"] = wrapHCalc("50.");
+            replaceMap["最大径50"] = wrapH("50.");
         }
     } else if (input.workType === "M22") {
         if (typeof template_M22 !== "undefined") finalCode = template_M22;
@@ -1141,50 +1134,8 @@ function generateGCode(input, machineName) {
         return { displayHtml: "エラー: テンプレートが見つかりません", plainText: null };
     }
 
-    // カバレッジ用: 置換前のテンプレートキーを抽出
-    const _templateKeysRaw = [];
-    {
-        const _m = finalCode.matchAll(/\{\{([^}]+)\}\}/g);
-        for (const x of _m) _templateKeysRaw.push(x[1]);
-    }
-    const _templateKeySet = new Set(_templateKeysRaw);
-
-    // デバッグモード時にプレースホルダーとして残す対象: ユーザー数値入力から導出されるキーのみ
-    // 設計上の空値（{{扉閉じ}}・{{ヨセパス}}・{{最大径+3}} 等）はスキップしない
-    const _debugUserInputKeys = new Set([
-        "最大径-5",
-        "最大径+角",
-        "入力_内径深さ",
-        "入力_図番",
-        "入力_工程No",
-        "入力_作成者",
-        "入力_アテ長さ",
-        // Tube 系
-        "入力_外径",
-        "入力_内径",
-        "入力_長さ",
-        "入力_R",
-        "L",
-        "L-R",
-        "L-0.3",
-        "L-0.5",
-        "OD+2R",
-        "OD+2R+0.1",
-        "OD+0.1",
-        "OD-0.6",
-        "ID+0.6",
-        "Drill-1",
-        "母材幅",
-        "MC丸",
-    ]);
-
     Object.keys(replaceMap).forEach((key) => {
         const val = replaceMap[key];
-        // デバッグモード時: ユーザー入力由来のキーに限り、空値への置換をスキップして {{key}} を残す
-        if (_isDbgMode && _debugUserInputKeys.has(key)) {
-            const plain = gcodeDisplayHtmlToPlainText(String(val == null ? "" : val)).trim();
-            if (plain === "") return;
-        }
         finalCode = finalCode.split("{{" + key + "}}").join(val);
     });
 
@@ -1201,61 +1152,6 @@ function generateGCode(input, machineName) {
             /\{\{([^}]+)\}\}/g,
             (_, k) => `<span class="h-val h-val--unresolved">{{${escapeHtml(k)}}}</span>`
         );
-    }
-
-    // デバッグ用: 最後の入力・解決結果を保持
-    _ncDebugLastInput = input;
-    _ncDebugLastReplaceMap = replaceMap;
-    _ncDebugLastTemplateKeys = _templateKeySet;
-    _ncDebugLastUnresolved = new Set(_unresolvedKeys);
-
-    // デバッグ用: 中間算出値を保持
-    {
-        const _bigD = resolveWorkBigDiameter(input);
-        const _drillDia = resolveDrillDia(input);
-        const _yoseMetrics = isYoseRelayStyle(style) ? calcYoseRelayMetrics(input) : null;
-        const _crossSmallDepth =
-            style === "CrossSmall" && !isM8WorkType(input.workType) ? calcCrossSmallFinishDepth(input) : null;
-        const _ft = input.m12FinishType || "hss";
-        let _templateName = "template_" + input.workType;
-        if (input.workType === "M12") {
-            _templateName = "template_M12" + (_ft === "baito" ? "BAITO" : _ft === "hss" ? "HSS" : "HGDR");
-        } else if (input.workType === "M12_MH") {
-            _templateName = "template_M12" + (_ft === "baito" ? "BAITO" : _ft === "hss" ? "HSS" : "HGDR") + "_MH";
-        }
-        const _drillBlockKind = usesG18DrillShiageG1Block(input.workType) || isM12HgdrFinish(input.workType, input.m12FinishType)
-            ? "getDrillShiageHGDRBlock(G1)"
-            : isJM8ASWDWorkType(input.workType) || isM8WorkType(input.workType)
-                ? "getDrillShiage10mmStepBlock"
-            : (input.workType === "M12" || input.workType === "M12_MH") && _ft === "hss"
-                ? "getDrillShiage10mmStepBlock"
-                : "getDrillShiageHGDRBlock(" + (input.drillMode || "G74") + ")";
-        _ncDebugLastCalcValues = {
-            machineName,
-            style,
-            templateName: _templateName,
-            calcMode: input.calcMode,
-            drillBlockKind: _drillBlockKind,
-            // 外径
-            valMaxOD: isNaN(valMaxOD) ? null : valMaxOD,
-            calcMax1,
-            calcMax2,
-            calcMainMax,
-            calcCorner,
-            isCorner: input.calcMode === "corner",
-            // 深さ
-            baseIDDepth: isNaN(baseIDDepth) ? null : baseIDDepth,
-            finalDrillDepth: isNaN(finalDrillDepth) ? null : finalDrillDepth,
-            finalFinishDepth: isNaN(finalFinishDepth) ? null : finalFinishDepth,
-            // ワーク固有
-            bigD: isNaN(_bigD) ? null : _bigD,
-            drillDia: isNaN(_drillDia) ? null : _drillDia,
-            crossSmallDepth: _crossSmallDepth != null && !isNaN(_crossSmallDepth) ? _crossSmallDepth : null,
-            yoseRelayMetrics: _yoseMetrics,
-            // その他
-            fullDrawStr,
-            valM99,
-        };
     }
 
     // ── 最終出力チェック（最終防衛ライン） ──
@@ -1277,24 +1173,21 @@ function generateGCode(input, machineName) {
         }
     }
     if (_finalScanIssues.length > 0) {
-        if (!_isDbgMode) {
-            return {
-                displayHtml: `
-                <div style="background:#330000; border:2px solid #ff4444; padding:15px; color:#ffcccc; border-radius:6px; column-span: all;">
-                    <h3 style="margin-top:0; color:#ff4444;">⚠ 最終チェックエラー</h3>
-                    <ul style="padding-left:20px; line-height:1.6;">
-                        ${_finalScanIssues.map((msg) => `<li>${msg}</li>`).join("")}
-                    </ul>
-                </div>
-            `,
-                plainText: null,
-            };
-        }
-        _debugValidationWarning += `<div style="background:#332200; border:2px solid #ffaa00; padding:10px; color:#ffeecc; border-radius:6px; margin-bottom:6px; column-span:all; font-size:0.85em;"><strong>🛠 デバッグモード: 最終出力チェックで問題を検出（強制出力）</strong><ul style="padding-left:18px; margin:4px 0 0 0; line-height:1.5;">${_finalScanIssues.map((msg) => `<li>${escapeHtml(msg)}</li>`).join("")}</ul></div>`;
+        return {
+            displayHtml: `
+            <div style="background:#330000; border:2px solid #ff4444; padding:15px; color:#ffcccc; border-radius:6px; column-span: all;">
+                <h3 style="margin-top:0; color:#ff4444;">⚠ 最終チェックエラー</h3>
+                <ul style="padding-left:20px; line-height:1.6;">
+                    ${_finalScanIssues.map((msg) => `<li>${msg}</li>`).join("")}
+                </ul>
+            </div>
+        `,
+            plainText: null,
+        };
     }
 
     return {
-        displayHtml: _debugValidationWarning + finalCode,
+        displayHtml: finalCode,
         plainText: _finalPlainText,
     };
 }
