@@ -358,6 +358,99 @@ async function main() {
         }
     );
 
+    await test(
+        browser,
+        "チューブ + 通常バイト加工: 内径深さはチューブ規格値から自動入力されず、Mねじ等と同じく手入力必須になること",
+        async (page) => {
+            await page.goto(`${baseUrl}/gui-v2.html`);
+            await page.click('[data-action="start"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-machine"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-worktype"][data-value="Tube"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-tube-spec"][data-value="8x6 (R0.5)"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-tube-length"][data-value="18"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-style"][data-value="Normal"]');
+            await page.waitForTimeout(150);
+            await page.fill("#ate-input", "20");
+            await page.click('[data-action="next-atelength"]');
+            await page.waitForTimeout(150);
+            await page.fill("#maxod-direct-input", "30.1");
+            await page.click('[data-action="next-maxod"]');
+            await page.waitForTimeout(150);
+
+            const idDepthInputCount = await page.locator("#id-depth").count();
+            assert.equal(
+                idDepthInputCount,
+                1,
+                "通常バイト加工では内径深さの手入力欄が表示されること（内径Φ寸法からの自動入力にならないこと）"
+            );
+
+            await page.click('.wiz-btn-primary[data-action="next-depths"]');
+            await page.waitForTimeout(200);
+            const titleAfterEmpty = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
+            assert.ok(titleAfterEmpty.includes("加工深さ"), "内径深さ未入力のままでは次の画面に進まないこと");
+
+            await page.fill("#id-depth", "15");
+            await page.click('.wiz-btn-primary[data-action="next-depths"]');
+            await page.waitForTimeout(200);
+            const titleAfterFilled = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
+            assert.ok(!titleAfterFilled.includes("加工深さ"), "内径深さを入力すれば次の画面に進めること");
+        }
+    );
+
+    await test(
+        browser,
+        "チューブ + ヨセ: 内径深さの自動値はチューブ長さになり（内径Φ寸法は使われず）、手動切替もできること",
+        async (page) => {
+            await page.goto(`${baseUrl}/gui-v2.html`);
+            await page.click('[data-action="start"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-machine"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-worktype"][data-value="Tube"]');
+            await page.waitForTimeout(150);
+            // 12x10 (R1): 内径Φ=10, 長さ=25 を選び、自動値が「25」（長さ）であって「10」（内径Φ）でないことを確認する
+            await page.click('[data-action="select-tube-spec"][data-value="12x10 (R1)"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-tube-length"][data-value="25"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-style"][data-value="Yose"]');
+            await page.waitForTimeout(150);
+            await page.fill("#yose-d", "6");
+            await page.click('[data-action="next-yose"]');
+            await page.waitForTimeout(150);
+            await page.fill("#ate-input", "20");
+            await page.click('[data-action="next-atelength"]');
+            await page.waitForTimeout(150);
+            await page.fill("#maxod-direct-input", "16");
+            await page.click('[data-action="next-maxod"]');
+            await page.waitForTimeout(150);
+
+            const idDepthInputCount = await page.locator("#id-depth").count();
+            assert.equal(idDepthInputCount, 0, "自動計算される場合は内径深さの入力欄自体が表示されないこと");
+
+            const autoText = await page.evaluate(() => document.getElementById("id-depth-auto-val")?.textContent || "");
+            assert.ok(autoText.includes("25"), `自動値がチューブ長さ(25mm)になっていること (実際: ${autoText})`);
+            assert.ok(!/\b10\b/.test(autoText), `自動値が内径Φ寸法(10)になっていないこと (実際: ${autoText})`);
+
+            // 例外加工向けの手動切替: 直前の自動値を引き継いだ上で上書きできること
+            await page.click('[data-action="toggle-id-manual"]');
+            await page.waitForTimeout(150);
+            const manualValue = await page.inputValue("#id-depth");
+            assert.equal(manualValue, "25", "手動切替の直後は直前の自動値が引き継がれること");
+
+            await page.fill("#id-depth", "30");
+            await page.click('.wiz-btn-primary[data-action="next-depths"]');
+            await page.waitForTimeout(200);
+            const titleAfter = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
+            assert.ok(!titleAfter.includes("加工深さ"), "手動で値を入力すれば次の画面に進めること");
+        }
+    );
+
     await browser.close();
     server.close();
 

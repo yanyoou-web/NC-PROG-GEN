@@ -1122,12 +1122,6 @@ body {
     transition: color var(--trans), border-color var(--trans);
 }
 .depth-quick-btn:hover { color: var(--text); border-color: var(--text-sub); }
-.depth-finish-hint {
-    font-size: 0.76rem;
-    color: var(--text-sub);
-    margin-top: -4px;
-    padding-left: 2px;
-}
 .depth-ip-hint {
     font-size: 0.72rem;
     color: var(--text-sub);
