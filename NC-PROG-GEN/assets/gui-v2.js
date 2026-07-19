@@ -89,7 +89,25 @@ var STYLE_ICON_HTML = {
         +'<rect x="151" y="148" width="34" height="34" stroke="var(--accent)" stroke-width="4"/>'
         +'<circle cx="168" cy="165" r="9" stroke="var(--accent)" stroke-width="4"/>'
         +'</g></svg></div>',
-    YoseRelay: '<div class="icon-convergence icon-convergence--yose-relay"><div class="icon-convergence-lines icon-convergence-lines--relay"></div></div>',
+    YoseRelay: '<div class="icon-yose-relay"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" fill="none">'
+        +'<defs>'
+        +'<filter id="yose-relay-glow" x="-20%" y="-20%" width="140%" height="140%">'
+        +'<feGaussianBlur stdDeviation="6" result="b1"/><feGaussianBlur stdDeviation="12" result="b2"/>'
+        +'<feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>'
+        +'</filter>'
+        +'<pattern id="yose-relay-hatch" patternUnits="userSpaceOnUse" width="16" height="16" patternTransform="rotate(45)">'
+        +'<line x1="0" y1="0" x2="0" y2="16" stroke="var(--accent)" stroke-opacity="0.35" stroke-width="2"/>'
+        +'</pattern>'
+        +'</defs>'
+        +'<g filter="url(#yose-relay-glow)" stroke-linecap="round" stroke-linejoin="round">'
+        +'<polygon points="90,108 150,148 360,148 360,108" fill="url(#yose-relay-hatch)"/>'
+        +'<polygon points="90,364 150,324 360,324 360,364" fill="url(#yose-relay-hatch)"/>'
+        +'<path d="M90 108L150 148H360 M90 364L150 324H360" stroke="var(--text)" stroke-width="4"/>'
+        +'<line x1="50" y1="236" x2="434" y2="236" stroke="var(--text-sub)" stroke-width="3" stroke-dasharray="22 14"/>'
+        +'<rect x="217" y="158" width="260" height="60" stroke="var(--text)" stroke-width="4"/>'
+        +'<rect x="182" y="148" width="34" height="34" stroke="var(--accent)" stroke-width="4"/>'
+        +'<circle cx="200" cy="165" r="9" stroke="var(--accent)" stroke-width="4"/>'
+        +'</g></svg></div>',
     Yose:      '<div class="icon-convergence icon-convergence--yose"><div class="icon-convergence-lines"></div></div>',
     CrossSmall:'<div class="icon-hole-cross"></div>',
 };
