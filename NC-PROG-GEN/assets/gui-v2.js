@@ -127,7 +127,21 @@ var STYLE_ICON_HTML = {
         +'<rect x="182" y="148" width="34" height="34" stroke="var(--accent)" stroke-width="4"/>'
         +'<circle cx="200" cy="165" r="9" stroke="var(--accent)" stroke-width="4"/>'
         +'</g></svg></div>',
-    CrossSmall:'<div class="icon-hole-cross"></div>',
+    CrossSmall:'<div class="icon-cross-small"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" fill="none">'
+        +'<defs>'
+        +'<filter id="cross-small-glow" x="-20%" y="-20%" width="140%" height="140%">'
+        +'<feGaussianBlur stdDeviation="6" result="b1"/><feGaussianBlur stdDeviation="12" result="b2"/>'
+        +'<feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>'
+        +'</filter>'
+        +'</defs>'
+        +'<g filter="url(#cross-small-glow)" stroke-linecap="round" stroke-linejoin="round">'
+        +'<line x1="110" y1="70" x2="110" y2="442" stroke="var(--text)" stroke-width="4"/>'
+        +'<path d="M250 70V185H420" stroke="var(--text)" stroke-width="4"/>'
+        +'<path d="M250 442V295H410" stroke="var(--text)" stroke-width="4"/>'
+        +'<rect x="251" y="200" width="260" height="60" stroke="var(--text)" stroke-width="4"/>'
+        +'<rect x="216" y="185" width="34" height="34" stroke="var(--accent)" stroke-width="4"/>'
+        +'<circle cx="234" cy="201" r="9" stroke="var(--accent)" stroke-width="4"/>'
+        +'</g></svg></div>',
 };
 
 function getAvailableStyles(workType) {
