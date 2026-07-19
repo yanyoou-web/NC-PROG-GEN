@@ -18,6 +18,7 @@
 /* global getIchimonjiHirazokoBlock, getOkuBiteBlock, getOkuBiteBlockG18 */
 /* global computeFlatBottomExitLine, combineTubeFlatBottomFinishLine */
 /* global $id, currentInternalStyle */
+/* global isMHWorkType, isTubeWorkType */
 // ========== 生成ロジック ==========
 /**
  * logic.js
@@ -210,7 +211,7 @@ function isYoseRelayStyle(style) {
 // --- 解決ヘルパー ---
 
 function resolveWorkBigDiameter(input) {
-    if (input.workType === "Tube" && typeof tubeData !== "undefined" && tubeData[input.tubeSpec]) {
+    if (isTubeWorkType(input.workType) && typeof tubeData !== "undefined" && tubeData[input.tubeSpec]) {
         return parseFloat(tubeData[input.tubeSpec].id);
     }
     if (WORK_ID_MAP[input.workType] != null) {
@@ -229,7 +230,7 @@ function resolveYosePartnerDepth(input) {
 }
 
 function resolveDrillDia(input) {
-    if (input.workType === "Tube") {
+    if (isTubeWorkType(input.workType)) {
         const spec = input.tubeSpec || "";
         if (typeof tubeData !== "undefined" && tubeData[spec] && tubeData[spec].drill) {
             return parseFloat(String(tubeData[spec].drill).replace(/[^0-9.]/g, ""));
@@ -415,7 +416,7 @@ function validateBasicSelections(input) {
         errors.push("[テンプレート] が選択されていません。「テンプレート」欄からワーク種別を選択してください。");
     }
 
-    if (input.workType && input.workType !== "Tube") {
+    if (input.workType) {
         if (!input.internalStyle) {
             errors.push(
                 "[加工スタイル] が選択されていません。内径スタイルドロワーから加工スタイルを選択してください。"
@@ -545,7 +546,7 @@ function validateStyleSpecificRules(input) {
             errors.push(`[${styleLabel}: 相手径(Φd)] ${yoseDCheck.msg}`);
         }
         // YoseRelay は内径深さを自動計算するため手入力必須にしない
-        if (!isYoseRelayStyle(style) && input.workType !== "Tube" && isNaN(parseSimpleNumberOrFormula(input.idDepth))) {
+        if (!isYoseRelayStyle(style) && !isTubeWorkType(input.workType) && isNaN(parseSimpleNumberOrFormula(input.idDepth))) {
             errors.push(`[内径深さ] が入力されていません（${styleLabel}計算に必要）。`);
         }
         if (isYoseRelayStyle(style)) {
@@ -602,7 +603,7 @@ function validateStyleSpecificRules(input) {
         !isYoseMachiningStyle(style) &&
         !isYoseRelayStyle(style) &&
         style !== "CrossSmall" &&
-        input.workType !== "Tube"
+        !isTubeWorkType(input.workType)
     ) {
         const idDepthNum = parseSimpleNumberOrFormula(input.idDepth);
         if (isNaN(idDepthNum)) {
@@ -612,7 +613,7 @@ function validateStyleSpecificRules(input) {
         }
     }
     // Yose スタイル（非 Tube）でも内径深さが入力されていれば 7 超チェックを適用
-    if (isYoseMachiningStyle(style) && input.workType !== "Tube") {
+    if (isYoseMachiningStyle(style) && !isTubeWorkType(input.workType)) {
         const idDepthNum = parseSimpleNumberOrFormula(input.idDepth);
         if (!isNaN(idDepthNum) && idDepthNum <= 7) {
             errors.push("[内径深さ] は 7 より大きい値を入力してください。");
@@ -620,7 +621,7 @@ function validateStyleSpecificRules(input) {
     }
 
     // チューブ加工の場合の必須チェック（未選択／未定義データ／一覧に無い規格はここで止め、{{…}} 残りを防ぐ）
-    if (input.workType === "Tube") {
+    if (isTubeWorkType(input.workType)) {
         const spec = (input.tubeSpec || "").trim();
         if (!spec) {
             errors.push("[チューブ規格] を選択してください。");
@@ -880,7 +881,7 @@ function generateGCode(input, machineName) {
         if (!isNaN(bigD) && !isNaN(smallD) && !isNaN(angle)) {
             // チューブの場合、深さが未入力なら長さを代用
             let effectiveDepth = depth;
-            if (input.workType === "Tube" && isNaN(effectiveDepth)) {
+            if (isTubeWorkType(input.workType) && isNaN(effectiveDepth)) {
                 effectiveDepth = parseFloat(input.tubeLength);
             }
 
@@ -1023,8 +1024,12 @@ function generateGCode(input, machineName) {
     // --- 6. テンプレート選択・生成 ---
     let finalCode = "";
 
-    if (input.workType === "Tube") {
-        if (typeof template_Tube !== "undefined") finalCode = template_Tube;
+    if (input.workType === "Tube" || input.workType === "Tube_MH") {
+        if (input.workType === "Tube") {
+            if (typeof template_Tube !== "undefined") finalCode = template_Tube;
+        } else {
+            if (typeof template_Tube_MH !== "undefined") finalCode = template_Tube_MH;
+        }
         if (typeof tubeData !== "undefined" && tubeData[input.tubeSpec]) {
             const tSpec = tubeData[input.tubeSpec];
             const L = parseFloat(input.tubeLength);
