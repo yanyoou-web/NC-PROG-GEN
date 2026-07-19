@@ -24,6 +24,15 @@ var STYLE_LABELS = {
     YoseRelay:"ヨセ中継", Yose:"ヨセ", CrossSmall:"交差穴（小径）",
 };
 var STYLE_NUMS = { Hirazoko:"1",Ichimonji:"2",Normal:"3",YoseRelay:"4",Yose:"5",CrossSmall:"6" };
+/* v1(assets/v1/style.css)のcard-iconをv2へ移植したもの。CSS本体はgui-v2.css参照 */
+var STYLE_ICON_HTML = {
+    Hirazoko:  '<div class="icon-hole-flat"></div>',
+    Ichimonji: '<div class="icon-hole-ichi"></div>',
+    Normal:    '<div class="icon-parallel-lines"></div>',
+    YoseRelay: '<div class="icon-convergence icon-convergence--yose-relay"><div class="icon-convergence-lines icon-convergence-lines--relay"></div></div>',
+    Yose:      '<div class="icon-convergence icon-convergence--yose"><div class="icon-convergence-lines"></div></div>',
+    CrossSmall:'<div class="icon-hole-cross"></div>',
+};
 
 function getAvailableStyles(workType) {
     if (workType==="J_M8_300"||workType==="J_M8_200") return ["CrossSmall"];
@@ -377,6 +386,7 @@ function buildStyleScreen() {
     var cards=av.map(function(s){
         return '<button class="wiz-card wiz-card--style'+(wizardState.internalStyle===s?" selected":"")
             +'" data-action="select-style" data-value="'+escapeHtml(s)+'">'
+            +'<div class="card-icon">'+(STYLE_ICON_HTML[s]||"")+'</div>'
             +'<span class="wiz-card__num">'+(STYLE_NUMS[s]||"")+'</span>'
             +'<span class="wiz-card__label">'+escapeHtml(STYLE_LABELS[s]||s)+'</span></button>';
     }).join("");
