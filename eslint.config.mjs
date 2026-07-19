@@ -89,7 +89,7 @@ export default [
     }
   },
   {
-    files: ['Gコードジェネレータ/assets/v1/data.js', 'Gコードジェネレータ/assets/data-v2.js'],
+    files: ['Gコードジェネレータ/assets/data-v2.js'],
     rules: {
       'no-redeclare': 'off'
     }

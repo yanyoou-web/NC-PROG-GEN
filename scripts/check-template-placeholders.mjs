@@ -17,9 +17,9 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 
-// ─── logic.js から replaceMap のキーセットを抽出 ──────────────────────────────
-// replaceMap は generateGCode (logic.js) に定義されている
-const appSrc = readFileSync(join(ROOT, "Gコードジェネレータ", "assets", "v1", "logic.js"), "utf8");
+// ─── logic-v2.js から replaceMap のキーセットを抽出 ────────────────────────────
+// replaceMap は generateGCode (logic-v2.js) に定義されている
+const appSrc = readFileSync(join(ROOT, "Gコードジェネレータ", "assets", "logic-v2.js"), "utf8");
 
 // 1) 固定キー: replaceMap セクションを抽出してキーを収集
 const replaceMapSectionRe = /const replaceMap\s*=\s*\{([\s\S]*?)\};/;
@@ -37,8 +37,8 @@ if (rmMatch) {
 }
 
 // 2) 動的キー: replaceMap[key] = ... で追加されるもの（機械変数・Tube変数など）
-//    data.js から機械定義のキーを抽出
-const dataSrc = readFileSync(join(ROOT, "Gコードジェネレータ", "assets", "v1", "data.js"), "utf8");
+//    data-v2.js から機械定義のキーを抽出
+const dataSrc = readFileSync(join(ROOT, "Gコードジェネレータ", "assets", "data-v2.js"), "utf8");
 const machineKeys = new Set();
 // NCL044 ブロック内のキーを取得（最初の機械定義のキーを代表として使用）
 const ncl044Match = dataSrc.match(/NCL044\s*:\s*\{([\s\S]*?)\},/);
@@ -51,7 +51,7 @@ if (ncl044Match) {
     }
 }
 
-// 3) Tube 動的キー（app.js のコードから直接収集）
+// 3) Tube 動的キー（logic-v2.js のコードから直接収集）
 const tubeKeys = new Set([
     "チューブ内径バイト",
     "チューブ_平底_仕上一行",
@@ -122,7 +122,7 @@ for (const r of results) {
 
 console.log("\n─────────────────────────────────────");
 if (hasError) {
-    console.log(`\n⚠  未解決プレースホルダーがあります (計${totalIssues}件)。app.js の replaceMap を確認してください。`);
+    console.log(`\n⚠  未解決プレースホルダーがあります (計${totalIssues}件)。logic-v2.js の replaceMap を確認してください。`);
     process.exit(1);
 } else {
     console.log("\n✅ 全テンプレート OK — 未解決プレースホルダーはありません。");
