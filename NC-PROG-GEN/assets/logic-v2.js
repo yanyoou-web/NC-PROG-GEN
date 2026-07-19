@@ -597,13 +597,13 @@ function validateStyleSpecificRules(input) {
     }
 
     // Normal / Hirazoko / Ichimonji / CrossBig スタイルでは内径深さ必須かつ 7 超
-    // （YoseRelay は自動計算・CrossSmall は交差穴CP から自動計算・Tube はチューブ長さを使用）
+    // （YoseRelay は自動計算・CrossSmall は交差穴CP から自動計算。
+    //   チューブもMねじ・Gネジ等と同じ図面値の手入力なので対象から除外しない）
     if (
         style &&
         !isYoseMachiningStyle(style) &&
         !isYoseRelayStyle(style) &&
-        style !== "CrossSmall" &&
-        !isTubeWorkType(input.workType)
+        style !== "CrossSmall"
     ) {
         const idDepthNum = parseSimpleNumberOrFormula(input.idDepth);
         if (isNaN(idDepthNum)) {
@@ -612,8 +612,8 @@ function validateStyleSpecificRules(input) {
             errors.push("[内径深さ] は 7 より大きい値を入力してください。");
         }
     }
-    // Yose スタイル（非 Tube）でも内径深さが入力されていれば 7 超チェックを適用
-    if (isYoseMachiningStyle(style) && !isTubeWorkType(input.workType)) {
+    // Yose スタイルでも内径深さが入力されていれば 7 超チェックを適用（チューブ含む）
+    if (isYoseMachiningStyle(style)) {
         const idDepthNum = parseSimpleNumberOrFormula(input.idDepth);
         if (!isNaN(idDepthNum) && idDepthNum <= 7) {
             errors.push("[内径深さ] は 7 より大きい値を入力してください。");

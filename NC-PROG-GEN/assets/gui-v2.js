@@ -206,7 +206,7 @@ var wizardState = {
     yoseMethod:"2", yoseAngle:"60", yoseD:"", yoseTotalLength:"", yosePartnerDepth:"",
     maxOD:"", calcMode:"normal", valStockA:"", valStockB:"", valEccA:"", valEccB:"", valCornW:"", valCornH:"",
     ateLength:"",
-    drillMode:"G74", drillDepth:"", drillDepthManual:false, idDepth:"",
+    drillMode:"G74", drillDepth:"", drillDepthManual:false, idDepth:"", idDepthManual:false,
     mhOdTool:"外径荒", g12bNoseR:"none",
     m12FinishType:"hss", m12CrossMethod:"hss_oku", g18CrossMethod:"hgdr_oku",
     valPartnerD:"", cpVal:"", okuBiteEnabled:false,
@@ -739,25 +739,34 @@ function buildDepthsScreen() {
     // 一文字（M12・M8以外）: CP入力が必要
     var isIchimonjiNeedsCp = st==="Ichimonji" && !isM12Like(wt) && !(typeof isM8WorkType==="function" && isM8WorkType(wt));
 
-    // 内径深さ / IP（ヨセ中継は自動。交差穴・一文字CP では「IP = 原点〜穴中心距離」として使用）
+    // 内径深さ / IP: 自動で決まる値があるのはヨセ中継（計算式）とチューブ+ヨセ（チューブ長さ）のみ。
+    // それ以外（通常バイト加工／内径バイト平底／一文字DR平底／交差穴）はMねじ・Gネジ等と同じく
+    // 図面値としてユーザーが手入力する（チューブでも例外ではない）。
+    // 自動値がある場合も、例外加工向けに手動切替を必ず残す（ドリル深さと同じ導線）。
+    var isTubeYose = isTubeWorkType(wt) && st==="Yose";
     var idAutoVal = isRelay ? computeIdDepthForRelay()
-                 : isTubeWorkType(wt) ? computeIdDepthForTube()
+                 : isTubeYose ? computeIdDepthForTubeYose()
                  : null;
+    var idManual = wizardState.idDepthManual;
     var idLabel = (isCross || isIchimonjiNeedsCp)
         ? (isCross
             ? 'IP（原点〜穴中心距離）(mm)<span class="depth-ip-hint"> ← CP = IP − 相手径/2</span>'
             : 'IP（原点〜一文字位置）(mm)<span class="depth-ip-hint"> ← CP = IP − ドリル径/2</span>')
         : '内径深さ (mm)';
     var idHtml;
-    if (idAutoVal!==null) {
+    if (idAutoVal!==null && !idManual) {
         var idAutoLabel = isTubeWorkType(wt) ? "自動（規格値）" : "自動計算";
         idHtml='<label class="wiz-lbl">内径深さ</label>'
-            +'<div class="depth-auto-row"><span class="depth-auto-val">'+escapeHtml(idAutoVal)+' mm <span class="depth-auto-badge">'+idAutoLabel+'</span></span></div>';
+            +'<div class="depth-auto-row"><span class="depth-auto-val" id="id-depth-auto-val">'+escapeHtml(idAutoVal)+' mm <span class="depth-auto-badge">'+idAutoLabel+'</span></span>'
+            +'<button class="depth-manual-link" data-action="toggle-id-manual">手動で変更</button></div>';
         wizardState.idDepth = idAutoVal;
     } else {
         idHtml='<label class="wiz-lbl" for="id-depth">'+idLabel+'</label>'
             +'<input class="wiz-input depth-cross-field validate-positive" id="id-depth" type="text" inputmode="decimal"'
-            +' value="'+escapeHtml(wizardState.idDepth)+'" />';
+            +' value="'+escapeHtml(wizardState.idDepth)+'" />'
+            +(idAutoVal!==null
+                ? '<button class="depth-manual-link" data-action="toggle-id-manual">自動計算に戻す（'+escapeHtml(idAutoVal)+'mm）</button>'
+                : '');
     }
 
     // 交差穴 / 一文字CP: IP + 相手径 + CP表示
@@ -855,11 +864,14 @@ function computeCP(idDepth,partnerD) {
     return (d-p/2).toFixed(3);
 }
 
-/* チューブ内径深さ自動計算（tubeData[spec].id から取得） */
-function computeIdDepthForTube() {
-    if (!isTubeWorkType(wizardState.workType)) return null;
-    if (typeof tubeData === "undefined" || !tubeData[wizardState.tubeSpec]) return null;
-    return String(tubeData[wizardState.tubeSpec].id);
+/* チューブ + ヨセ の内径深さ自動計算。
+   tubeData[spec].id は「内径のΦ寸法」であって長さ方向の深さではないため使用しない
+   （それは {{入力_内径}} 側で径指令として使われている）。ヨセのテーパ計算はチューブ長さを
+   基準にする（logic-v2.js のヨセ計算が未入力時にチューブ長さを代用するのと同じ考え方）。 */
+function computeIdDepthForTubeYose() {
+    if (!isTubeWorkType(wizardState.workType) || wizardState.internalStyle !== "Yose") return null;
+    var tl = parseFloat(wizardState.tubeLength);
+    return !isNaN(tl) ? String(tl) : null;
 }
 
 /* ドリル深さ自動計算（logic.js の関数を使用）
@@ -997,11 +1009,13 @@ function initDrillAutoCalc() {
         var av=computeDrillDepthAuto();
         if (av!==null) wizardState.drillDepth=av;
     }
-    computeIdDepthForRelay(); // YoseRelay: idDepthを自動セット
-    // Tube: idDepthをtubeDataから自動セット
-    if (wizardState.workType === "Tube") {
-        var tubId = computeIdDepthForTube();
-        if (tubId !== null) wizardState.idDepth = tubId;
+    if (!wizardState.idDepthManual) {
+        computeIdDepthForRelay(); // YoseRelay: idDepthを自動セット
+        // チューブ + ヨセ: idDepthをチューブ長さから自動セット（それ以外のスタイルは手入力）
+        if (isTubeWorkType(wizardState.workType) && wizardState.internalStyle === "Yose") {
+            var tubId = computeIdDepthForTubeYose();
+            if (tubId !== null) wizardState.idDepth = tubId;
+        }
     }
 }
 
@@ -1074,7 +1088,7 @@ function doRestart() {
     wizardState={machine:null,workType:null,tubeSpec:"",tubeLength:"",internalStyle:null,
         yoseMethod:"2",yoseAngle:"60",yoseD:"",yoseTotalLength:"",yosePartnerDepth:"",
         maxOD:"",calcMode:"normal",valStockA:"",valStockB:"",valEccA:"",valEccB:"",valCornW:"",valCornH:"",
-        ateLength:"",drillMode:"G74",drillDepth:"",drillDepthManual:false,idDepth:"",
+        ateLength:"",drillMode:"G74",drillDepth:"",drillDepthManual:false,idDepth:"",idDepthManual:false,
         mhOdTool:"外径荒",g12bNoseR:"none",m12FinishType:"hss",m12CrossMethod:"hss_oku",g18CrossMethod:"hgdr_oku",
         valPartnerD:"",cpVal:"",okuBiteEnabled:false,m99Mode:"off",
         drawNumA:"",drawNumB:"2",drawRev:"NONE",processNum:"1",workerName:""};
@@ -1089,12 +1103,13 @@ function handleAction(action, value) {
             wizardState.workType=value;
             wizardState.internalStyle=(value==="J_M8_300"||value==="J_M8_200")?"CrossSmall":null;
             wizardState.drillDepthManual=false;
+            wizardState.idDepthManual=false;
             advance("q-worktype"); break;
         case "select-tube-spec":   wizardState.tubeSpec=value; wizardState.tubeLength=""; advance("q-tube-spec"); break;
         case "select-tube-length": wizardState.tubeLength=value; advance("q-tube-length"); break;
         case "select-style":
             if (getAvailableStyles(wizardState.workType).indexOf(value)===-1) break;
-            wizardState.internalStyle=value; wizardState.drillDepthManual=false; advance("q-style"); break;
+            wizardState.internalStyle=value; wizardState.drillDepthManual=false; wizardState.idDepthManual=false; advance("q-style"); break;
         case "select-yose-method":
             wizardState.yoseMethod=value;
             document.querySelectorAll("[data-action='select-yose-method']").forEach(function(b){b.classList.toggle("selected",b.dataset.value===value);});
@@ -1180,6 +1195,19 @@ function handleAction(action, value) {
                 // 手動に切替
                 wizardState.drillDepthManual=true;
                 if (curVal) wizardState.drillDepth=curVal;
+            }
+            renderScreen("q-depths"); break;
+        }
+        case "toggle-id-manual": {
+            var curValId=(document.getElementById("id-depth")||{value:""}).value;
+            if (wizardState.idDepthManual) {
+                // 自動に戻す
+                wizardState.idDepthManual=false;
+                wizardState.idDepth="";
+            } else {
+                // 手動に切替（例外加工向け）
+                wizardState.idDepthManual=true;
+                if (curValId) wizardState.idDepth=curValId;
             }
             renderScreen("q-depths"); break;
         }
