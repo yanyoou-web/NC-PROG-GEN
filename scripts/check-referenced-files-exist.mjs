@@ -1,6 +1,6 @@
 /**
  * check-referenced-files-exist.mjs
- * index.html / gui-v2.html が <script src="..."> / <link href="..."> で
+ * gui-v2.html が <script src="..."> / <link href="..."> で
  * 読み込むよう指定しているファイルが、実際にその場所に存在するかを検証する。
  *
  * 「保存してブラウザで確認する」作業のたびに、ファイルの追加漏れ・名前の
@@ -21,9 +21,9 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
-const APP_DIR = join(ROOT, "Gコードジェネレータ");
+const APP_DIR = join(ROOT, "NC-PROG-GEN");
 
-const HTML_FILES = ["index.html", "gui-v2.html"];
+const HTML_FILES = ["gui-v2.html"];
 
 // <script src="..."> / <link ... href="..."> の参照パスを抽出する
 // （外部URL(http://等)は対象外。ローカル相対パスのみを対象とする）

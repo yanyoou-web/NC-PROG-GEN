@@ -710,31 +710,28 @@ function syncStyleCheckboxes() {
 // ── scope / post checkboxes ───────────────────────
 var SCOPE_ITEMS = [
   { id:"tpl_place",   lbl:"テンプレートを テンプレート/ に配置", def:true },
-  { id:"idx_option",  lbl:"index.html: workType option 追加", def:true },
-  { id:"idx_script",  lbl:"index.html: script タグ（app.js より前）", def:true },
-  { id:"drill_map",   lbl:"app.js: DRILL_DIA_MAP 追加", def:true },
-  { id:"work_id",     lbl:"app.js: WORK_ID_MAP 追加", def:true },
-  { id:"flat_tool",   lbl:"app.js: FLAT_BOTTOM_TOOL_DIA_MM 追加", def:true },
-  { id:"dispatch",    lbl:"app.js: template dispatch 追加", def:true },
-  { id:"desc",        lbl:"app.js: WORK_TYPE_DESCRIPTIONS 追加", def:true },
-  { id:"helper_fn",   lbl:"app.js: isFooWorkType() ヘルパー追加", def:false },
-  { id:"restrict_fn", lbl:"app.js: restrictStyles に分岐追加", def:false },
-  { id:"ui_style",    lbl:"app.js: updateInternalStyleUI 修正", def:false },
-  { id:"rear_chamf",  lbl:"app.js: rearChamferEarly 分岐追加", def:false },
-  { id:"drill_fn",    lbl:"app.js: 新規ドリル関数追加", def:false },
-  { id:"data_tools",  lbl:"data.js: 新規工具キー追加（全6機械）", def:false },
-  { id:"cross_panel", lbl:"index.html + app.js: CrossSmall サブパネル一式", def:false },
-  { id:"sw_cache",    lbl:"sw.js: CACHE_FILES に追加", def:false },
+  { id:"idx_option",  lbl:"gui-v2.js: WORK_TYPE_GROUPS に追加", def:true },
+  { id:"idx_script",  lbl:"gui-v2.html: script タグ（blocks-v2.js より前）", def:true },
+  { id:"drill_map",   lbl:"logic-v2.js: DRILL_DIA_MAP 追加", def:true },
+  { id:"work_id",     lbl:"logic-v2.js: WORK_ID_MAP 追加", def:true },
+  { id:"flat_tool",   lbl:"logic-v2.js: FLAT_BOTTOM_TOOL_DIA_MM 追加", def:true },
+  { id:"dispatch",    lbl:"logic-v2.js: template dispatch 追加", def:true },
+  { id:"helper_fn",   lbl:"logic-v2.js: isFooWorkType() ヘルパー追加", def:false },
+  { id:"restrict_fn", lbl:"gui-v2.js: getAvailableStyles に分岐追加", def:false },
+  { id:"ui_style",    lbl:"gui-v2.js: 該当する画面構築関数（build*Screen）を修正", def:false },
+  { id:"rear_chamf",  lbl:"logic-v2.js: rearChamferEarly 分岐追加", def:false },
+  { id:"drill_fn",    lbl:"blocks-v2.js: 新規ドリル関数追加", def:false },
+  { id:"data_tools",  lbl:"data-v2.js: 新規工具キー追加（全6機械）", def:false },
+  { id:"cross_panel", lbl:"gui-v2.js: CrossSmall用の画面・状態管理一式", def:false },
 ];
 
 var POST_ITEMS = [
   { id:"node_check",    lbl:"node --check テンプレート/data_template_XXX.js", def:true },
   { id:"ph_check",      lbl:"node scripts/check-template-placeholders.mjs", def:true },
-  { id:"ui_select",     lbl:"プルダウン選択 → G コード生成 が成功する", def:true },
-  { id:"style_grey",    lbl:"不可スタイルがグレーアウトされる", def:true },
+  { id:"ui_select",     lbl:"ワーク種別選択 → G コード生成 が成功する", def:true },
+  { id:"style_grey",    lbl:"不可スタイルが選択肢から除外される（getAvailableStyles）", def:true },
   { id:"machines",      lbl:"全機械で T 番号が正しく置換される", def:true },
   { id:"export_import", lbl:"エクスポート → インポートで全値が復元される", def:false },
-  { id:"debug_cov",     lbl:"デバッグパネルのカバレッジが 100%", def:false },
   { id:"no_check_str",  lbl:"出力に「check」などの確認メモが出ない", def:true },
 ];
 
@@ -1150,7 +1147,7 @@ function generateBrief() {
   }
   if (fc>1) {
     L.push("");
-    L.push("index.html に追加する script タグ（app.js より前の順番）:");
+    L.push("gui-v2.html に追加する script タグ（blocks-v2.js より前の順番）:");
     var pfx = G("folderPrefix").value;
     files.forEach(function(f){ L.push('  <script src="' + pfx + f.name + '"></scr' + 'ipt>'); });
   }
@@ -1232,7 +1229,7 @@ function generateBrief() {
   L.push("");
 
   L.push(sep);
-  L.push("## 0-F 工具キー（data.js）");
+  L.push("## 0-F 工具キー（data-v2.js）");
   L.push("  既存キーで足りる: " + ynStr("toolsOk"));
   if (yn.toolsOk==="N") {
     var nk = (G("newToolKeys").value||"").trim();
@@ -1260,7 +1257,7 @@ function generateBrief() {
   L.push("");
 
   L.push(sep);
-  L.push("## app.js マップ登録値（コピペ用）");
+  L.push("## logic-v2.js マップ登録値（コピペ用）");
   L.push("```");
   L.push("// DRILL_DIA_MAP に追加");
   rows.forEach(function(r){ if(r.drillDia) L.push(r.wt + ": " + r.drillDia + ","); });
@@ -1272,11 +1269,6 @@ function generateBrief() {
   rows.forEach(function(r){ if(r.toolDia) L.push(r.wt + ": " + r.toolDia + ","); });
   L.push("```");
   L.push("");
-  if (rows.length) {
-    L.push("// WORK_TYPE_DESCRIPTIONS に追加:");
-    rows.forEach(function(r){ L.push(r.wt + ': "' + (r.disp||r.wt) + " — 内径 Φ" + r.idDia + " / ドリル φ" + r.drillDia + ' / バイト Φ' + r.toolDia + '",'); });
-    L.push("");
-  }
 
   L.push(sep);
   L.push("## 実装スコープ");
@@ -1291,8 +1283,8 @@ function generateBrief() {
   L.push(sep);
   L.push("## よくあるミス（手順書より）");
   L.push("  - {{...}} の }} 閉じ忘れ / テンプレ内に literal M51 等を直書きしない（{{M51}} を使う）");
-  L.push("  - script タグは app.js より前に置く（後ろに置くと template_XXX が undefined）");
-  L.push("  - 新規工具キーは data.js 全6機械に追加（一部だけ追加すると他機械でエラー）");
+  L.push("  - script タグは blocks-v2.js より前に置く（後ろに置くと template_XXX が undefined）");
+  L.push("  - 新規工具キーは data-v2.js 全6機械に追加（一部だけ追加すると他機械でエラー）");
   L.push("  - getDrillShiage10mmStepBlock を M12 以外に流用しない（将来の調整で独立が必要）");
   L.push("  - PowerShell での編集は必ず UTF8: [System.IO.File]::ReadAllText/WriteAllText");
   L.push("");

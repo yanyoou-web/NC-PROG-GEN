@@ -68,20 +68,6 @@ body {
     letter-spacing: 0.04em;
     flex: 1;
 }
-.wiz-header__classic {
-    font-size: 0.75rem;
-    color: var(--text-sub);
-    text-decoration: none;
-    padding: 4px 8px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    transition: color var(--trans), border-color var(--trans);
-}
-.wiz-header__classic:hover {
-    color: var(--text);
-    border-color: var(--text-sub);
-}
-
 /* ---------- 設定済み項目クラムバー ---------- */
 .wiz-crumb-bar {
     display: flex;

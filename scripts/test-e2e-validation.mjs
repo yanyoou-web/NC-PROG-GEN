@@ -25,7 +25,7 @@ import { join, dirname, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const APP_DIR = join(__dirname, "..", "Gコードジェネレータ");
+const APP_DIR = join(__dirname, "..", "NC-PROG-GEN");
 
 const MIME_TYPES = {
     ".html": "text/html; charset=utf-8",

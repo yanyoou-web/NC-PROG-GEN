@@ -32,5 +32,5 @@
 
 - `docs/drilling-rules.md` — ドリル加工の分岐ルール
 - `docs/debug-template.md` — 不具合報告テンプレート
-- `docs/v1-v2-feature-gap.md` — v1（従来版）にあり v2 に無い機能の一覧（v1削除前の判断材料）
-- `docs/v1-legacy-reference.md` — v1から今後の開発に役立つ仕様・コードを整理したアーカイブ
+- `docs/v1-v2-feature-gap.md` — v1（従来版、削除済み）にあり v2 に無かった機能の調査・意思決定の記録
+- `docs/v1-legacy-reference.md` — v1（削除済み）から今後の開発に役立つ仕様・コードを整理したアーカイブ

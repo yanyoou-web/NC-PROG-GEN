@@ -14,6 +14,8 @@ alwaysApply: true
 - ユーザーがフォームに加工条件（機械・ワーク種別・寸法など）を入力すると、**NC旋盤向けのGコード（工作機械への命令文）を自動生成する**Webアプリです。
 - 生成されたGコードは、NC旋盤（NCL044・NCL015 等）に直接送り込んで使用します。
 - 入力値が一文字でも間違っていると**機械が誤動作する危険がある**ため、コードへの変更はすべて慎重に扱います。
+- 画面本体は `NC-PROG-GEN/gui-v2.html`（一問一答形式のウィザード）。
+  ファイル名に残る `-v2` は開発初期の呼称の名残で、現在はこれが唯一の画面。
 
 ---
 
@@ -26,26 +28,21 @@ alwaysApply: true
 
 | ファイル・フォルダ | 役割のひとこと説明 | 変更可否 |
 |---|---|---|
-| `Gコードジェネレータ/テンプレート/` 内 全ファイル | Gコードのひな形。`{{}}` の部分に後から実際の数値が埋め込まれる | **変更禁止**（新規追加のみ可） |
-| `Gコードジェネレータ/assets/v1/logic.js` | v1 画面用 Gコード生成ロジック本体（凍結済み） | **変更禁止** |
-| `Gコードジェネレータ/assets/logic-v2.js` | v2 画面用 Gコード生成ロジック（v1 から複製・改修可能） | v2 機能追加時のみ慎重に変更可 |
-| `Gコードジェネレータ/assets/v1/blocks.js` | v1 用加工ブロック文字列の組み立て（凍結済み） | **変更禁止** |
-| `Gコードジェネレータ/assets/blocks-v2.js` | v2 用加工ブロック文字列（複製・改修可能） | 数値調整のみ可（構造変更禁止） |
-| `Gコードジェネレータ/assets/v1/data.js` | v1 用機械ごとのMコード・工具オフセット定義（凍結済み） | **変更禁止** |
-| `Gコードジェネレータ/assets/data-v2.js` | v2 用機械定義（複製・改修可能） | 機械追加時のみ変更可 |
-| `Gコードジェネレータ/index.html` | v1 の入力画面 | スクリプトパス修正のみ許可 |
-| `Gコードジェネレータ/assets/v1/style.css` | v1 画面のデザイン定義（凍結済み） | 変更禁止 |
+| `NC-PROG-GEN/テンプレート/` 内 全ファイル | Gコードのひな形。`{{}}` の部分に後から実際の数値が埋め込まれる | **変更禁止**（新規追加のみ可） |
+| `NC-PROG-GEN/assets/logic-v2.js` | Gコード生成ロジック本体（`generateGCode`） | 機能追加・バグ修正のため慎重に変更可 |
+| `NC-PROG-GEN/assets/blocks-v2.js` | 加工ブロック文字列の組み立て | 数値調整のみ可（構造変更禁止） |
+| `NC-PROG-GEN/assets/data-v2.js` | 機械ごとのMコード・工具オフセット定義 | 機械追加時のみ変更可 |
+| `NC-PROG-GEN/gui-v2.html` | 入力画面（ウィザード） | スクリプトパス修正のみ許可 |
 
 ### テンプレートフォルダについて
 
-`Gコードジェネレータ/テンプレート/` に入っているファイルは、**ワーク種別1つにつき1ファイル**で構成されています。
+`NC-PROG-GEN/テンプレート/` に入っているファイルは、**ワーク種別1つにつき1ファイル**で構成されています。
 例：`data_template_M18.js` ＝「M18サイズの部品を加工するためのGコードひな形」
 
 - ファイル内の `{{変数名}}` の部分は、アプリが実行時に実際の数値に置き換えます。
 - ひな形のGコード本文を書き換えると機械への指示内容が変わるため、**新しいワーク種別を追加するとき以外は触らない**。
-- テンプレートは `index.html`（v1）と `gui-v2.html`（v2）で**共用**。バージョンごとに分離しない。
 - 既存テンプレートへの行追加・削除は `dev/テンプレート追加確認事項.html` で事前検証してから行うこと。
-- `data_template_S_G12_PP` / `S_G38_PP` / `S_G78_PP` / `S_M12_PP` / `S_M15_PP` の5ファイルはフォルダ内に存在するが、現時点では両 HTML の `<script>` タグに未登録のため動作しない。有効化するには両 HTML への登録作業が別途必要。
+- `data_template_S_G12_PP` / `S_G38_PP` / `S_G78_PP` / `S_M12_PP` / `S_M15_PP` の5ファイルはフォルダ内に存在するが、現時点では `gui-v2.html` の `<script>` タグに未登録のため動作しない。有効化するには `gui-v2.html` への登録作業が別途必要。
 - **`.nc` 拡張子のファイルについて：** テンプレートフォルダ内の `.nc` ファイルは、テンプレート追加作業に伴う確認中のファイル（草稿）。アプリからは参照されず、AI は内容の変更・参照対象としない。確認が完了したら開発者が手動で `.js` に切り替える。切り替え後に別途テンプレート追加の指示を行う。
 
 ---
@@ -54,7 +51,7 @@ alwaysApply: true
 
 - 新規テンプレートを追加するときは `dev/テンプレート追加確認事項.html` でブリーフ（作業指示書）を生成し、テンプレートJSファイルと一緒に Agent に送ること。
 - ブリーフに加工仕様3点（内径Φ・ドリルφ・バイトΦ）が明記されていれば Agent は再確認せず実装してよい（ブリーフがない場合のみ確認すること）。
-- 内径Φ＝バイトΦ（同径）時の `{{平底_内径仕上出口}}` は `U-.2`、異径時は `X{toolDia}.F.03`（`computeFlatBottomExitLine` の仕様）。
+- 内径Φ＝バイトΦ（同径）時の `{{平底_内径仕上出口}}` は `U-.2`、異径時は `X{toolDia}.F.03`（`computeFlatBottomExitLine` の仕様、`blocks-v2.js`）。
 
 ---
 
@@ -62,67 +59,43 @@ alwaysApply: true
 
 > **これは何か：** 「このワーク種別はこのグループに属するか？」という Yes/No を返す小さな判定処理です。たとえば「M16・M18・M22・M24・M35 はどれも『トメセン系』として同じルールで扱う」といった場合に使います。ワーク種別が増えたときにも一か所を修正するだけで対応できる仕組みです。
 
-- 複数 workType を束ねる場合は `isXxxWorkType(wt)` を `FLAT_BOTTOM_TOOL_DIA_MM` 定義の直後に追加する。
-- `restrictStyles`（`app.js` 内）で `else_m` デフォルト分岐（Ichimonji のみ無効）では足りない場合は専用分岐を追加し、ブリーフのスコープ `restrict_fn` を true にする。GUI v2 では対応する処理は `gui-v2.js` 内の `getAvailableStyles(workType)` になる。
+- 複数 workType を束ねる場合は `isXxxWorkType(wt)` を `logic-v2.js` の `FLAT_BOTTOM_TOOL_DIA_MM` 定義の直後に追加する。
+- 加工スタイルの選択肢絞り込みは `gui-v2.js` 内の `getAvailableStyles(workType)`（純粋関数）で行う。`else` デフォルト分岐では足りない場合は専用分岐を追加し、ブリーフのスコープ `restrict_fn` を true にする。
 - `dev/テンプレート追加確認事項.html` の restrict チップで `else_m` 以外を選択すると `restrict_fn` が自動チェックされる。
 
 ---
 
-## バージョン別ファイル管理ルール
-
-> **このアプリのファイルは v1 / v2 … と世代ごとに独立して管理します。**
-> 将来 v3 が生まれた場合は同じ手順を繰り返します。
-
-### フォルダ構成（現行）
+## ファイル構成
 
 ```
-Gコードジェネレータ/
-├── index.html          ← v1 画面（スクリプトパス修正のみ許可）
-├── gui-v2.html         ← v2 画面
+NC-PROG-GEN/
+├── gui-v2.html         ← 入力画面（ウィザード）
 ├── assets/
-│   ├── icon.svg        ← 共用（移動しない）
-│   ├── v1/             ← v1 専用ファイル（凍結・原則変更禁止）
-│   │   ├── logic.js / blocks.js / data.js / i18n.js
-│   │   ├── style.css / app.js / operator-hints.js
-│   │   └── preview.js / debug.js
-│   ├── logic-v2.js     ← v2 専用（v1 から複製・改修可能）
-│   ├── blocks-v2.js    ← v2 専用（同上）
-│   ├── data-v2.js      ← v2 専用（同上）
-│   ├── i18n-v2.js      ← v2 専用（同上）
-│   ├── gui-v2.css      ← v2 専用デザイン
-│   └── gui-v2.js       ← v2 専用ウィザード制御
-└── テンプレート/        ← v1・v2 共用（変更禁止）
+│   ├── icon.svg        ← アイコン
+│   ├── data-v2.js      ← 機械定義（機械追加時のみ変更可）
+│   ├── i18n-v2.js      ← UI文言（翻訳・ラベル追加時のみ変更可）
+│   ├── blocks-v2.js    ← Gコードブロック（数値調整のみ可）
+│   ├── validators-v2.js← 入力チェック共通処理（半角変換・計算式評価など）
+│   ├── logic-v2.js     ← Gコード生成ロジック本体（generateGCode）
+│   ├── preview-v2.js   ← ツールパスプレビュー
+│   ├── gui-v2.css      ← デザイン
+│   └── gui-v2.js       ← ウィザード制御
+└── テンプレート/        ← Gコードひな形（変更禁止・新規追加のみ可）
 ```
 
-### 新バージョン（v3 以降）追加手順
-
-1. `assets/v2/` フォルダを作成し `logic-v2.js` / `blocks-v2.js` / `data-v2.js` / `i18n-v2.js` を `git mv` で移動。
-2. `assets/` に `logic-v3.js` / `blocks-v3.js` / `data-v3.js` / `i18n-v3.js` をコピー作成。
-3. `gui-v3.html` を新規作成し、v3 ファイルを参照するよう `<script>` タグを設定。
-4. このルールファイルのフォルダ構成を更新。
-
-### v2 ファイルの変更可否
-
-| ファイル | 変更可否 |
-|---|---|
-| `assets/v1/*` | **変更禁止**（凍結済み） |
-| `assets/logic-v2.js` | v2 機能追加・バグ修正のため変更可 |
-| `assets/blocks-v2.js` | 数値調整のみ可（構造変更禁止） |
-| `assets/data-v2.js` | 機械追加時のみ変更可 |
-| `assets/i18n-v2.js` | 翻訳・ラベル追加時のみ変更可 |
-| `assets/gui-v2.js` | 自由に変更可（v2 専用） |
-| `assets/gui-v2.css` | 自由に変更可（v2 専用） |
+ファイル名に残る `-v2` は開発初期に「次世代UI」として作られた際の名残で、現在はこれが唯一のバージョン。
+将来また画面を作り直す場合は、このファイル構成をコピーして新しい接尾辞（例: `-v3`）でファイルを複製し、
+このルールファイルのファイル構成を更新すること。
 
 ---
 
-## GUI v2 開発ルール
-
-> **GUI v2 とは：** 現行の入力画面（`index.html`）を将来的に置き換える、新しい「一問一答形式」の操作画面です。`index.html`（旧画面）はそのまま残してあるため、`gui-v2.html` に問題が起きても旧画面を直接開けばすぐ使えます。
+## 開発ルール
 
 ### 基本方針
-- v2 専用ファイルは `gui-v2.html`・`assets/gui-v2.css`・`assets/gui-v2.js`・`assets/logic-v2.js`・`assets/blocks-v2.js`・`assets/data-v2.js`・`assets/i18n-v2.js`。
-- **`assets/v1/` 内のファイルには一切手を加えない。**
-- `gui-v2.html` では `app.js` と `operator-hints.js` を読み込まない。代わりに `gui-v2.js` の冒頭に必要な補助関数を定義しておく（`logic-v2.js` が起動時に補助関数を必要とするため、先に読み込む順番を守る）。
+- `assets/blocks-v2.js` は数値調整のみ可（構造変更禁止）。
+- `assets/data-v2.js` は機械追加時のみ変更可。
+- `assets/i18n-v2.js` は翻訳・ラベル追加時のみ変更可。
+- `assets/gui-v2.js` / `assets/gui-v2.css` は自由に変更可。
 
 ### ファイルの読み込み順（重要）
 
@@ -131,46 +104,28 @@ Gコードジェネレータ/
 `gui-v2.html` でのスクリプト読み込み順は以下を守ること：
 
 ```
-data-v2.js → i18n-v2.js → テンプレート群（共用）→ blocks-v2.js → gui-v2.js → logic-v2.js
+data-v2.js → i18n-v2.js → テンプレート群 → blocks-v2.js → validators-v2.js
+→ gui-v2.js → logic-v2.js → preview-v2.js
 ```
 
-`gui-v2.js` を `logic-v2.js` より**先に**読み込むことで、`logic-v2.js` が必要とする補助関数（数値の整形・文字のエスケープ処理など）を事前に準備しておく。
+`validators-v2.js` を `gui-v2.js`/`logic-v2.js` より**先に**読み込むことで、両ファイルが必要とする
+共通ユーティリティ（数値の整形・文字のエスケープ処理・半角変換など）を事前に準備しておく。
+`gui-v2.js` を `logic-v2.js` より**先に**読み込むことで、`logic-v2.js` が必要とする補助関数を事前に準備しておく。
 
 ### Gコード生成の呼び出し方
 
-> **`generateGCode` とは：** `logic-v2.js` に定義されている「入力値を受け取ってGコード文字列を返す」中心的な処理です。GUI v2 はこの処理をそのまま使うため、ロジックを二重に書く必要がありません。
+> **`generateGCode` とは：** `logic-v2.js` に定義されている「入力値を受け取ってGコード文字列を返す」中心的な処理です。
 
 - `gui-v2.js` からは `generateGCode(inputObject, machineName)` を直接呼び出す。
 - 呼び出す直前に `currentInternalStyle = state.internalStyle;` で加工スタイルの値を同期させること（`logic-v2.js` が内部でこの値を参照するため）。
 - 戻り値は `{ displayHtml: "...", plainText: "..." }` の形式。`plainText` がコピー・保存に使う純粋なGコード文字列。
-- `restrictStyles`（v1 の `app.js` でスタイル選択を制限する処理）の代わりに、`gui-v2.js` 内で `getAvailableStyles(workType)` という純粋な判定処理として再実装し、ウィザード画面の選択肢の絞り込みに使う。
+- スタイル選択の絞り込みは `gui-v2.js` 内の `getAvailableStyles(workType)` という純粋な判定処理で行う。
 
----
+### 入力チェックのタイミング
 
-## UI レイアウト（index.html / style.css）
-
-> **この節は現行画面（`Gコードジェネレータ/index.html`）に変更を加える場合のみ参照してください。GUI v2 の開発中は基本的に不要です。**
-
-### ラベル幅・インデント基準
-- `nc-section-card` / `machining-panel` 共通ラベル幅: **140px**
-- 図番行 `.nc-fn-row label` も **140px**（`!important`）— PM- が他コントロールと揃う
-- `.nc-label-spacer`（作成者テキスト入力の位置合わせ）: **140px**
-
-### カード行のベース設定
-- `.nc-section-card .row`: `padding-left: 10px; gap: 10px; box-sizing: border-box;`（machining-panel .row と同一）
-- コントロール開始位置: padding-left(10) + ラベル(140) + gap(10) = **160px**
-
-### コントロール幅基準
-- セレクトボックス・テキスト入力の標準幅: **250px**（`select { width:250px !important }` / `.w-long` / 加工設定個別指定で統一）
-- `#ateLength`: `width: 250px !important; max-width: 100%`（datalist input を select と統一）
-- 図番入力テキストボックス（`#v1a`,`#v1b`,`#v1c`,`#v2`）は個別幅固定 — 変更禁止
-
-### 説明テキストのインデント
-- `.nc-section-card .work-type-desc`: `margin-left: 160px; width: fit-content; max-width: calc(100% - 160px)`
-- `.internal-style-hint`: `margin-left: 160px`（machining-panel padding-left 10 + ラベル 140 + gap 10）
-
-### 作成者ボタン
-- HTML: 作成者行とworkerName行を `<div class="nc-author-section">` で包む
-- CSS: `.nc-author-section .nc-author-row { display:none }` / `.nc-author-section:focus-within .nc-author-row { display:flex }` — workerName フォーカス時のみ表示
-- ボタンサイズ: `.nc-btns-inline .qb { padding: 2px 4px; font-size: 0.65rem }`（通常 `.qb` より約40%縮小）
-- グリッド: `grid-template-columns: repeat(3, 1fr)`（3列2段）
+- 業種固有の入力ルール（idDepth>7、CrossSmall相手径±0.5mmルールなど）は `logic-v2.js` の
+  `validateBasicSelections`/`validateDrawNumAndAuthor`/`validateCommonNumericFields`/`validateStyleSpecificRules`
+  の4関数に分離されており、`validateDomainRules()` として合成して `generateGCode()` の最終ゲートから呼ばれる。
+- ウィザードの「加工深さ」画面の「次へ」押下時（`gui-v2.js` の `next-depths` アクション）でも、
+  図番・作成者チェックを除く3関数を早期に呼び出し、その場でエラーを検出する。
+- 新しい業種固有ルールを追加する場合は、この4関数のうち該当するものに追加し、**ロジックを二重実装しない**こと。

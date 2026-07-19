@@ -1,11 +1,12 @@
 /**
- * チューブ平底仕上一行の検証（assets/data.js の tubeData を実ファイルから読み込み）
+ * チューブ平底仕上一行の検証（assets/data-v2.js の tubeData を実ファイルから読み込み）
  *
  * 実行: プロジェクトルートで
  *   node scripts/verify-tube-x6u2.mjs
  *
  * 注意: 下の ncFormat / computeFlatBottomExitLine / combineTubeFlatBottomFinishLine は
- * assets/app.js の同名関数と同じであること。app.js を変えたらここも揃えること。
+ * assets/validators-v2.js・assets/blocks-v2.js の同名関数と同じであること。
+ * それらを変えたらここも揃えること。
  */
 
 import fs from "node:fs";
@@ -14,7 +15,7 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_JS = path.join(__dirname, "..", "Gコードジェネレータ", "assets", "v1", "data.js");
+const DATA_JS = path.join(__dirname, "..", "NC-PROG-GEN", "assets", "data-v2.js");
 
 function loadTubeDataFromDataJs() {
   const code = fs.readFileSync(DATA_JS, "utf8");
