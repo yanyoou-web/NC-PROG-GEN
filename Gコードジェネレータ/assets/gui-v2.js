@@ -7,6 +7,7 @@
    ========================================================= */
 /* global navigator */
 /* global generateGCode */
+/* global validateBasicSelections, validateCommonNumericFields, validateStyleSpecificRules */
 /* global isM8WorkType, isYoseMachiningStyle, isYoseRelayStyle */
 /* global calcSpecialDrillZ, calcYoseRelayMetrics, calcCrossSmallFinishDepth */
 /* global DRILL_DIA_MAP */
@@ -1116,6 +1117,16 @@ function handleAction(action, value) {
                 if (_maxDepth!=null && !isNaN(_dd) && _dd>_maxDepth) {
                     window.alert("ドリル深さ "+_dd+"mm が刃長の上限（"+_maxDepth+"mm）を超えています。\n工具が底まで届かない可能性があるので、値を確認してください。\n（このまま進めることもできます）");
                 }
+            }
+            // 業種固有ルールの早期チェック（idDepth>7、CrossSmall相手径±0.5mmルール、yoseD範囲など）。
+            // logic-v2.js の generateGCode() 最終ゲートと同じ判定関数を再利用し、ロジックを
+            // 重複させない（ここまでの画面で入力済みの図番・作成者チェックはまだ対象外）。
+            if (typeof validateBasicSelections==="function") {
+                var _earlyInput=buildInputFromState();
+                var _earlyErrors=validateBasicSelections(_earlyInput)
+                    .concat(validateCommonNumericFields(_earlyInput))
+                    .concat(validateStyleSpecificRules(_earlyInput));
+                if (_earlyErrors.length) { showToast(_earlyErrors[0]); return; }
             }
             advance("q-depths"); break;
         case "set-author":

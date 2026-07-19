@@ -398,65 +398,23 @@ function validateYoseDField(showPopup) {
     return result.ok;
 }
 
-// --- Gコード生成（メイン）---
+// --- 入力チェック（generateGCode()の最終ゲートと、ウィザード各画面の早期チェックの両方から
+//     同じ関数を呼び、ロジックを二重実装しないための分離）---
+//
+// 4グループに分かれている理由: 各グループが対応する値を入力する画面のタイミングが違うため。
+// generateGCode() の最終ゲート（validateDomainRules）は常に全グループを実行する。
+// ウィザード側の早期チェック（gui-v2.js の "next-depths" アクション内）は、その時点までに
+// 入力済みのグループだけを個別に呼ぶ（例: 図番・作成者はウィザード最後の画面でしか
+// 入力されないため、depths画面からの早期チェックには含めない）。
 
-function generateGCode(input, machineName) {
-    // 1. ガード節: 機械定義チェック
-    const machineConfig = machines[machineName];
-    if (!machineConfig) {
-        return {
-            displayHtml: `<span style="color:red; font-weight:bold;">エラー: 機械定義 "${machineName}" が見つかりません。</span>`,
-            plainText: null,
-        };
-    }
-
-    if (input.workType === "Tonbo") {
-        return {
-            displayHtml:
-                '<span style="color:red; font-weight:bold;">トンボテンプレートは廃止されました（実装中止）。テンプレートを M12〜M40・G78・チューブから選んでください。</span>',
-            plainText: null,
-        };
-    }
-
-    // ── 数値・計算式フィールドの正規化（最終防衛ライン） ──
-    // 画面側はフォーカスアウト時に計算式を数値へ自動計算・置換するが（gui-v2.js
-    // の applyNumericFormulaOnBlur）、JSONインポート等その仕組みを経由しない
-    // 経路で値が渡ってくる可能性もある。ここで同じ evaluateFormula 系のロジック
-    // （parseSimpleNumberOrFormula）を使って正規化しておくことで、以降のチェック・
-    // 計算処理が常に同じ「計算済みの数値」を見るようにする。評価できない値は
-    // そのまま残し、後続のチェックでエラーとして検出させる。
-    const FORMULA_NORMALIZE_FIELDS = [
-        "maxOD",
-        "ateLength",
-        "valStockA",
-        "valStockB",
-        "valEccA",
-        "valEccB",
-        "valCornW",
-        "valCornH",
-        "drillDepth",
-        "idDepth",
-        "valPartnerD",
-        "yoseD",
-        "yoseTotalLength",
-        "yosePartnerDepth",
-    ];
-    FORMULA_NORMALIZE_FIELDS.forEach((key) => {
-        const raw = input[key];
-        if (raw === undefined || raw === null || String(raw).trim() === "") return;
-        const num = parseSimpleNumberOrFormula(raw);
-        if (!isNaN(num)) input[key] = String(num);
-    });
-
-    // ▼▼▼ 追加: 数値入力バリデーション (Step 3) ▼▼▼
+// ── ワーク種別・加工スタイル未選択チェック / M99P100 ──
+function validateBasicSelections(input) {
     const errors = [];
 
-    // ── テンプレート（ワーク種別）未選択チェック ──
     if (!input.workType) {
         errors.push("[テンプレート] が選択されていません。「テンプレート」欄からワーク種別を選択してください。");
     }
 
-    // ── 加工スタイル未選択チェック（チューブは不要） ──
     if (input.workType && input.workType !== "Tube") {
         if (!input.internalStyle) {
             errors.push(
@@ -465,7 +423,6 @@ function generateGCode(input, machineName) {
         }
     }
 
-    // ── M99P100 / X50.U8.処理（チューブは対象外。MH系はテンプレートに固定済みのため対象外） ──
     if (input.workType && input.workType !== "Tube" && !isMHWorkType(input.workType)) {
         const m99Mode = input.m99Mode;
         const validM99Modes = input.workType === "M40" ? ["on", "off", "x50u8"] : ["on", "off"];
@@ -478,7 +435,13 @@ function generateGCode(input, machineName) {
         }
     }
 
-    // ── 図番・作成者の必須チェック ──
+    return errors;
+}
+
+// ── 図番・作成者の必須チェック（ウィザード最後の画面でのみ入力されるため、早期チェック対象外）──
+function validateDrawNumAndAuthor(input) {
+    const errors = [];
+
     if (!input.drawNumA || String(input.drawNumA).trim() === "") {
         errors.push("[図番] が入力されていません。「PM-」の後の数字を入力してください。");
     } else if (!/^[0-9]+$/.test(String(input.drawNumA).trim())) {
@@ -498,14 +461,20 @@ function generateGCode(input, machineName) {
         );
     }
 
-    // チェック対象リスト: { キー名, 表示名, 必須かどうか(省略可ならfalse) }
+    return errors;
+}
+
+// ── 外径最大径・アテ長さ・工程No・角ありモード(W/H) ──
+function validateCommonNumericFields(input) {
+    const errors = [];
+
+    // チェック対象リスト: { キー名, 表示名 }
     const checkList = [
         { key: "maxOD", name: "外径最大径" },
         { key: "ateLength", name: "アテ長さ" },
         { key: "processNum", name: "工程No" },
     ];
 
-    // 1. 共通項目のチェック（どの欄を直せばよいか明示）
     checkList.forEach((item) => {
         // MH系は外径最大径をテンプレート固定値で処理するため検証をスキップ
         if (item.key === "maxOD" && isMHWorkType(input.workType)) return;
@@ -558,7 +527,12 @@ function generateGCode(input, machineName) {
         }
     }
 
-    // 2. 条件付き項目のチェック (加工スタイルごとの必須値)
+    return errors;
+}
+
+// ── 加工スタイルごとの必須値・業種固有ルール（ヨセ／交差穴／内径深さ／チューブ）──
+function validateStyleSpecificRules(input) {
+    const errors = [];
     const style = input.internalStyle;
 
     // ヨセ加工の場合の必須チェック
@@ -661,6 +635,75 @@ function generateGCode(input, machineName) {
         }
     }
 
+    return errors;
+}
+
+/**
+ * 業種固有の入力チェックをすべて実行し、エラーメッセージの配列を返す。
+ * generateGCode() の最終ゲート専用（UI層を迂回した不正値も含め、全項目を対象に検証する）。
+ */
+function validateDomainRules(input) {
+    return [
+        ...validateBasicSelections(input),
+        ...validateDrawNumAndAuthor(input),
+        ...validateCommonNumericFields(input),
+        ...validateStyleSpecificRules(input),
+    ];
+}
+
+// --- Gコード生成（メイン）---
+
+function generateGCode(input, machineName) {
+    // 1. ガード節: 機械定義チェック
+    const machineConfig = machines[machineName];
+    if (!machineConfig) {
+        return {
+            displayHtml: `<span style="color:red; font-weight:bold;">エラー: 機械定義 "${machineName}" が見つかりません。</span>`,
+            plainText: null,
+        };
+    }
+
+    if (input.workType === "Tonbo") {
+        return {
+            displayHtml:
+                '<span style="color:red; font-weight:bold;">トンボテンプレートは廃止されました（実装中止）。テンプレートを M12〜M40・G78・チューブから選んでください。</span>',
+            plainText: null,
+        };
+    }
+
+    // ── 数値・計算式フィールドの正規化（最終防衛ライン） ──
+    // 画面側はフォーカスアウト時に計算式を数値へ自動計算・置換するが（gui-v2.js
+    // の applyNumericFormulaOnBlur）、JSONインポート等その仕組みを経由しない
+    // 経路で値が渡ってくる可能性もある。ここで同じ evaluateFormula 系のロジック
+    // （parseSimpleNumberOrFormula）を使って正規化しておくことで、以降のチェック・
+    // 計算処理が常に同じ「計算済みの数値」を見るようにする。評価できない値は
+    // そのまま残し、後続のチェックでエラーとして検出させる。
+    const FORMULA_NORMALIZE_FIELDS = [
+        "maxOD",
+        "ateLength",
+        "valStockA",
+        "valStockB",
+        "valEccA",
+        "valEccB",
+        "valCornW",
+        "valCornH",
+        "drillDepth",
+        "idDepth",
+        "valPartnerD",
+        "yoseD",
+        "yoseTotalLength",
+        "yosePartnerDepth",
+    ];
+    FORMULA_NORMALIZE_FIELDS.forEach((key) => {
+        const raw = input[key];
+        if (raw === undefined || raw === null || String(raw).trim() === "") return;
+        const num = parseSimpleNumberOrFormula(raw);
+        if (!isNaN(num)) input[key] = String(num);
+    });
+
+    // ▼▼▼ 追加: 数値入力バリデーション (Step 3) ▼▼▼
+    const errors = validateDomainRules(input);
+
     if (errors.length > 0) {
         // ▼ styleに column-span: all; を追加して、2段組みを貫通させる
         return {
@@ -723,7 +766,7 @@ function generateGCode(input, machineName) {
     let valM99 = input.m99Mode === "on" ? " M99P100" : "";
 
     // --- 2. ドリル深さ決定ロジック ---
-    // const style = input.internalStyle; // 上で定義済み
+    const style = input.internalStyle;
     const baseIDDepth = parseFloat(input.idDepth);
     let finalDrillDepth = parseFloat(input.drillDepth);
 
