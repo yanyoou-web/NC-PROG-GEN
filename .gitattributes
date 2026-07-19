@@ -13,6 +13,9 @@
 *.mdc   text eol=lf
 *.txt   text eol=lf
 
+# Windows バッチファイル（CRLF 必須）
+*.bat   text eol=crlf
+
 # バイナリファイル（改行変換しない）
 *.png   binary
 *.jpg   binary
