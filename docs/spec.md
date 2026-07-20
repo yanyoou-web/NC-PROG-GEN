@@ -30,6 +30,7 @@
 
 ## 関連ドキュメント
 
+- `docs/template-add-checklist.md` — テンプレート追加実装の標準手順（計画→設計→実装→確認→改善）
 - `docs/drilling-rules.md` — ドリル加工の分岐ルール
 - `docs/debug-template.md` — 不具合報告テンプレート
 - `docs/golden-tests.md` — ゴールデン（スナップショット）テストの仕組みとケース追加方法
