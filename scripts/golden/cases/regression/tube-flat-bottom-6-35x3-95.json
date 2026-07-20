@@ -1,0 +1,15 @@
+{
+  "description": "チューブ Hirazoko・toolDiaがnull(内径ダイヤ工具が存在しない規格)のとき平底仕上出口は既定の「U-.2」になること。旧: scripts/verify-tube-x6u2.mjs の specNull ケース。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "Tube",
+    "internalStyle": "Hirazoko",
+    "tubeSpec": "6.35x3.95 (R0.5)",
+    "tubeLength": "18",
+    "ateLength": "20",
+    "maxOD": "16",
+    "idDepth": "18",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}

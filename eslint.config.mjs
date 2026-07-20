@@ -95,14 +95,6 @@ export default [
     }
   },
   {
-    files: ['NC-PROG-GEN/assets/logic-v2.js'],
-    languageOptions: {
-      globals: {
-        isMHWorkType: 'readonly'
-      }
-    }
-  },
-  {
     // Playwrightのpage.evaluate()コールバック内はブラウザ上で実行されるコードのため、
     // このファイルに限りブラウザ組み込みオブジェクトもグローバルとして許可する
     files: ['scripts/test-e2e-validation.mjs'],

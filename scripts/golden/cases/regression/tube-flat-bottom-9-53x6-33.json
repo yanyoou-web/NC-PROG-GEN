@@ -1,0 +1,15 @@
+{
+  "description": "チューブ Hirazoko・内径Φ≠バイトΦ(6.33≠6)のとき平底仕上出口は「X6.F.03」の1行になること。旧: scripts/verify-tube-x6u2.mjs の specMismatch ケース。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "Tube",
+    "internalStyle": "Hirazoko",
+    "tubeSpec": "9.53x6.33 (R1)",
+    "tubeLength": "21",
+    "ateLength": "20",
+    "maxOD": "16",
+    "idDepth": "21",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}
