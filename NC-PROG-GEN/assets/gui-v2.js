@@ -155,8 +155,7 @@ function getAvailableStyles(workType) {
         return ["Hirazoko","Normal","YoseRelay"];
     if (workType==="M42X3_25175"||workType==="M42X3_25175_16"||workType==="M42X3_25175_20"||workType==="M42X3_25175_22")
         return ["Hirazoko","Normal","Yose","YoseRelay"];
-    if (workType==="G78_ST_20175"||workType==="G78_ST_20175_16")
-        return ["Hirazoko","Normal","Yose","YoseRelay"];
+    // G78-ST系はデフォルト（平底/通常/ヨセ中継/ヨセ/交差穴（小径）。一文字DR平底なし・中バリ処理ブロックなし）
     if (workType==="M12"||workType==="M12_MH") return ["Ichimonji","Normal","YoseRelay","CrossSmall"];
     if (workType==="TOMESEN_M16"||workType==="TOMESEN_M18"||workType==="TOMESEN_M22"||workType==="TOMESEN_M24"||workType==="TOMESEN_M35")
         return ["Hirazoko","Ichimonji","Normal","YoseRelay","Yose"];
