@@ -8,7 +8,7 @@
 /* global navigator */
 /* global generateGCode */
 /* global validateBasicSelections, validateCommonNumericFields, validateStyleSpecificRules */
-/* global validateCrossSmallPartnerDia */
+/* global validateCrossSmallPartnerDia, validateYoseDDiameter */
 /* global isM8WorkType, isYoseMachiningStyle, isYoseRelayStyle */
 /* global calcSpecialDrillZ, calcYoseRelayMetrics, calcCrossSmallFinishDepth */
 /* global DRILL_DIA_MAP */
@@ -1173,6 +1173,12 @@ function handleAction(action, value) {
             if(document.getElementById("yose-d") && !wizardState.yoseD){showToast("相手径 Φdを入力してください");return;}
             if(document.getElementById("yose-total-len") && !wizardState.yoseTotalLength){showToast("全長を入力してください");return;}
             if(document.getElementById("yose-partner-depth") && !wizardState.yosePartnerDepth){showToast("相手径深さを入力してください");return;}
+            // 相手径(Φd)と加工径の大小関係チェック（フィールド欄に赤枠+メッセージで表示済み。
+            // blur済みでない場合の保険として、ここでも同じ関数で再チェックしてから次へ進む）。
+            {
+                var _yoseDEl=document.getElementById("yose-d");
+                if (_yoseDEl && !validateYoseDField(_yoseDEl)) return;
+            }
             advance("q-yose-detail"); break;
         case "select-mh-tool":
             wizardState.mhOdTool=value;
@@ -1317,9 +1323,14 @@ function handleAction(action, value) {
                 var _earlyInput=buildInputFromState();
                 var _warnEl=document.getElementById("depths-style-warning");
                 if (isCrossStyle(wizardState.internalStyle)) {
+                    // メッセージは #depths-style-warning ボックス（「通常バイト加工へ切替」導線つき）に
+                    // 表示するため、同じ内容のトーストは重ねて出さない（フィールド欄はblur済みなら
+                    // validatePartnerDField により既に赤枠表示済みのはず。保険として再度反映する）。
                     var _crossCheck=validateCrossSmallPartnerDia(_earlyInput);
                     if (_warnEl) _warnEl.innerHTML=_crossCheck.ok?"":buildStyleSwitchWarningHTML(_crossCheck.msg);
-                    if (!_crossCheck.ok) { showToast(_crossCheck.msg); return; }
+                    var _partnerDEl=document.getElementById("depth-partner-d");
+                    if (_partnerDEl) _partnerDEl.classList.toggle("wiz-input--invalid", !_crossCheck.ok);
+                    if (!_crossCheck.ok) return;
                 } else if (_warnEl) {
                     _warnEl.innerHTML="";
                 }
@@ -1525,36 +1536,83 @@ function initValidation() {
     document.querySelectorAll(".validate-positive").forEach(function(el) {
         if (el.dataset.valBound) return;
         el.dataset.valBound = "1";
-        el.addEventListener("input", function() { validatePositive(el); });
+        var run = fieldValidatorFor(el.id);
+        el.addEventListener("input", function() { run(el); });
         el.addEventListener("blur",  function() {
             applyNumericFormulaOnBlur(el); // フォーカスアウト時に計算式を数値へ置き換える
-            validatePositive(el);
+            run(el);
         });
     });
 }
-function validatePositive(el) {
-    var v = el.value.trim();
+// フィールドIDごとに追加の業種固有チェックを重ねる関数を返す（無ければ共通の正数チェックのみ）。
+// yose-d / depth-partner-d は、以前は generateGCode() の最終ゲートでしか検出されず
+// ウィザードの残り画面を全部入力し終えてから気づく形になっていたため、該当欄を
+// 離れた時点で他の欄と同じテキストボックス型エラーとして即座に表示する。
+function fieldValidatorFor(id) {
+    if (id === "yose-d") return validateYoseDField;
+    if (id === "depth-partner-d") return validatePartnerDField;
+    return validatePositive;
+}
+function setFieldError(el, msg) {
+    el.classList.add("wiz-input--invalid");
     var errId = el.id+"-err";
     var existing = document.getElementById(errId);
-    if (v === "") {
-        el.classList.remove("wiz-input--invalid");
-        if (existing) existing.remove();
-        return true;
+    if (!existing) {
+        existing = document.createElement("div");
+        existing.id = errId; existing.className = "wiz-field-error";
+        el.parentNode.insertBefore(existing, el.nextSibling);
     }
+    existing.textContent = msg;
+}
+function clearFieldError(el) {
+    el.classList.remove("wiz-input--invalid");
+    var existing = document.getElementById(el.id+"-err");
+    if (existing) existing.remove();
+}
+function validatePositive(el) {
+    var v = el.value.trim();
+    if (v === "") { clearFieldError(el); return true; }
     var num = parseSimpleNumberOrFormula(v);
     if (isNaN(num) || num <= 0) {
-        el.classList.add("wiz-input--invalid");
-        if (!existing) {
-            var e = document.createElement("div");
-            e.id = errId; e.className = "wiz-field-error";
-            e.textContent = "正の数値、または + - * / を使った計算式を入力してください";
-            el.parentNode.insertBefore(e, el.nextSibling);
-        }
+        setFieldError(el, "正の数値、または + - * / を使った計算式を入力してください");
         return false;
     }
-    el.classList.remove("wiz-input--invalid");
-    if (existing) existing.remove();
+    clearFieldError(el);
     return true;
+}
+// ── ヨセ/ヨセ中継: 相手径(Φd)と加工径の大小関係チェック ──
+function validateYoseDField(el) {
+    if (!validatePositive(el)) return false;
+    if (!isYoseMachiningStyle(wizardState.internalStyle) && !isYoseRelayStyle(wizardState.internalStyle)) return true;
+    var result = validateYoseDDiameter({
+        yoseD: el.value,
+        workType: wizardState.workType,
+        tubeSpec: wizardState.tubeSpec,
+        internalStyle: wizardState.internalStyle,
+    });
+    if (!result.ok) { setFieldError(el, result.msg); return false; }
+    clearFieldError(el);
+    return true;
+}
+// ── 交差穴(加工径小): 相手径の±0.5mmルールチェック ──
+// メッセージは「通常バイト加工へ切替」の導線を持つ #depths-style-warning ボックス側に表示するため、
+// このフィールドでは境界線の色のみ切り替え、別テキストのエラーメッセージは重ねて出さない。
+function validatePartnerDField(el) {
+    if (!validatePositive(el)) return false;
+    var warnEl = document.getElementById("depths-style-warning");
+    if (wizardState.internalStyle !== "CrossSmall") {
+        if (warnEl) warnEl.innerHTML = "";
+        return true;
+    }
+    var result = validateCrossSmallPartnerDia({
+        valPartnerD: el.value,
+        workType: wizardState.workType,
+        tubeSpec: wizardState.tubeSpec,
+        internalStyle: wizardState.internalStyle,
+    });
+    if (warnEl) warnEl.innerHTML = result.ok ? "" : buildStyleSwitchWarningHTML(result.msg);
+    el.classList.toggle("wiz-input--invalid", !result.ok);
+    return result.ok;
 }
 // フォーカスアウト時、入力値が数値または計算式として解釈できれば、
 // 計算結果の数値そのものに置き換える（例:「10.5+2.3」→「12.8」）。

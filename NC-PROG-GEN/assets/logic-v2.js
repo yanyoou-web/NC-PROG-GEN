@@ -383,24 +383,6 @@ function validateYoseDDiameter(input) {
     return { ok: true, partnerDia: partnerDia, machinedDia: machinedDia, msg: "" };
 }
 
-function validateYoseDField(showPopup) {
-    const yoseEl = $id("yoseD");
-    if (!yoseEl) return true;
-    if (!isYoseMachiningStyle(currentInternalStyle) && !isYoseRelayStyle(currentInternalStyle)) {
-        yoseEl.setCustomValidity("");
-        return true;
-    }
-    const result = validateYoseDDiameter({
-        yoseD: yoseEl.value,
-        workType: ($id("workType") || {}).value || "",
-        tubeSpec: ($id("tubeSpecSelect") || {}).value || "",
-        internalStyle: currentInternalStyle,
-    });
-    yoseEl.setCustomValidity(result.ok ? "" : result.msg);
-    if (!result.ok && showPopup) yoseEl.reportValidity();
-    return result.ok;
-}
-
 // --- 入力チェック（generateGCode()の最終ゲートと、ウィザード各画面の早期チェックの両方から
 //     同じ関数を呼び、ロジックを二重実装しないための分離）---
 //
