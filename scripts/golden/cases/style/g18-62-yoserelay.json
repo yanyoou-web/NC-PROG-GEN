@@ -1,0 +1,15 @@
+{
+  "description": "G18系 φ6.2・YoseRelay。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "G18_62",
+    "internalStyle": "YoseRelay",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "yoseD": "10",
+    "yoseTotalLength": "50",
+    "yosePartnerDepth": "20",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}
