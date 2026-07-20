@@ -290,8 +290,10 @@ function calcYoseRelayMetrics(input) {
     const yoseLength = (partnerDia / 2.0 - machinedDia / 2.0) / tanVal;
     // 対ヨセ長さ: 対向口径距離 - ヨセ長さ
     const taiYoseLength = opposedDistance - yoseLength;
-    const relayIdDepth = taiYoseLength + 1.0;
-    const relayDrillDepth = isNaN(drillDia) ? NaN : taiYoseLength + 0.3 * drillDia;
+    // NC旋盤側が小数点第3位までしか処理できず第4位以降はエラーになるため、
+    // Gコードに出す最終値はここで toFixed(3) に丸める（tan除算由来の浮動小数点誤差対策）。
+    const relayIdDepth = Number((taiYoseLength + 1.0).toFixed(3));
+    const relayDrillDepth = isNaN(drillDia) ? NaN : Number((taiYoseLength + 0.3 * drillDia).toFixed(3));
     return {
         opposedDistance: opposedDistance,
         yoseLength: yoseLength,
