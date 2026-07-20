@@ -1,0 +1,15 @@
+{
+  "description": "M18・YoseRelay（ヨセ中継）。内径深さは自動計算されるため入力しない。相手径(yoseD)は内径加工寸法より大きい値が必要。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "M18",
+    "internalStyle": "YoseRelay",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "yoseD": "10",
+    "yoseTotalLength": "50",
+    "yosePartnerDepth": "20",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "description": "M12・Ichimonji（一文字DR平底）。M12/M12_MHはCP不要でidDepthベースの一文字ドリルブロック（getIchimonjiHirazokoBlock）を使う特殊系統。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "M12",
+    "internalStyle": "Ichimonji",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "idDepth": "15",
+    "valPartnerD": "10",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}
