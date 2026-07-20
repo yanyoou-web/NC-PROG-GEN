@@ -24,11 +24,12 @@
 
 ## 受け入れ確認（最小）
 
-- `npm run test:tube` が成功する。
-- 代表ケース（M12 / Tube / Cross）で生成結果が崩れない。
+- `npm run check` が成功する（`npm run test:golden` を含む。全workType・主要styleの生成結果をスナップショットと比較し、意図しない変化を検知する）。
+- `logic-v2.js` / `blocks-v2.js` / テンプレートを変更した場合は、`npm run test:golden` の差分（`scripts/golden/__snapshots__/**/*.txt`）が意図した変更のみであることを確認する。新しいワーク種別・スタイルの組み合わせを追加した場合はゴールデンケースも追加する（`docs/golden-tests.md` 参照）。
 - エラー時にメッセージが入力項目と一致する。
 
 ## 関連ドキュメント
 
 - `docs/drilling-rules.md` — ドリル加工の分岐ルール
 - `docs/debug-template.md` — 不具合報告テンプレート
+- `docs/golden-tests.md` — ゴールデン（スナップショット）テストの仕組みとケース追加方法
