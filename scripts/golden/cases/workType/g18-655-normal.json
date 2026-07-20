@@ -1,0 +1,13 @@
+{
+  "description": "G18系 φ6.55・Normalの基本ケース。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "G18_655",
+    "internalStyle": "Normal",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "idDepth": "15",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}

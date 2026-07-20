@@ -1,0 +1,14 @@
+{
+  "description": "G18系 φ4.0・CrossSmall（横穴＆中バリ処理／交差穴加工径小）の基本ケース。getAvailableStyles()上、G18_40/42系はNormal/Hirazokoが選べずCrossSmall/YoseRelay必須。相手径は加工径(Φ4.0)+0.5より大きい値が必要（±0.5以内だと「通常バイト加工へ」エラーになる）。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "G18_40",
+    "internalStyle": "CrossSmall",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "valPartnerD": "5",
+    "cpVal": "8"
+  }
+}
