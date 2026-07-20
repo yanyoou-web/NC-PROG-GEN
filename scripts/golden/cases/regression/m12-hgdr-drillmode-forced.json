@@ -1,0 +1,15 @@
+{
+  "description": "M12・Ichimonji・m12FinishType=hgdrのとき、drillModeにG74を指定してもドリルブロックは常にG1単動固定になること（過去の「M12のHGDR固定化バグ」はgui-v2.jsのUI表示側の分類ミスだったが、generateGCode自体の分岐（isM12HgdrFinish）が今後も正しく機能し続けることを保証する回帰ケース）。",
+  "machine": "NCL044",
+  "wizardState": {
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "workType": "M12",
+    "internalStyle": "Ichimonji",
+    "idDepth": "15",
+    "m12FinishType": "hgdr",
+    "drillMode": "G74"
+  }
+}

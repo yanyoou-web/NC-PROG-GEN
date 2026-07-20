@@ -1,0 +1,14 @@
+{
+  "description": "Yoseで相手径(Φd)が「3 < Φd < 内径加工寸法」の範囲外だとエラーになること（validateYoseDDiameter）。",
+  "machine": "NCL044",
+  "wizardState": {
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "workType": "M18",
+    "internalStyle": "Yose",
+    "idDepth": "15",
+    "yoseD": "9"
+  }
+}

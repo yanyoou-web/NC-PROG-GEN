@@ -1,0 +1,12 @@
+{
+  "description": "Normalスタイルで内径深さ未入力だとエラーになること。",
+  "machine": "NCL044",
+  "wizardState": {
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "workType": "M18",
+    "internalStyle": "Normal"
+  }
+}
