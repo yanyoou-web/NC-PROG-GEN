@@ -5,10 +5,13 @@
     "workType": "S_G12",
     "internalStyle": "Yose",
     "ateLength": "20",
-    "maxOD": "28",
+    "maxOD": "47.376",
     "idDepth": "20",
     "yoseD": "6",
     "drawNumA": "12345",
-    "workerName": "YAMADA"
+    "workerName": "YAMADA",
+    "calcMode": "normal",
+    "valStockA": "33.5",
+    "valStockB": "33.5"
   }
 }

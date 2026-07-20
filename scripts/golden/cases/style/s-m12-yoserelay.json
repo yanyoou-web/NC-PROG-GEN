@@ -5,11 +5,14 @@
     "workType": "S_M12",
     "internalStyle": "YoseRelay",
     "ateLength": "20",
-    "maxOD": "16",
+    "maxOD": "47.376",
     "yoseD": "8",
     "yoseTotalLength": "30",
     "yosePartnerDepth": "10",
     "drawNumA": "12345",
-    "workerName": "YAMADA"
+    "workerName": "YAMADA",
+    "calcMode": "normal",
+    "valStockA": "33.5",
+    "valStockB": "33.5"
   }
 }

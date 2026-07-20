@@ -5,10 +5,13 @@
     "workType": "S_M15",
     "internalStyle": "CrossSmall",
     "ateLength": "20",
-    "maxOD": "20",
+    "maxOD": "47.376",
     "valPartnerD": "10",
     "cpVal": "8",
     "drawNumA": "12345",
-    "workerName": "YAMADA"
+    "workerName": "YAMADA",
+    "calcMode": "normal",
+    "valStockA": "33.5",
+    "valStockB": "33.5"
   }
 }
