@@ -750,14 +750,12 @@ function buildDepthsScreen() {
     // 一文字（M12・M8以外）: CP入力が必要
     var isIchimonjiNeedsCp = st==="Ichimonji" && !isM12Like(wt) && !(typeof isM8WorkType==="function" && isM8WorkType(wt));
 
-    // 内径深さ / IP: 自動で決まる値があるのはヨセ中継（計算式）とチューブ+ヨセ（チューブ長さ）のみ。
-    // それ以外（通常バイト加工／内径バイト平底／一文字DR平底／交差穴）はMねじ・Gネジ等と同じく
-    // 図面値としてユーザーが手入力する（チューブでも例外ではない）。
+    // 内径深さ / IP: 自動で決まる値があるのはヨセ中継（計算式）のみ。
+    // それ以外（通常バイト加工／内径バイト平底／一文字DR平底／交差穴／ヨセ）はMねじ・Gネジ等と
+    // 同じく図面値としてユーザーが手入力する（チューブでも例外ではない）。内径深さはチューブ長さに
+    // 依存しないため、ヨセであってもチューブ長さを自動値として代用してはいけない。
     // 自動値がある場合も、例外加工向けに手動切替を必ず残す（ドリル深さと同じ導線）。
-    var isTubeYose = isTubeWorkType(wt) && st==="Yose";
-    var idAutoVal = isRelay ? computeIdDepthForRelay()
-                 : isTubeYose ? computeIdDepthForTubeYose()
-                 : null;
+    var idAutoVal = isRelay ? computeIdDepthForRelay() : null;
     var idManual = wizardState.idDepthManual;
     var idLabel = (isCross || isIchimonjiNeedsCp)
         ? (isCross
@@ -766,9 +764,8 @@ function buildDepthsScreen() {
         : '内径深さ (mm)';
     var idHtml;
     if (idAutoVal!==null && !idManual) {
-        var idAutoLabel = isTubeWorkType(wt) ? "自動（規格値）" : "自動計算";
         idHtml='<label class="wiz-lbl">内径深さ</label>'
-            +'<div class="depth-auto-row"><span class="depth-auto-val" id="id-depth-auto-val">'+escapeHtml(idAutoVal)+' mm <span class="depth-auto-badge">'+idAutoLabel+'</span></span>'
+            +'<div class="depth-auto-row"><span class="depth-auto-val" id="id-depth-auto-val">'+escapeHtml(idAutoVal)+' mm <span class="depth-auto-badge">自動計算</span></span>'
             +'<button class="depth-manual-link" data-action="toggle-id-manual">手動で変更</button></div>';
         wizardState.idDepth = idAutoVal;
     } else {
@@ -889,16 +886,6 @@ function computeCP(idDepth,partnerD) {
     var d=parseFloat(idDepth),p=parseFloat(partnerD);
     if (isNaN(d)||isNaN(p)) return "";
     return (d-p/2).toFixed(3);
-}
-
-/* チューブ + ヨセ の内径深さ自動計算。
-   tubeData[spec].id は「内径のΦ寸法」であって長さ方向の深さではないため使用しない
-   （それは {{入力_内径}} 側で径指令として使われている）。ヨセのテーパ計算はチューブ長さを
-   基準にする（logic-v2.js のヨセ計算が未入力時にチューブ長さを代用するのと同じ考え方）。 */
-function computeIdDepthForTubeYose() {
-    if (!isTubeWorkType(wizardState.workType) || wizardState.internalStyle !== "Yose") return null;
-    var tl = parseFloat(wizardState.tubeLength);
-    return !isNaN(tl) ? String(tl) : null;
 }
 
 /* チューブのドリル径を解決する（logic-v2.js の resolveDrillDia() と同じ規則を踏襲）。
@@ -1056,11 +1043,6 @@ function initDrillAutoCalc() {
     }
     if (!wizardState.idDepthManual) {
         computeIdDepthForRelay(); // YoseRelay: idDepthを自動セット
-        // チューブ + ヨセ: idDepthをチューブ長さから自動セット（それ以外のスタイルは手入力）
-        if (isTubeWorkType(wizardState.workType) && wizardState.internalStyle === "Yose") {
-            var tubId = computeIdDepthForTubeYose();
-            if (tubId !== null) wizardState.idDepth = tubId;
-        }
     }
 }
 
