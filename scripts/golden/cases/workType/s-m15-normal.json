@@ -1,0 +1,13 @@
+{
+  "description": "S-M系 S_M15・Normalの基本ケース（PPドラフトからのテンプレート本実装）。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "S_M15",
+    "internalStyle": "Normal",
+    "ateLength": "20",
+    "maxOD": "20",
+    "idDepth": "12",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}

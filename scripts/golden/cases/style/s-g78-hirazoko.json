@@ -1,0 +1,13 @@
+{
+  "description": "S_G78・Hirazoko。toolDia(16)＝内径D(16)のため defaultLine に落ち、S_G78 専用の U-.3（PPドラフト由来の逃げ量）が出ることを守る。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "S_G78",
+    "internalStyle": "Hirazoko",
+    "ateLength": "20",
+    "maxOD": "38",
+    "idDepth": "25",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}

@@ -300,6 +300,7 @@ function computeFlatBottomExitLine(input) {
     function defaultLine() {
         if (wt === "G78" || wt === "M40") return "U-.2(X16)";
         if (wt === "M22") return "U-.2(X8)";
+        if (wt === "S_G78") return "U-.3"; // Φ16バイトのため逃げ量を大きく取る（テンプレ由来）
         return "U-.2";
     }
 

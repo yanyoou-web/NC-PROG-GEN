@@ -61,6 +61,11 @@ const WORK_ID_MAP = {
     TOMESEN_M22: 12.0,
     TOMESEN_M24: 16.0,
     TOMESEN_M35: 22.0,
+    S_G12: 10.0,
+    S_G38: 8.0,
+    S_G78: 16.0,
+    S_M12: 4.4,
+    S_M15: 6.5,
 };
 
 /** G18 HGDR 系（φ6.2 / φ6.55 / φ6.175）：同一のスタイル制限・DRILLSHIAGE（G74 仕上げブロック） */
@@ -151,6 +156,12 @@ const FLAT_BOTTOM_TOOL_DIA_MM = {
     TOMESEN_M22: 8,
     TOMESEN_M24: 16,
     TOMESEN_M35: 16,
+    // S-M系: N3 の {{内径ダイヤΦ*}} 工具に対応
+    S_G12: 8,
+    S_G38: 6,
+    S_G78: 16,
+    S_M12: 4,
+    S_M15: 6,
 };
 
 // ドリル径データベース
@@ -191,6 +202,11 @@ const DRILL_DIA_MAP = {
     TOMESEN_M22: 10.7,
     TOMESEN_M24: 14,
     TOMESEN_M35: 14,
+    S_G12: 7.0,
+    S_G38: 7.0,
+    S_G78: 14.0,
+    S_M12: 3.3,
+    S_M15: 3.3,
     Tube: null,
 };
 
@@ -1152,6 +1168,16 @@ function generateGCode(input, machineName) {
         if (typeof template_TOMESEN_M24 !== "undefined") finalCode = template_TOMESEN_M24;
     } else if (input.workType === "TOMESEN_M35") {
         if (typeof template_TOMESEN_M35 !== "undefined") finalCode = template_TOMESEN_M35;
+    } else if (input.workType === "S_G12") {
+        if (typeof template_S_G12 !== "undefined") finalCode = template_S_G12;
+    } else if (input.workType === "S_G38") {
+        if (typeof template_S_G38 !== "undefined") finalCode = template_S_G38;
+    } else if (input.workType === "S_G78") {
+        if (typeof template_S_G78 !== "undefined") finalCode = template_S_G78;
+    } else if (input.workType === "S_M12") {
+        if (typeof template_S_M12 !== "undefined") finalCode = template_S_M12;
+    } else if (input.workType === "S_M15") {
+        if (typeof template_S_M15 !== "undefined") finalCode = template_S_M15;
     } else {
         if (typeof template_G78 !== "undefined") finalCode = template_G78;
     }

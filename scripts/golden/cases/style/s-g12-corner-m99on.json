@@ -1,0 +1,17 @@
+{
+  "description": "S_G12・Normal・角あり(calcMode=corner)＋M99P100使用。N2の {{最大径-5}}=W√2-5、N100内の {{最大径+角}}=X(入力最大径)、{{最大径+3}}=X(W√2+3)F.3 行の挿入、(M99P100)M99P100 出力を守る（N7統合後の外径仕上げの鬼門ケース）。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "S_G12",
+    "internalStyle": "Normal",
+    "ateLength": "42.5",
+    "calcMode": "corner",
+    "valCornW": "20",
+    "valCornH": "5",
+    "maxOD": "20",
+    "idDepth": "20",
+    "m99Mode": "on",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}

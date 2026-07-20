@@ -1,0 +1,15 @@
+{
+  "description": "S_M12・YoseRelay（ヨセ中継）。内径深さ・ドリル深さは自動計算。相手径(yoseD)は内径加工寸法(4.4)より大きい値が必要。ドリル径はDRILL_DIA_MAP[S_M12]=3.3を使う。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "S_M12",
+    "internalStyle": "YoseRelay",
+    "ateLength": "20",
+    "maxOD": "16",
+    "yoseD": "8",
+    "yoseTotalLength": "30",
+    "yosePartnerDepth": "10",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}
