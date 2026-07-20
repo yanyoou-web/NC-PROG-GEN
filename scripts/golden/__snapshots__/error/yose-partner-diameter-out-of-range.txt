@@ -1,0 +1,9 @@
+ERROR:
+
+            <div style="background:#330000; border:2px solid #ff4444; padding:15px; color:#ffcccc; border-radius:6px; column-span: all;">
+                <h3 style="margin-top:0; color:#ff4444;">⚠ 生成エラー (入力値を確認してください)</h3>
+                <ul style="padding-left:20px; line-height:1.6;">
+                    <li>[ヨセ: 相手径(Φd)] 相手径(Φd)は 3 より大きく、かつ内径加工寸法(Φ8.000)より小さい値にしてください。</li>
+                </ul>
+            </div>
+        

@@ -1,0 +1,14 @@
+{
+  "description": "CrossSmallで相手径と加工径の差が±0.5以内だと「通常バイト加工へ」エラーになること（validateCrossSmallPartnerDia）。",
+  "machine": "NCL044",
+  "wizardState": {
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "workType": "G18_40",
+    "internalStyle": "CrossSmall",
+    "valPartnerD": "4.2",
+    "cpVal": "8"
+  }
+}

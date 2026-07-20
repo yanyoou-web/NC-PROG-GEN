@@ -1,0 +1,15 @@
+{
+  "description": "YoseRelayで相手径(Φd)が内径加工寸法以下だとエラーになること（YoseRelayはYoseと逆で「相手径 > 内径加工寸法」が必要）。",
+  "machine": "NCL044",
+  "wizardState": {
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "workType": "M18",
+    "internalStyle": "YoseRelay",
+    "yoseD": "6",
+    "yoseTotalLength": "50",
+    "yosePartnerDepth": "20"
+  }
+}

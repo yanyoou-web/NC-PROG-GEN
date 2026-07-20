@@ -1,0 +1,15 @@
+{
+  "description": "チューブ規格が一覧に無い値だとエラーになること。",
+  "machine": "NCL044",
+  "wizardState": {
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "workType": "Tube",
+    "internalStyle": "Hirazoko",
+    "tubeSpec": "NOT-A-REAL-SPEC",
+    "tubeLength": "18",
+    "idDepth": "18"
+  }
+}
