@@ -1,0 +1,14 @@
+{
+  "description": "M8系 S-M8 φ2.1・CrossSmallの基本ケース。getAvailableStyles()上M8_21/31はNormalが選べずIchimonji/YoseRelay/CrossSmall必須。M8系はcalcCrossSmallFinishDepthを使わず加工径もWORK_ID_MAP未定義のため相手径の±0.5制約は掛からない。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "M8_21",
+    "internalStyle": "CrossSmall",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "valPartnerD": "10",
+    "cpVal": "8"
+  }
+}
