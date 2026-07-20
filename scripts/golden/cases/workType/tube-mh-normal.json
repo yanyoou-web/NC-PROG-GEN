@@ -1,0 +1,15 @@
+{
+  "description": "チューブ MH・Normalの基本ケース（Tube通常版はregression/配下の平底仕上げ3ケースで既にカバー済みのため、MH固有のテンプレートを別途カバーする）。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "Tube_MH",
+    "internalStyle": "Normal",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "idDepth": "15",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "tubeSpec": "8x6 (R0.5)",
+    "tubeLength": "18"
+  }
+}

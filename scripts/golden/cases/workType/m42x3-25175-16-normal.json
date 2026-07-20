@@ -1,0 +1,13 @@
+{
+  "description": "M42X3系 →φ16・Normalの基本ケース。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "M42X3_25175_16",
+    "internalStyle": "Normal",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "idDepth": "15",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}

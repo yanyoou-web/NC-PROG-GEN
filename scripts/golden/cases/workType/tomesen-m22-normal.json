@@ -1,0 +1,13 @@
+{
+  "description": "トメセン M22・Normalの基本ケース。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "TOMESEN_M22",
+    "internalStyle": "Normal",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "idDepth": "15",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}
