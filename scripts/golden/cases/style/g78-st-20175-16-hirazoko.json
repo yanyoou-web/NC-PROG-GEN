@@ -1,0 +1,16 @@
+{
+  "description": "G78_ST_20175_16・Hirazoko（平底）。内径D(16)＝バイト径(16)のため defaultLine に落ち U-.2 が出る分岐を守る（M42X3_25175_16と同方式）。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "G78_ST_20175_16",
+    "internalStyle": "Hirazoko",
+    "ateLength": "20",
+    "maxOD": "47.376",
+    "idDepth": "25",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "calcMode": "normal",
+    "valStockA": "33.5",
+    "valStockB": "33.5"
+  }
+}

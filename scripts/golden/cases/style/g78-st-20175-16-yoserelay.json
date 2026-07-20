@@ -1,0 +1,18 @@
+{
+  "description": "G78_ST_20175_16・YoseRelay（ヨセ中継）。内径深さ・ドリル深さは自動計算。相手径(yoseD)は内径加工寸法(16)より大きい値が必要。ドリル径はDRILL_DIA_MAP=14.0を使い、自動ドリル深さが30超になるためG74の10mmステップ分岐も通る。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "G78_ST_20175_16",
+    "internalStyle": "YoseRelay",
+    "ateLength": "20",
+    "maxOD": "47.376",
+    "yoseD": "20",
+    "yoseTotalLength": "50",
+    "yosePartnerDepth": "20",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "calcMode": "normal",
+    "valStockA": "33.5",
+    "valStockB": "33.5"
+  }
+}

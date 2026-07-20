@@ -155,6 +155,8 @@ function getAvailableStyles(workType) {
         return ["Hirazoko","Normal","YoseRelay"];
     if (workType==="M42X3_25175"||workType==="M42X3_25175_16"||workType==="M42X3_25175_20"||workType==="M42X3_25175_22")
         return ["Hirazoko","Normal","Yose","YoseRelay"];
+    if (workType==="G78_ST_20175"||workType==="G78_ST_20175_16")
+        return ["Hirazoko","Normal","Yose","YoseRelay"];
     if (workType==="M12"||workType==="M12_MH") return ["Ichimonji","Normal","YoseRelay","CrossSmall"];
     if (workType==="TOMESEN_M16"||workType==="TOMESEN_M18"||workType==="TOMESEN_M22"||workType==="TOMESEN_M24"||workType==="TOMESEN_M35")
         return ["Hirazoko","Ichimonji","Normal","YoseRelay","Yose"];
@@ -169,6 +171,7 @@ var WORK_TYPE_GROUPS = [
     {label:"S-M系",    items:[{value:"S_G12",label:"S-G12"},{value:"S_G38",label:"S-G38"},{value:"S_G78",label:"S-G78"},{value:"S_M12",label:"S-M12"},{value:"S_M15",label:"S-M15"}]},
     {label:"G18系",    items:[{value:"G18_40",label:"φ4.0"},{value:"G18_42",label:"φ4.2"},{value:"G18_62",label:"φ6.2"},{value:"G18_655",label:"φ6.55"},{value:"G18_6175",label:"φ6.175"},{value:"G18_40_MH",label:"φ4.0 MH"},{value:"G18_42_MH",label:"φ4.2 MH"},{value:"G18_62_MH",label:"φ6.2 MH"},{value:"G18_655_MH",label:"φ6.55 MH"},{value:"G18_6175_MH",label:"φ6.175 MH"}]},
     {label:"M42X3系",  items:[{value:"M42X3_25175",label:"φ25.175 ST"},{value:"M42X3_25175_16",label:"→φ16"},{value:"M42X3_25175_20",label:"→φ20"},{value:"M42X3_25175_22",label:"→φ22"}]},
+    {label:"G78-ST系", items:[{value:"G78_ST_20175",label:"φ20.175 ST"},{value:"G78_ST_20175_16",label:"→φ16"}]},
     {label:"M8系",     items:[{value:"M8_21",label:"S-M8 φ2.1"},{value:"M8_31",label:"S-M8 φ3.1"},{value:"J_M8_300",label:"次世代M8 φ3.0"},{value:"J_M8_200",label:"次世代M8 φ2.0"}]},
     {label:"トメセン",  items:[{value:"TOMESEN_M16",label:"M16"},{value:"TOMESEN_M18",label:"M18"},{value:"TOMESEN_M22",label:"M22"},{value:"TOMESEN_M24",label:"M24"},{value:"TOMESEN_M35",label:"M35"}]},
     {label:"特殊",     items:[{value:"G12B_G_ST_12175_8",label:"G12B-ST-12.175-8"}]},

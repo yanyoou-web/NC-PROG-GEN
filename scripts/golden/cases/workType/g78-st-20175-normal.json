@@ -1,0 +1,16 @@
+{
+  "description": "G78-ST系 φ20.175 ST・Normalの基本ケース（ドラフトからのテンプレート本実装）。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "G78_ST_20175",
+    "internalStyle": "Normal",
+    "ateLength": "20",
+    "maxOD": "47.376",
+    "idDepth": "25",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "calcMode": "normal",
+    "valStockA": "33.5",
+    "valStockB": "33.5"
+  }
+}

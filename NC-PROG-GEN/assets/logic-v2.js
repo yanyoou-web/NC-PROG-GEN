@@ -66,6 +66,9 @@ const WORK_ID_MAP = {
     S_G78: 16.0,
     S_M12: 4.4,
     S_M15: 6.5,
+    // G78-ST系: ストレート20.175 / φ16段付（段付は最奥のφ16を加工径とする。M42X3系と同方式）
+    G78_ST_20175: 20.175,
+    G78_ST_20175_16: 16.0,
 };
 
 /** G18 HGDR 系（φ6.2 / φ6.55 / φ6.175）：同一のスタイル制限・DRILLSHIAGE（G74 仕上げブロック） */
@@ -162,6 +165,9 @@ const FLAT_BOTTOM_TOOL_DIA_MM = {
     S_G78: 16,
     S_M12: 4,
     S_M15: 6,
+    // G78-ST系: 内径ダイヤΦ16 使用。φ16段付のみ toolDia=idDia で U-.2、ストレートは X16.F.03
+    G78_ST_20175: 16,
+    G78_ST_20175_16: 16,
 };
 
 // ドリル径データベース
@@ -207,6 +213,8 @@ const DRILL_DIA_MAP = {
     S_G78: 14.0,
     S_M12: 3.3,
     S_M15: 3.3,
+    G78_ST_20175: 14.0,
+    G78_ST_20175_16: 14.0,
     Tube: null,
 };
 
@@ -1178,6 +1186,10 @@ function generateGCode(input, machineName) {
         if (typeof template_S_M12 !== "undefined") finalCode = template_S_M12;
     } else if (input.workType === "S_M15") {
         if (typeof template_S_M15 !== "undefined") finalCode = template_S_M15;
+    } else if (input.workType === "G78_ST_20175") {
+        if (typeof template_G78_ST_20175 !== "undefined") finalCode = template_G78_ST_20175;
+    } else if (input.workType === "G78_ST_20175_16") {
+        if (typeof template_G78_ST_20175_16 !== "undefined") finalCode = template_G78_ST_20175_16;
     } else {
         if (typeof template_G78 !== "undefined") finalCode = template_G78;
     }
