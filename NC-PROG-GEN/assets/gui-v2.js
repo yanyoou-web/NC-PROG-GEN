@@ -1428,7 +1428,8 @@ function buildInputFromState() {
         drillDepth:wizardState.drillDepth, idDepth:wizardState.idDepth, drillMode:wizardState.drillMode||"G74",
         workType:wizardState.workType, internalStyle:wizardState.internalStyle||"",
         m99Mode:wizardState.workType==="Tube"?"off":(wizardState.m99Mode||"off"),
-        m99p100:wizardState.m99Mode==="on",
+        // Tube_MH は q-maxod 画面（M99P100選択UI）を通らないため、常にON固定で扱う
+        m99p100:wizardState.workType==="Tube_MH"?true:wizardState.m99Mode==="on",
         mhOdTool:wizardState.mhOdTool||"外径荒", g12bNoseR:wizardState.g12bNoseR||"none",
         m12FinishType:isM12Like(wizardState.workType)?m12r.finishType:"hss",
         m12Profile:isM12Like(wizardState.workType)?m12r.profile:"drill_ichi_hira",

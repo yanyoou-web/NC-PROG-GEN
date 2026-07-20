@@ -1050,11 +1050,6 @@ function generateGCode(input, machineName) {
                     ? wrapH(ncFormat(_mcNum.toFixed(3)))
                     : "テンプレート未設定"
                 : "";
-            replaceMap["MC丸+1"] = input.m99p100
-                ? !isNaN(_mcNum)
-                    ? wrapH(ncFormat((_mcNum + 1).toFixed(3)))
-                    : "テンプレート未設定"
-                : "";
             replaceMap["OD+0.1"] = wrapH(ncFormat((OD + 0.1).toFixed(3)));
             replaceMap["Drill-1"] = wrapH(ncFormat((drillVal - 1.0).toFixed(3)));
             replaceMap["ID+0.6"] = wrapH(ncFormat((ID + 0.6).toFixed(3)));
