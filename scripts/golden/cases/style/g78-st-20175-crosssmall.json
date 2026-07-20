@@ -1,0 +1,18 @@
+{
+  "description": "G78_ST_20175・CrossSmall（交差穴（小径））。内径深さは CP と相手径から calcCrossSmallFinishDepth で自動計算（加工径=WORK_ID_MAP=20.175）。中バリ処理ブロックは出ないこと（G78-ST系は内バリ分岐対象外）を守る。ドリル深さはUI自動計算式 CP+1+0.3×14=20.20 のブリッジ値。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "G78_ST_20175",
+    "internalStyle": "CrossSmall",
+    "ateLength": "20",
+    "maxOD": "47.376",
+    "valPartnerD": "30",
+    "cpVal": "15",
+    "drillDepth": "20.20",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "calcMode": "normal",
+    "valStockA": "33.5",
+    "valStockB": "33.5"
+  }
+}

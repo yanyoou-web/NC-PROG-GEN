@@ -1,0 +1,17 @@
+{
+  "description": "G78_ST_20175・Normal・角あり(calcMode=corner)＋M99P100使用。N2の {{最大径-5}}=W√2-5、N100内の {{最大径+角}}=X(入力最大径)、{{最大径+3}}=X(W√2+3)F.3 行の挿入を守る。外径最大径はUIの角あり自動計算 √(((W/2+H)×2)²+W²)=64.83 をブリッジした値。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "G78_ST_20175",
+    "internalStyle": "Normal",
+    "ateLength": "42.5",
+    "calcMode": "corner",
+    "valCornW": "33.5",
+    "valCornH": "11",
+    "maxOD": "64.83",
+    "idDepth": "20",
+    "m99Mode": "on",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}
