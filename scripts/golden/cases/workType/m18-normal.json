@@ -1,0 +1,13 @@
+{
+  "description": "M18・Normal（通常バイト仕上げ）の基本ケース。scripts/test-e2e-validation.mjs の navigateToDrawNumScreen と同じ入力値。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "M18",
+    "internalStyle": "Normal",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "idDepth": "15",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}

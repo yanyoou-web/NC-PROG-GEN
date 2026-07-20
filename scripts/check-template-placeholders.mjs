@@ -65,6 +65,7 @@ const tubeKeys = new Set([
     "チューブ_外径荒加工径",
     "チューブ_端面始点",
     "MC丸",
+    "MC丸+1",
     "OD+0.1",
     "Drill-1",
     "ID+0.6",
