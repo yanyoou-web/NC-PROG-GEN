@@ -891,16 +891,24 @@ function computeIdDepthForTubeYose() {
     return !isNaN(tl) ? String(tl) : null;
 }
 
+/* チューブのドリル径を解決する（logic-v2.js の resolveDrillDia() と同じ規則を踏襲）。
+   tubeData[規格].drill は "DR2.3" のような表記のため、数値以外を除去して parseFloat する。
+   非チューブは従来通り DRILL_DIA_MAP を使う。 */
+function resolveDrillDiaLive(wt) {
+    if (isTubeWorkType(wt)) {
+        var spec = wizardState.tubeSpec || "";
+        if (typeof tubeData !== "undefined" && tubeData[spec] && tubeData[spec].drill) {
+            return parseFloat(String(tubeData[spec].drill).replace(/[^0-9.]/g, ""));
+        }
+        return NaN;
+    }
+    return typeof DRILL_DIA_MAP !== "undefined" ? (DRILL_DIA_MAP[wt] || NaN) : NaN;
+}
+
 /* ドリル深さ自動計算（logic.js の関数を使用）
    DOM が存在する場合は DOM の現在値を優先して参照する */
 function computeDrillDepthAuto() {
     var wt=wizardState.workType, st=wizardState.internalStyle;
-
-    // Tube: ドリル深さ = チューブ長さ
-    if (wt === "Tube") {
-        var tl = parseFloat(wizardState.tubeLength);
-        return !isNaN(tl) ? String(tl) : null;
-    }
 
     // 内径深さ: DOM 優先（同一画面でリアルタイム計算するため）
     var idDomEl=document.getElementById("id-depth");
@@ -913,7 +921,7 @@ function computeDrillDepthAuto() {
     var cpLive=computeCP(ipVal,pdVal);
     var cp=parseFloat(cpLive||wizardState.cpVal);
 
-    // Hirazoko / Ichimonji: logic.js は idDepth + 0.1 を finalDrillDepth に使用する
+    // Hirazoko / Ichimonji: logic.js は idDepth + 0.1 を finalDrillDepth に使用する（チューブも同じ式）
     if (st==="Hirazoko"||st==="Ichimonji") {
         return !isNaN(idD) ? (idD+0.1).toFixed(3) : null;
     }
@@ -921,19 +929,19 @@ function computeDrillDepthAuto() {
     if ((isM12Like(wt)||isG18Small(wt))&&st==="CrossSmall") {
         return !isNaN(cp) ? (cp+1.2+1).toFixed(3) : null;
     }
-    // 他の CrossSmall: calcSpecialDrillZ(style, drillDia, cp)
+    // 他の CrossSmall: calcSpecialDrillZ(style, drillDia, cp)（チューブは規格ごとの実ドリル径を使用）
     if (isCrossStyle(st)) {
-        if (typeof calcSpecialDrillZ==="undefined"||typeof DRILL_DIA_MAP==="undefined") return null;
-        var dd=DRILL_DIA_MAP[wt]||0; if (!dd||isNaN(cp)) return null;
+        if (typeof calcSpecialDrillZ==="undefined") return null;
+        var dd=resolveDrillDiaLive(wt); if (!dd||isNaN(cp)) return null;
         var z=calcSpecialDrillZ(st,dd,cp); return z!==null?String(z):null;
     }
-    // Yose: calcSpecialDrillZ(style, drillDia, idDepth)
+    // Yose: calcSpecialDrillZ(style, drillDia, idDepth)（チューブは規格ごとの実ドリル径を使用）
     if (st==="Yose") {
-        if (typeof calcSpecialDrillZ==="undefined"||typeof DRILL_DIA_MAP==="undefined") return null;
-        var dd2=DRILL_DIA_MAP[wt]||0; if (!dd2||isNaN(idD)) return null;
+        if (typeof calcSpecialDrillZ==="undefined") return null;
+        var dd2=resolveDrillDiaLive(wt); if (!dd2||isNaN(idD)) return null;
         var z2=calcSpecialDrillZ(st,dd2,idD); return z2!==null?String(z2):null;
     }
-    // YoseRelay: calcYoseRelayMetrics
+    // YoseRelay: calcYoseRelayMetrics（チューブは resolveDrillDia 経由で規格ごとの実ドリル径を使用）
     if (st==="YoseRelay") {
         if (typeof calcYoseRelayMetrics==="undefined") return null;
         var m=calcYoseRelayMetrics({workType:wt,tubeSpec:wizardState.tubeSpec,
@@ -943,6 +951,7 @@ function computeDrillDepthAuto() {
         if (!isNaN(m.relayIdDepth)&&isFinite(m.relayIdDepth)) wizardState.idDepth=m.relayIdDepth.toFixed(3);
         return (!isNaN(m.relayDrillDepth)&&isFinite(m.relayDrillDepth))?m.relayDrillDepth.toFixed(3):null;
     }
+    // Normal 等: 自動計算式なし（他ワーク種別と同様、手動入力が必要）
     return null;
 }
 
