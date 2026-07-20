@@ -1,5 +1,5 @@
 {
-  "description": "M8系 S-M8 φ2.1・CrossSmallの基本ケース。getAvailableStyles()上M8_21/31はNormalが選べずIchimonji/YoseRelay/CrossSmall必須。M8系はcalcCrossSmallFinishDepthを使わず加工径もWORK_ID_MAP未定義のため相手径の±0.5制約は掛からない。",
+  "description": "M8系 S-M8 φ2.1・CrossSmallの基本ケース。getAvailableStyles()上M8_21/31はNormalが選べずIchimonji/YoseRelay/CrossSmall必須。M8系はcalcCrossSmallFinishDepthを使わず加工径もWORK_ID_MAP未定義のため相手径の±0.5制約は掛からない。回帰ケースを兼ねる: data_template_M8_21.jsのN4(IN-ARA-3.9)ブロックに実機確認後の消し忘れと思われる「 check」という文字列が生成Gコードにそのまま出力されていたのを削除（ユーザー指示によりテンプレート変更の一時許可を得て対応）。",
   "machine": "NCL044",
   "wizardState": {
     "workType": "M8_21",
