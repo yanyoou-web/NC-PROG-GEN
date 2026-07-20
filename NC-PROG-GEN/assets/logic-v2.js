@@ -530,7 +530,9 @@ function validateStyleSpecificRules(input) {
             errors.push(`[${styleLabel}: 相手径(Φd)] ${yoseDCheck.msg}`);
         }
         // YoseRelay は内径深さを自動計算するため手入力必須にしない
-        if (!isYoseRelayStyle(style) && !isTubeWorkType(input.workType) && isNaN(parseSimpleNumberOrFormula(input.idDepth))) {
+        // （チューブでも例外にしない。内径深さはチューブ長さに依存しないため、
+        //   ヨセはチューブ規格の有無に関わらず内径深さの手入力が必要）
+        if (!isYoseRelayStyle(style) && isNaN(parseSimpleNumberOrFormula(input.idDepth))) {
             errors.push(`[内径深さ] が入力されていません（${styleLabel}計算に必要）。`);
         }
         if (isYoseRelayStyle(style)) {
@@ -860,60 +862,52 @@ function generateGCode(input, machineName) {
 
         const smallD = parseFloat(input.yoseD); // 小径 d
         const angle = parseFloat(input.yoseAngle);
-        const depth = parseFloat(input.idDepth); // 通常ワークの内径深さ
+        // 内径深さ（チューブでも図面値の手入力が必須で、チューブ長さを代用することはない）
+        const depth = parseFloat(input.idDepth);
 
-        if (!isNaN(bigD) && !isNaN(smallD) && !isNaN(angle)) {
-            // チューブの場合、深さが未入力なら長さを代用
-            let effectiveDepth = depth;
-            if (isTubeWorkType(input.workType) && isNaN(effectiveDepth)) {
-                effectiveDepth = parseFloat(input.tubeLength);
-            }
+        if (!isNaN(bigD) && !isNaN(smallD) && !isNaN(angle) && !isNaN(depth)) {
+            // 計算ロジック
+            const xEnd = smallD - 0.4;
+            const rDiff = (bigD - xEnd) / 2.0;
+            const rad = (angle * Math.PI) / 180;
+            const zAdd = rDiff / Math.tan(rad);
+            const zEnd = depth + zAdd;
+            const zInter = zEnd - 0.4;
 
-            if (!isNaN(effectiveDepth)) {
-                // 計算ロジック
-                const xEnd = smallD - 0.4;
-                const rDiff = (bigD - xEnd) / 2.0;
-                const rad = (angle * Math.PI) / 180;
-                const zAdd = rDiff / Math.tan(rad);
-                const zEnd = effectiveDepth + zAdd;
-                const zInter = zEnd - 0.4;
+            const Fmt = (n) => wrapH(ncFormat(n.toFixed(3)));
+            const H_depth = wrapH(ncFormat(depth));
 
-                const Fmt = (n) => wrapH(ncFormat(n.toFixed(3)));
-                const yoseBaseDepth = effectiveDepth;
-                const H_depth = wrapH(ncFormat(yoseBaseDepth));
+            // 共通パス
+            const commonPath =
+                `X${Fmt(xEnd)}(d-0.4)Z-${Fmt(zInter)}(Zend-0.4)F.08\n` +
+                `Z-${Fmt(zEnd)}(Zend)F.2\n` +
+                `X${Fmt(bigD)}Z-${H_depth}S250F.03(STRAIGHT)\n` +
+                `W.1`;
 
-                // 共通パス
-                const commonPath =
-                    `X${Fmt(xEnd)}(d-0.4)Z-${Fmt(zInter)}(Zend-0.4)F.08\n` +
-                    `Z-${Fmt(zEnd)}(Zend)F.2\n` +
-                    `X${Fmt(bigD)}Z-${H_depth}S250F.03(STRAIGHT)\n` +
-                    `W.1`;
+            if (input.yoseMethod === "1") {
+                // ① バイト1本 (同時)
+                yosePath = `\n${commonPath}`;
+            } else {
+                // ② バイト2本 (別工程)
+                const toolKey = "内径ダイヤΦ4";
+                const toolName = machineConfig[toolKey] ? wrapH(machineConfig[toolKey]) : "T0707";
+                const m51 = machineConfig["M51"] ? wrapH(machineConfig["M51"]) : "";
+                const m59 = machineConfig["M59"] ? wrapH(machineConfig["M59"]) : "";
 
-                if (input.yoseMethod === "1") {
-                    // ① バイト1本 (同時)
-                    yosePath = `\n${commonPath}`;
-                } else {
-                    // ② バイト2本 (別工程)
-                    const toolKey = "内径ダイヤΦ4";
-                    const toolName = machineConfig[toolKey] ? wrapH(machineConfig[toolKey]) : "T0707";
-                    const m51 = machineConfig["M51"] ? wrapH(machineConfig["M51"]) : "";
-                    const m59 = machineConfig["M59"] ? wrapH(machineConfig["M59"]) : "";
+                const startX = (bigD - 1.0).toFixed(0) + ".";
+                const approachZ = (depth - 1.0).toFixed(0) + ".";
 
-                    const startX = (bigD - 1.0).toFixed(0) + ".";
-                    const approachZ = (effectiveDepth - 1.0).toFixed(0) + ".";
-
-                    yoseBlock =
-                        `N102(IN-OKU)\n` +
-                        `G0G40G97S350M3${toolName}\n` +
-                        `X${startX}Z30.\n` +
-                        `Z1.${m51}\n` +
-                        `G1Z-${approachZ}F4.(STRAIGHT-1.0)\n` +
-                        `X${Fmt(bigD)}Z-${H_depth}F.1(STRAIGHT)\n` +
-                        `${commonPath}\n` +
-                        `${flatBottomExitLine}\n` +
-                        `G0Z30.${m59}\n` +
-                        `G28U0W0M1`;
-                }
+                yoseBlock =
+                    `N102(IN-OKU)\n` +
+                    `G0G40G97S350M3${toolName}\n` +
+                    `X${startX}Z30.\n` +
+                    `Z1.${m51}\n` +
+                    `G1Z-${approachZ}F4.(STRAIGHT-1.0)\n` +
+                    `X${Fmt(bigD)}Z-${H_depth}F.1(STRAIGHT)\n` +
+                    `${commonPath}\n` +
+                    `${flatBottomExitLine}\n` +
+                    `G0Z30.${m59}\n` +
+                    `G28U0W0M1`;
             }
         }
     }

@@ -442,7 +442,8 @@ async function main() {
 
     await test(
         browser,
-        "チューブ + ヨセ: 内径深さの自動値はチューブ長さになり（内径Φ寸法は使われず）、手動切替もできること",
+        "チューブ + ヨセ: 内径深さはチューブ長さから自動入力されず、Mねじ等と同じく手入力必須になること。" +
+            "ドリル深さは入力した内径深さを基準に自動計算されること（チューブ長さは使われない）",
         async (page) => {
             await page.goto(`${baseUrl}/gui-v2.html`);
             await page.click('[data-action="start"]');
@@ -451,7 +452,7 @@ async function main() {
             await page.waitForTimeout(150);
             await page.click('[data-action="select-worktype"][data-value="Tube"]');
             await page.waitForTimeout(150);
-            // 12x10 (R1): 内径Φ=10, 長さ=25 を選び、自動値が「25」（長さ）であって「10」（内径Φ）でないことを確認する
+            // 12x10 (R1): 内径Φ=10, 長さ=25, ドリル=DR7.0(→7.0)
             await page.click('[data-action="select-tube-spec"][data-value="12x10 (R1)"]');
             await page.waitForTimeout(150);
             await page.click('[data-action="select-tube-length"][data-value="25"]');
@@ -469,23 +470,39 @@ async function main() {
             await page.waitForTimeout(150);
 
             const idDepthInputCount = await page.locator("#id-depth").count();
-            assert.equal(idDepthInputCount, 0, "自動計算される場合は内径深さの入力欄自体が表示されないこと");
+            assert.equal(
+                idDepthInputCount,
+                1,
+                "内径深さの手入力欄が表示されること（チューブ長さ(25mm)からの自動入力にならないこと）"
+            );
 
-            const autoText = await page.evaluate(() => document.getElementById("id-depth-auto-val")?.textContent || "");
-            assert.ok(autoText.includes("25"), `自動値がチューブ長さ(25mm)になっていること (実際: ${autoText})`);
-            assert.ok(!/\b10\b/.test(autoText), `自動値が内径Φ寸法(10)になっていないこと (実際: ${autoText})`);
+            // 内径深さ未入力の間は、ドリル深さの自動計算欄もプレースホルダー表示のままであること
+            const placeholderText = await page.evaluate(
+                () => document.getElementById("drill-depth-auto-val")?.textContent || ""
+            );
+            assert.ok(
+                placeholderText.includes("自動計算されます"),
+                `内径深さ未入力時はドリル深さがプレースホルダー表示のままであること (実際: ${placeholderText})`
+            );
 
-            // 例外加工向けの手動切替: 直前の自動値を引き継いだ上で上書きできること
-            await page.click('[data-action="toggle-id-manual"]');
-            await page.waitForTimeout(150);
-            const manualValue = await page.inputValue("#id-depth");
-            assert.equal(manualValue, "25", "手動切替の直後は直前の自動値が引き継がれること");
+            await page.click('.wiz-btn-primary[data-action="next-depths"]'); // 内径深さ未入力のまま次へ
+            await page.waitForTimeout(200);
+            const titleAfterEmpty = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
+            assert.ok(titleAfterEmpty.includes("加工深さ"), "内径深さ未入力のままでは次の画面に進まないこと");
 
+            // 内径深さを手入力すると、ドリル深さ = 0.3×ドリル径 + 内径深さ - 0.4 で自動計算されること
+            // （0.3×7.0 + 30 - 0.4 = 31.70。Mねじ等のヨセと同じ計算式で、チューブ長さ(25)は使われない）
             await page.fill("#id-depth", "30");
+            await page.waitForTimeout(150);
+            const autoText = await page.evaluate(
+                () => document.getElementById("drill-depth-auto-val")?.textContent || ""
+            );
+            assert.ok(autoText.includes("31.7"), `ドリル深さが内径深さ基準で自動計算されること (実際: ${autoText})`);
+
             await page.click('.wiz-btn-primary[data-action="next-depths"]');
             await page.waitForTimeout(200);
             const titleAfter = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
-            assert.ok(!titleAfter.includes("加工深さ"), "手動で値を入力すれば次の画面に進めること");
+            assert.ok(!titleAfter.includes("加工深さ"), "内径深さを入力すれば次の画面に進めること");
         }
     );
 
