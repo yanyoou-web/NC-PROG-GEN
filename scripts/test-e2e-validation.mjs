@@ -93,7 +93,13 @@ async function fillAndBlur(page, selector, value) {
 
 // M18・通常スタイルで、アテ長さ→外径最大径→加工深さ の各画面を経由し、
 // 図番・作成者入力画面までウィザードを進める
-async function navigateToDrawNumScreen(page, baseUrl, { ateLength = "20", maxOD = "30.1", idDepth = "15" } = {}) {
+// 通常バイト加工（Normal）はドリル深さの自動計算式が無く常に手入力欄が出るため、
+// idDepth と同様 drillDepth も渡して埋める（未入力だと加工深さ画面でブロックされる）。
+async function navigateToDrawNumScreen(
+    page,
+    baseUrl,
+    { ateLength = "20", maxOD = "30.1", idDepth = "15", drillDepth = "18" } = {}
+) {
     await page.goto(`${baseUrl}/gui-v2.html`);
     await page.click('[data-action="start"]');
     await page.waitForTimeout(150);
@@ -110,6 +116,7 @@ async function navigateToDrawNumScreen(page, baseUrl, { ateLength = "20", maxOD 
     await page.click('[data-action="next-maxod"]');
     await page.waitForTimeout(150);
     if (await page.locator("#id-depth").count()) await page.fill("#id-depth", idDepth);
+    if (await page.locator("#drill-depth").count()) await page.fill("#drill-depth", drillDepth);
     await page.waitForTimeout(120);
     await page.locator(".wiz-btn-primary[data-action]").first().click();
     await page.waitForTimeout(150);
@@ -294,34 +301,51 @@ async function main() {
         assert.ok(!titleAfterFilled.includes("ヨセ"), "入力すれば次の画面に進めること");
     });
 
-    await test(browser, "一問一答: 加工深さ画面で内径深さ未入力のまま次へ進もうとしても画面が変わらない", async (page) => {
-        await page.goto(`${baseUrl}/gui-v2.html`);
-        await page.click('[data-action="start"]');
-        await page.waitForTimeout(150);
-        await page.click('[data-action="select-machine"]');
-        await page.waitForTimeout(150);
-        await page.click('[data-action="select-worktype"][data-value="M18"]');
-        await page.waitForTimeout(150);
-        await page.click('[data-action="select-style"][data-value="Normal"]');
-        await page.waitForTimeout(150);
-        await page.fill("#ate-input", "20");
-        await page.click('[data-action="next-atelength"]');
-        await page.waitForTimeout(150);
-        await page.fill("#maxod-direct-input", "30.1");
-        await page.click('[data-action="next-maxod"]');
-        await page.waitForSelector("#id-depth", { timeout: 5000 });
+    await test(
+        browser,
+        "一問一答: 加工深さ画面（通常バイト加工）で内径深さ・ドリル深さが未入力のまま次へ進もうとしても画面が変わらない",
+        async (page) => {
+            await page.goto(`${baseUrl}/gui-v2.html`);
+            await page.click('[data-action="start"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-machine"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-worktype"][data-value="M18"]');
+            await page.waitForTimeout(150);
+            await page.click('[data-action="select-style"][data-value="Normal"]');
+            await page.waitForTimeout(150);
+            await page.fill("#ate-input", "20");
+            await page.click('[data-action="next-atelength"]');
+            await page.waitForTimeout(150);
+            await page.fill("#maxod-direct-input", "30.1");
+            await page.click('[data-action="next-maxod"]');
+            await page.waitForSelector("#id-depth", { timeout: 5000 });
 
-        await page.click('.wiz-btn-primary[data-action="next-depths"]'); // 内径深さを空のまま次へ
-        await page.waitForTimeout(200);
-        const titleAfterEmpty = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
-        assert.ok(titleAfterEmpty.includes("加工深さ"), "未入力のままでは次の画面に進まないこと");
+            // 通常バイト加工はドリル深さの自動計算式が無いため、#drill-depth が最初から
+            // 手入力欄として表示され、自動計算⇄手動入力のトグルボタンは出ない。
+            const drillManualToggleCount = await page.locator('[data-action="toggle-drill-manual"]').count();
+            assert.equal(drillManualToggleCount, 0, "自動計算式が無いため手動/自動切替ボタンを出さないこと");
+            const drillDepthInputCount = await page.locator("#drill-depth").count();
+            assert.equal(drillDepthInputCount, 1, "ドリル深さの手入力欄が最初から表示されること");
 
-        await page.fill("#id-depth", "15");
-        await page.click('.wiz-btn-primary[data-action="next-depths"]');
-        await page.waitForTimeout(200);
-        const titleAfterFilled = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
-        assert.ok(!titleAfterFilled.includes("加工深さ"), "入力すれば次の画面に進めること");
-    });
+            await page.click('.wiz-btn-primary[data-action="next-depths"]'); // 両方空のまま次へ
+            await page.waitForTimeout(200);
+            const titleAfterEmpty = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
+            assert.ok(titleAfterEmpty.includes("加工深さ"), "未入力のままでは次の画面に進まないこと");
+
+            await page.fill("#id-depth", "15");
+            await page.click('.wiz-btn-primary[data-action="next-depths"]'); // ドリル深さだけ空のまま次へ
+            await page.waitForTimeout(200);
+            const titleIdOnly = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
+            assert.ok(titleIdOnly.includes("加工深さ"), "ドリル深さが未入力のままでは次の画面に進まないこと");
+
+            await page.fill("#drill-depth", "18");
+            await page.click('.wiz-btn-primary[data-action="next-depths"]');
+            await page.waitForTimeout(200);
+            const titleAfterFilled = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
+            assert.ok(!titleAfterFilled.includes("加工深さ"), "両方入力すれば次の画面に進めること");
+        }
+    );
 
     await test(
         browser,
@@ -346,7 +370,10 @@ async function main() {
             await page.waitForTimeout(150);
             await page.fill("#maxod-direct-input", "30.1");
             await page.click('[data-action="next-maxod"]');
-            await page.waitForSelector(".wiz-q-title", { timeout: 5000 });
+            // ".wiz-q-title" は遷移前のq-maxod画面にも存在するため、目印には
+            // q-depths画面だけが持つ data-action="next-depths" ボタンを使う
+            // （でないと画面遷移前に早期解決し、直後のDOM確認が古い画面を見てしまう）。
+            await page.waitForSelector('.wiz-btn-primary[data-action="next-depths"]', { timeout: 5000 });
 
             const idDepthInputCount = await page.locator("#id-depth").count();
             assert.equal(idDepthInputCount, 0, "自動計算される場合は内径深さの入力欄自体が表示されないこと");
@@ -388,17 +415,28 @@ async function main() {
                 1,
                 "通常バイト加工では内径深さの手入力欄が表示されること（内径Φ寸法からの自動入力にならないこと）"
             );
+            // ドリル深さも同様に自動計算式が無いため、手入力欄が最初から出て、切替ボタンは出ない。
+            const drillDepthInputCount = await page.locator("#drill-depth").count();
+            assert.equal(drillDepthInputCount, 1, "ドリル深さの手入力欄も最初から表示されること");
+            const drillManualToggleCount = await page.locator('[data-action="toggle-drill-manual"]').count();
+            assert.equal(drillManualToggleCount, 0, "自動計算式が無いため手動/自動切替ボタンを出さないこと");
 
             await page.click('.wiz-btn-primary[data-action="next-depths"]');
             await page.waitForTimeout(200);
             const titleAfterEmpty = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
-            assert.ok(titleAfterEmpty.includes("加工深さ"), "内径深さ未入力のままでは次の画面に進まないこと");
+            assert.ok(titleAfterEmpty.includes("加工深さ"), "内径深さ・ドリル深さ未入力のままでは次の画面に進まないこと");
 
             await page.fill("#id-depth", "15");
             await page.click('.wiz-btn-primary[data-action="next-depths"]');
             await page.waitForTimeout(200);
+            const titleIdOnly = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
+            assert.ok(titleIdOnly.includes("加工深さ"), "ドリル深さが未入力のままでは次の画面に進まないこと");
+
+            await page.fill("#drill-depth", "18");
+            await page.click('.wiz-btn-primary[data-action="next-depths"]');
+            await page.waitForTimeout(200);
             const titleAfterFilled = await page.evaluate(() => document.querySelector(".wiz-q-title")?.textContent || "");
-            assert.ok(!titleAfterFilled.includes("加工深さ"), "内径深さを入力すれば次の画面に進めること");
+            assert.ok(!titleAfterFilled.includes("加工深さ"), "内径深さ・ドリル深さを入力すれば次の画面に進めること");
         }
     );
 
@@ -489,6 +527,68 @@ async function main() {
             assert.ok(finishText.includes("16.528"), `内径深さ（自動計算）も最終的な値まで追随すること (実際: ${finishText})`);
         }
     );
+
+    // ドリル深さの自動⇄手動切替ボタンは、自動計算式が無い Normal（通常バイト加工）でだけ消え、
+    // ヨセ・ヨセ中継・交差穴（小径）・内径バイト平底では従来どおり出ること（M18で全スタイル共通確認）。
+    const DRILL_STYLE_TOGGLE_CASES = [
+        { style: "Normal", expectToggle: false },
+        { style: "Hirazoko", expectToggle: true },
+        { style: "Yose", expectToggle: true, yoseFields: { "#yose-d": "6" } },
+        {
+            style: "YoseRelay",
+            expectToggle: true,
+            yoseFields: { "#yose-d": "6", "#yose-total-len": "50", "#yose-partner-depth": "20" },
+        },
+        { style: "CrossSmall", expectToggle: true },
+    ];
+    for (const { style, expectToggle, yoseFields } of DRILL_STYLE_TOGGLE_CASES) {
+        await test(
+            browser,
+            `加工深さ画面(M18/${style}): ドリル深さの自動⇄手動切替ボタンが${expectToggle ? "出る" : "出ない"}こと`,
+            async (page) => {
+                await page.goto(`${baseUrl}/gui-v2.html`);
+                await page.click('[data-action="start"]');
+                await page.waitForTimeout(150);
+                await page.click('[data-action="select-machine"]');
+                await page.waitForTimeout(150);
+                await page.click('[data-action="select-worktype"][data-value="M18"]');
+                await page.waitForTimeout(150);
+                await page.click(`[data-action="select-style"][data-value="${style}"]`);
+                await page.waitForTimeout(150);
+                if (yoseFields) {
+                    await page.waitForSelector("#yose-d", { timeout: 5000 });
+                    for (const [selector, value] of Object.entries(yoseFields)) {
+                        await page.fill(selector, value);
+                    }
+                    await page.click('[data-action="next-yose"]');
+                    await page.waitForTimeout(150);
+                }
+                await page.fill("#ate-input", "20");
+                await page.click('[data-action="next-atelength"]');
+                await page.waitForTimeout(150);
+                await page.fill("#maxod-direct-input", "30.1");
+                await page.click('[data-action="next-maxod"]');
+                // ".wiz-q-title" は前後の画面にも共通して存在するため待機の目印にならない
+                // （まだ遷移前のq-maxod画面のタイトルにマッチして即座に解決してしまう）。
+                // q-depths画面だけが持つ data-action="next-depths" ボタンを目印にする。
+                await page.waitForSelector('.wiz-btn-primary[data-action="next-depths"]', { timeout: 5000 });
+
+                const toggleCount = await page.locator('[data-action="toggle-drill-manual"]').count();
+                assert.equal(
+                    toggleCount,
+                    expectToggle ? 1 : 0,
+                    `${style}: 自動⇄手動切替ボタンの有無が期待と異なる（実際の個数: ${toggleCount}）`
+                );
+                // 切替ボタンが無いスタイルは、最初から手入力欄がそのまま出ていること
+                const drillInputCount = await page.locator("#drill-depth").count();
+                assert.equal(
+                    drillInputCount,
+                    expectToggle ? 0 : 1,
+                    `${style}: 自動計算式が無い場合のみ最初からドリル深さ手入力欄が出ること（実際の個数: ${drillInputCount}）`
+                );
+            }
+        );
+    }
 
     await browser.close();
     server.close();

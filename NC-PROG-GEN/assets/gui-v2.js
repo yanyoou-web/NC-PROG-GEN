@@ -227,6 +227,11 @@ function isM12Like(wt)   { return wt==="M12"||wt==="M12_MH"; }
 function isG18Small(wt)  { return wt==="G18_40"||wt==="G18_42"||wt==="G18_40_MH"||wt==="G18_42_MH"; }
 function isCrossStyle(s) { return s==="CrossSmall"; }
 function isTubeWorkType(wt) { return wt==="Tube"||wt==="Tube_MH"; }
+/* ドリル深さの自動計算式を持つスタイルか（Normal＝通常バイト加工は式が無く常に手入力）。
+   一覧は computeDrillDepthAuto() の分岐と対応させること。 */
+function styleHasDrillAutoCalc(st) {
+    return st==="Hirazoko"||st==="Ichimonji"||st==="CrossSmall"||st==="Yose"||st==="YoseRelay";
+}
 
 /* logic-v2.js のドリルブロック選択チェーンと同じ分類を行う。
    "g1"        = HGDR工具（G18全種・M12×HGDR）→ G74/G1選択不可、常にG1単動固定
@@ -707,7 +712,10 @@ function buildDepthsScreen() {
     var isM8=typeof isM8WorkType==="function"&&isM8WorkType(wt);
     var isCross=isCrossStyle(st);
     var isRelay=st==="YoseRelay";
-    var isManual=wizardState.drillDepthManual;
+    // Normal（通常バイト加工）等、自動計算式そのものが無いスタイルは、手動フラグの値に関わらず
+    // 常に手動入力扱いにする（トグルボタンも「自動計算されます」の案内も出さない）。
+    var hasDrillAutoCalc=styleHasDrillAutoCalc(st);
+    var isManual=wizardState.drillDepthManual||!hasDrillAutoCalc;
 
     // ドリルモード（ワーク種別/加工方法によっては選択不可＝固定のため、その場合は選択UIではなく固定表示にする）
     var drillModeHtml='<div id="drill-mode-section">'+buildDrillModeSectionInner(wt)+'</div>';
@@ -726,7 +734,7 @@ function buildDepthsScreen() {
             +'<button class="depth-manual-link" data-action="toggle-drill-manual">手動で変更</button>'
             +'</div>';
     } else {
-        // 手動入力
+        // 手動入力（自動計算式が無いスタイルは「自動計算に戻す」リンクごと出さない）
         var quickBtns=DRILL_QUICK_BTNS.map(function(b){
             return '<button class="depth-quick-btn" data-action="quick-drill" data-value="'+b.v+'">'+b.lbl+'</button>';
         }).join("");
@@ -734,7 +742,9 @@ function buildDepthsScreen() {
             +'<input class="wiz-input depth-cross-field validate-positive" id="drill-depth" type="text" inputmode="decimal"'
             +' value="'+escapeHtml(wizardState.drillDepth)+'" />'
             +'<div class="depth-quick-row">'+quickBtns+'</div>'
-            +'<button class="depth-manual-link" data-action="toggle-drill-manual">自動計算に戻す'+(autoVal!==null?'（'+escapeHtml(autoVal)+'mm）':'')+'</button>';
+            +(hasDrillAutoCalc
+                ? '<button class="depth-manual-link" data-action="toggle-drill-manual">自動計算に戻す'+(autoVal!==null?'（'+escapeHtml(autoVal)+'mm）':'')+'</button>'
+                : '');
     }
 
     // 一文字（M12・M8以外）: CP入力が必要
@@ -955,6 +965,13 @@ function computeDrillDepthAuto() {
     return null;
 }
 
+/* ドリル深さ「手動入力」の実効フラグ。styleHasDrillAutoCalc() が false のスタイル（Normal等）は
+   自動計算式そのものが無いため、wizardState.drillDepthManual の値（トグル未操作なら false）に
+   関わらず常に手動入力として扱う。 */
+function isDrillDepthManualEffective() {
+    return wizardState.drillDepthManual || !styleHasDrillAutoCalc(wizardState.internalStyle);
+}
+
 /* YoseRelay の内径深さ自動計算 */
 function computeIdDepthForRelay() {
     if (wizardState.internalStyle!=="YoseRelay") return null;
@@ -1013,7 +1030,7 @@ function updateCPDisplay() {
 }
 /* drillDepth 自動計算バッジ（#drill-depth-auto-val）をリアルタイムで更新 */
 function updateDrillDepthDisplay() {
-    if (wizardState.drillDepthManual) return;
+    if (isDrillDepthManualEffective()) return;
     var autoRow=document.getElementById("drill-depth-auto-row");
     var autoValEl=document.getElementById("drill-depth-auto-val");
     if (!autoRow||!autoValEl) return; // 手動入力モード（#drill-depth-auto-row が存在しない）
@@ -1032,8 +1049,8 @@ function bindDepthInputs() {
     });
 }
 function initDrillAutoCalc() {
-    // 自動計算値をstateに書き込む（手動でない場合）
-    if (!wizardState.drillDepthManual) {
+    // 自動計算値をstateに書き込む（手動でない場合。自動計算式が無いスタイルは常に手動扱い）
+    if (!isDrillDepthManualEffective()) {
         var av=computeDrillDepthAuto();
         if (av!==null) wizardState.drillDepth=av;
     }
@@ -1263,8 +1280,8 @@ function handleAction(action, value) {
             refreshDrillModeSection();
             break;
         case "next-depths":
-            // 自動計算値を最終確定
-            if (!wizardState.drillDepthManual) {
+            // 自動計算値を最終確定（自動計算式が無いスタイルは常に手動入力欄の値を採用）
+            if (!isDrillDepthManualEffective()) {
                 var av2=computeDrillDepthAuto();
                 if (av2!==null) wizardState.drillDepth=av2;
             } else {
@@ -1281,7 +1298,7 @@ function handleAction(action, value) {
             if (document.getElementById("depth-partner-d") && !wizardState.valPartnerD) {
                 showToast(isCrossStyle(wizardState.internalStyle) ? "相手径を入力してください" : "ドリル径を入力してください"); return;
             }
-            if (wizardState.drillDepthManual && !(document.getElementById("drill-depth")||{value:""}).value.trim()) {
+            if (isDrillDepthManualEffective() && !(document.getElementById("drill-depth")||{value:""}).value.trim()) {
                 showToast("ドリル深さを入力してください"); return;
             }
             // 奥バイトは m12CrossMethod から自動判定 - ここでは何もしない
