@@ -57,15 +57,18 @@ alwaysApply: true
 
 ---
 
-## ワーク種別レジストリ（段階移行フェーズ1〜3）
+## ワーク種別レジストリ（段階移行フェーズ1〜5）
 
-ワーク固有情報をテンプレートJSに集約するリファクタの**基盤部分**を導入済み。**まだ移行途中**であり、UI分岐とテンプレート選択は従来コードのまま動く点に注意する。
+ワーク固有情報をテンプレートJSに集約するリファクタ。フェーズ1〜5まで移行済み。UI表示・加工径・標準テンプレート選択はレジストリ駆動になった。**残るのは一部の特殊処理のみ**（後段フェーズ）。
 
-- **登録機構（`data-v2.js`）**: `workTypeRegistry`・`registerWorkType(definition)`・`getWorkTypeDefinition(workType)` を持つ。`data-v2.js` はテンプレート群より先に読み込まれるため、各テンプレートJSが読み込み時に自身を登録すると、`logic-v2.js` がマップを組み立てる時点でレジストリが埋まっている。
+- **登録機構（`data-v2.js`）**: `workTypeRegistry`・`registerWorkType(definition)`・`getWorkTypeDefinition(workType)` を持つ。`data-v2.js` はテンプレート群より先に読み込まれるため、各テンプレートJSが読み込み時に自身を登録すると、`gui-v2.js`/`logic-v2.js` が使う時点でレジストリが埋まっている。
 - **各テンプレートJSの末尾**に `registerWorkType({ id, ui:{label,group,order,styles}, machining:{idDiameterMm,drillDiameterMm,flatBottomToolDiameterMm,drillMaxDepthMm}, features:{mh,tube}, template })` を持つ（既存の `const template_XXX` はそのまま残す）。M12/M12_MH は既定バリアント（HSS）のファイルで1回だけ登録し、M42X3系の4種は同一ファイルにまとめて登録する。
-- **自動生成されるもの（`logic-v2.js`）**: `WORK_ID_MAP` / `DRILL_DIA_MAP` / `FLAT_BOTTOM_TOOL_DIA_MM` はハードコードをやめ、`createWorkTypeValueMap()` でレジストリの `machining.*` から生成する。値が `null` のワーク種別はキーごと除外（＝従来マップに載っていなかった状態を再現）。→ **加工径3種（内径Φ・ドリルφ・平底工具径）はテンプレートの `registerWorkType` に書く。`logic-v2.js` のマップは編集しない。**
-- **まだ移行していないもの（重要）**: `gui-v2.js` の `WORK_TYPE_GROUPS` / `getAvailableStyles` / `DRILL_MAX_DEPTH_MM` と、`logic-v2.js` のテンプレート選択 `if-else` チェーンは**従来定義のまま**。そのため新規テンプレート追加時は、`registerWorkType` に加えて**これら従来の結線も引き続き必要**で、`registerWorkType` の `ui`/`machining` の値は gui 側の定義と一致させること（重複は移行の後段フェーズで解消予定）。
-- 生成される Gコードはリファクタ前と完全一致する（全ゴールデンケースで出力差分ゼロを確認済み）。`npm run check:worktypes`（`scripts/check-work-types.mjs`、`npm run check` に含む）が全ワーク種別についてこの一致を機械的に保証する。
+- **レジストリ駆動になったもの**:
+  - `logic-v2.js`: `WORK_ID_MAP` / `DRILL_DIA_MAP` / `FLAT_BOTTOM_TOOL_DIA_MM` は `createWorkTypeValueMap()` で `machining.*` から生成（値 `null` の種別は従来同様キーごと除外）。**標準ワーク種別のテンプレート選択**は `getWorkTypeDefinition(workType).template` へ集約（巨大な `if-else` チェーンを廃止）。
+  - `gui-v2.js`: `getAvailableStyles`（`ui.styles`）・`isMHWorkType`/`isTubeWorkType`（`features.mh`/`tube`）・`getDrillMaxDepthMM`（`machining.drillMaxDepthMm`）・`WORK_TYPE_GROUPS`（`buildWorkTypeGroups()` が `ui.group`/`label`/`order` から再構成。グループ表示順のみ `WORK_TYPE_GROUP_ORDER` に持つ）。
+  - → **新規の標準ワーク種別は、テンプレJSの `registerWorkType` と `gui-v2.html` の `<script>` 追加だけで UI 表示・生成まで通る**（`gui-v2.js`/`logic-v2.js` へ workType ごとの分岐を足す必要はない）。
+- **まだレジストリ化していないもの（後段フェーズ）**: `logic-v2.js` に残る**特殊処理**（Tube のチューブデータ置換・M40 の x50u8・G12B のノーズR・M12/M12_MH のバリアント選択）は個別分岐のまま。`blocks-v2.js` のワーク固有の平底出口設定も従来どおり。これらを使うワーク種別を追加する場合のみ該当箇所の変更が要る。
+- 生成される Gコードはリファクタ前と完全一致する（全ゴールデンケース＋全45種×全スタイルで出力差分ゼロを確認済み）。`npm run check:worktypes`（`scripts/check-work-types.mjs`、`npm run check` に含む）が全ワーク種別について径マップ一致とレジストリ整合を機械的に保証する。
 
 ---
 

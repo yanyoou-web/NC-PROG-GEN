@@ -19,7 +19,6 @@
 /* global computeFlatBottomExitLine, combineTubeFlatBottomFinishLine */
 /* global $id, currentInternalStyle */
 /* global isMHWorkType, isTubeWorkType */
-/* global workTypeRegistry */
 // ========== 生成ロジック ==========
 /**
  * logic.js
@@ -1000,10 +999,6 @@ function generateGCode(input, machineName) {
             replaceMap["最大径-5"] = "";
             replaceMap["最大径50"] = wrapH("50.");
         }
-    } else if (input.workType === "M22") {
-        if (typeof template_M22 !== "undefined") finalCode = template_M22;
-    } else if (input.workType === "M18") {
-        if (typeof template_M18 !== "undefined") finalCode = template_M18;
     } else if (input.workType === "G12B_G_ST_12175_8") {
         if (typeof template_G12B_G_ST_12175_8 !== "undefined") finalCode = template_G12B_G_ST_12175_8;
         // 根本ノーズR あり/なし 分岐
@@ -1016,88 +1011,25 @@ function generateGCode(input, machineName) {
             replaceMap["G12B_ノーズRN22"] = "";
             replaceMap["G12B_ノーズRX"]   = "21.1";
         }
-    } else if (input.workType === "M15") {
-        if (typeof template_M15 !== "undefined") finalCode = template_M15;
-    } else if (input.workType === "M8_21") {
-        if (typeof template_M8_21 !== "undefined") finalCode = template_M8_21;
-    } else if (input.workType === "M8_31") {
-        if (typeof template_M8_31 !== "undefined") finalCode = template_M8_31;
-    } else if (input.workType === "J_M8_300") {
-        if (typeof template_J_M8_300 !== "undefined") finalCode = template_J_M8_300;
-    } else if (input.workType === "J_M8_200") {
-        if (typeof template_J_M8_200 !== "undefined") finalCode = template_J_M8_200;
-    } else if (input.workType === "M40_MH") {
-        if (typeof template_M40_MH !== "undefined") finalCode = template_M40_MH;
-    } else if (input.workType === "M22_MH") {
-        if (typeof template_M22_MH !== "undefined") finalCode = template_M22_MH;
-    } else if (input.workType === "M18_MH") {
-        if (typeof template_M18_MH !== "undefined") finalCode = template_M18_MH;
-    } else if (input.workType === "M15_MH") {
-        if (typeof template_M15_MH !== "undefined") finalCode = template_M15_MH;
     } else if (input.workType === "M12_MH") {
         const ft = input.m12FinishType || "hss";
         const m12mhv = ft === "baito" ? template_M12BAITO_MH : ft === "hss" ? template_M12HSS_MH : template_M12HGDR_MH;
         if (typeof m12mhv !== "undefined") finalCode = m12mhv;
-    } else if (input.workType === "G78_MH") {
-        if (typeof template_G78_MH !== "undefined") finalCode = template_G78_MH;
     } else if (input.workType === "M12") {
         const ft = input.m12FinishType || "hss";
         const m12v = ft === "baito" ? template_M12BAITO : ft === "hss" ? template_M12HSS : template_M12HGDR;
         if (typeof m12v !== "undefined") finalCode = m12v;
-    } else if (input.workType === "G18_40") {
-        if (typeof template_G18_40 !== "undefined") finalCode = template_G18_40;
-    } else if (input.workType === "G18_42") {
-        if (typeof template_G18_42 !== "undefined") finalCode = template_G18_42;
-    } else if (input.workType === "G18_62") {
-        if (typeof template_G18_62 !== "undefined") finalCode = template_G18_62;
-    } else if (input.workType === "G18_655") {
-        if (typeof template_G18_655 !== "undefined") finalCode = template_G18_655;
-    } else if (input.workType === "G18_6175") {
-        if (typeof template_G18_6175 !== "undefined") finalCode = template_G18_6175;
-    } else if (input.workType === "G18_40_MH") {
-        if (typeof template_G18_40_MH !== "undefined") finalCode = template_G18_40_MH;
-    } else if (input.workType === "G18_42_MH") {
-        if (typeof template_G18_42_MH !== "undefined") finalCode = template_G18_42_MH;
-    } else if (input.workType === "G18_62_MH") {
-        if (typeof template_G18_62_MH !== "undefined") finalCode = template_G18_62_MH;
-    } else if (input.workType === "G18_655_MH") {
-        if (typeof template_G18_655_MH !== "undefined") finalCode = template_G18_655_MH;
-    } else if (input.workType === "G18_6175_MH") {
-        if (typeof template_G18_6175_MH !== "undefined") finalCode = template_G18_6175_MH;
-    } else if (input.workType === "M42X3_25175") {
-        if (typeof template_M42X3_25175 !== "undefined") finalCode = template_M42X3_25175;
-    } else if (input.workType === "M42X3_25175_20") {
-        if (typeof template_M42X3_25175_20 !== "undefined") finalCode = template_M42X3_25175_20;
-    } else if (input.workType === "M42X3_25175_22") {
-        if (typeof template_M42X3_25175_22 !== "undefined") finalCode = template_M42X3_25175_22;
-    } else if (input.workType === "M42X3_25175_16") {
-        if (typeof template_M42X3_25175_16 !== "undefined") finalCode = template_M42X3_25175_16;
-    } else if (input.workType === "TOMESEN_M16") {
-        if (typeof template_TOMESEN_M16 !== "undefined") finalCode = template_TOMESEN_M16;
-    } else if (input.workType === "TOMESEN_M18") {
-        if (typeof template_TOMESEN_M18 !== "undefined") finalCode = template_TOMESEN_M18;
-    } else if (input.workType === "TOMESEN_M22") {
-        if (typeof template_TOMESEN_M22 !== "undefined") finalCode = template_TOMESEN_M22;
-    } else if (input.workType === "TOMESEN_M24") {
-        if (typeof template_TOMESEN_M24 !== "undefined") finalCode = template_TOMESEN_M24;
-    } else if (input.workType === "TOMESEN_M35") {
-        if (typeof template_TOMESEN_M35 !== "undefined") finalCode = template_TOMESEN_M35;
-    } else if (input.workType === "S_G12") {
-        if (typeof template_S_G12 !== "undefined") finalCode = template_S_G12;
-    } else if (input.workType === "S_G38") {
-        if (typeof template_S_G38 !== "undefined") finalCode = template_S_G38;
-    } else if (input.workType === "S_G78") {
-        if (typeof template_S_G78 !== "undefined") finalCode = template_S_G78;
-    } else if (input.workType === "S_M12") {
-        if (typeof template_S_M12 !== "undefined") finalCode = template_S_M12;
-    } else if (input.workType === "S_M15") {
-        if (typeof template_S_M15 !== "undefined") finalCode = template_S_M15;
-    } else if (input.workType === "G78_ST_20175") {
-        if (typeof template_G78_ST_20175 !== "undefined") finalCode = template_G78_ST_20175;
-    } else if (input.workType === "G78_ST_20175_16") {
-        if (typeof template_G78_ST_20175_16 !== "undefined") finalCode = template_G78_ST_20175_16;
     } else {
-        if (typeof template_G78 !== "undefined") finalCode = template_G78;
+        // 標準ワーク種別: テンプレート本文をレジストリ（各テンプレJSの registerWorkType）から取得する。
+        // 上の特殊ケース（Tube / M40 / G12B / M12・M12_MH のバリアント選択）以外はすべてここを通る。
+        // 未登録の workType は従来どおり template_G78 をフォールバックとする。
+        // （M40 / G12B / M12系の特殊処理は移行後段フェーズで behavior 化予定）
+        const _def = getWorkTypeDefinition(input.workType);
+        if (_def && typeof _def.template === "string") {
+            finalCode = _def.template;
+        } else if (typeof template_G78 !== "undefined") {
+            finalCode = template_G78;
+        }
     }
 
     if (!finalCode) {
