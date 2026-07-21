@@ -8,9 +8,10 @@
 
 ## よく使うコマンド
 
-- `npm run check` — 総合ゲート（lint → format:check → test → check:templates → check:files → check:worktypes → check:machine-tools）。マージ前に必ず通す。
+- `npm run check` — 総合ゲート（lint → format:check → test → check:templates → check:files → check:worktypes → check:machine-tools → check:template-reg）。マージ前に必ず通す。
 - `npm run check:worktypes` — ワーク種別レジストリ整合性チェック（`scripts/check-work-types.mjs`）。自動生成した径マップがリファクタ前の値と一致するか、登録漏れ・UI/レジストリの不一致がないかを検証する。
 - `npm run check:machine-tools` — 機械キー充足チェック（`scripts/check-machine-tools.mjs`）。テンプレが使う `{{機械キー}}` が全機種の機械定義に存在するかを検証する（未定義＝エラー。空 `""` は設備差による意図的設定として正常扱い）。
+- `npm run check:template-reg` — テンプレート結線チェック（`scripts/check-template-registration.mjs`）。テンプレJSが `gui-v2.html` の `<script>` で読み込まれているか（読込漏れ）、各 `const template_XXX` が registerWorkType か behavior から参照されているか（孤立テンプレ）を検証する。
 - `npm run test:golden` — ゴールデンテスト。`npm run test:golden:update` で更新（`UPDATE_GOLDEN=1` 形式のため POSIX シェルで実行）。
 - `npm run test:e2e` — Playwright E2E（`check` 非包含。初回は `npx playwright install chromium`）。
 
