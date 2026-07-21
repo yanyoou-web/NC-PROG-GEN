@@ -3,13 +3,13 @@
 ## 目的
 
 - 入力値と機械設定から NC テキストを安全に生成する。
-- UI 文言は `assets/i18n.js` で管理する。
+- UI 文言は `assets/i18n-v2.js` で管理する。
 
 ## 主要入力
 
-- 機械: `NCL044` / `NCL085` / `NCL012`
-- ワーク: `M12` / `M15` / `M18` / `M22` / `G78` / `M40` / `Tube` / `Tonbo`
-- 内径スタイル: `Hirazoko` / `Ichimonji` / `Normal` / `Yose` / `CrossBig` / `CrossSmall`
+- 機械: `assets/data-v2.js` の `machines` に定義された機種を UI がそのまま表示する（現在 `NCL044` / `NCL015` / `NCL085` / `NCL012` / `CL-25-2` / `CL-25-1` の6機種）。
+- ワーク種別: `data-v2.js` の `workTypeRegistry`（各テンプレJSが `registerWorkType` で登録）が正。UI は `gui-v2.js` の `WORK_TYPE_GROUPS`（主要ネジ系 / 主要ネジMH系 / スーパー系 / G18系 / ST系 / トメセン系 / チューブ系）に表示する。
+- 内径スタイル: `Hirazoko` / `Ichimonji` / `Normal` / `Yose` / `YoseRelay` / `CrossSmall`。各ワーク種別で選べる組合せは `registerWorkType(ui.styles)` で定義する。
 
 ## 重要ルール（安全）
 
