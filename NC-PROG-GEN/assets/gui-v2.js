@@ -758,7 +758,7 @@ function buildDepthsScreen() {
     var idManual = wizardState.idDepthManual;
     var idLabel = (isCross || isIchimonjiNeedsCp)
         ? (isCross
-            ? 'IP（原点〜穴中心距離）(mm)<span class="depth-ip-hint"> ← CP = IP − 相手径/2</span>'
+            ? 'IP（原点〜穴中心距離）(mm)'
             : 'IP（原点〜一文字位置）(mm)<span class="depth-ip-hint"> ← CP = IP − ドリル径/2</span>')
         : '内径深さ (mm)';
     var idHtml;
