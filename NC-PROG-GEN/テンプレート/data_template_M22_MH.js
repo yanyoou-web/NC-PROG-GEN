@@ -228,3 +228,21 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "M22_MH",
+    ui: {
+        label: "M22MH",
+        group: "主要ネジMH系",
+        order: 40,
+        styles: ["Hirazoko", "Normal", "YoseRelay", "Yose", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: 10,
+        drillDiameterMm: 7,
+        flatBottomToolDiameterMm: null,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: true, tube: false },
+    template: template_M22_MH,
+});

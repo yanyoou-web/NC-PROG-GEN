@@ -226,3 +226,21 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "M18_MH",
+    ui: {
+        label: "M18MH",
+        group: "主要ネジMH系",
+        order: 30,
+        styles: ["Hirazoko", "Normal", "YoseRelay", "Yose", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: 8,
+        drillDiameterMm: 7,
+        flatBottomToolDiameterMm: null,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: true, tube: false },
+    template: template_M18_MH,
+});

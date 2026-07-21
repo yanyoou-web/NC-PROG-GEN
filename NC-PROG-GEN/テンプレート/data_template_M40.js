@@ -231,3 +231,23 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "M40",
+    ui: {
+        label: "M40",
+        group: "主要ネジ系",
+        order: 80,
+        styles: ["Hirazoko", "Normal", "YoseRelay", "Yose", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: 22,
+        drillDiameterMm: 14,
+        flatBottomToolDiameterMm: 16,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: false, tube: false },
+    flatBottomExit: { defaultLine: "U-.2(X16)" },
+    behavior: "m40",
+    template: template_M40,
+});

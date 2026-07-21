@@ -227,3 +227,21 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "M15",
+    ui: {
+        label: "M15",
+        group: "主要ネジ系",
+        order: 40,
+        styles: ["Hirazoko", "Normal", "YoseRelay", "Yose", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: 6,
+        drillDiameterMm: 3.3,
+        flatBottomToolDiameterMm: 6,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: false, tube: false },
+    template: template_M15,
+});

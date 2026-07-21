@@ -145,34 +145,36 @@ var STYLE_ICON_HTML = {
         +'</g></svg></div>',
 };
 
+/* 許可する加工スタイルは各テンプレJSの registerWorkType(ui.styles) から取得する
+   （データは data-v2.js の workTypeRegistry 経由）。 */
 function getAvailableStyles(workType) {
-    if (workType==="J_M8_300"||workType==="J_M8_200") return ["CrossSmall"];
-    if (workType==="M8_21"||workType==="M8_31") return ["Ichimonji","YoseRelay","CrossSmall"];
-    if (workType==="G18_40"||workType==="G18_42"||workType==="G18_40_MH"||workType==="G18_42_MH")
-        return ["YoseRelay","CrossSmall"];
-    if (workType==="G18_62"||workType==="G18_655"||workType==="G18_6175"||
-        workType==="G18_62_MH"||workType==="G18_655_MH"||workType==="G18_6175_MH")
-        return ["Hirazoko","Normal","YoseRelay"];
-    if (workType==="M42X3_25175"||workType==="M42X3_25175_16"||workType==="M42X3_25175_20"||workType==="M42X3_25175_22")
-        return ["Hirazoko","Normal","Yose","YoseRelay"];
-    // G78-ST系はデフォルト（平底/通常/ヨセ中継/ヨセ/交差穴（小径）。一文字DR平底なし・中バリ処理ブロックなし）
-    if (workType==="M12"||workType==="M12_MH") return ["Ichimonji","Normal","YoseRelay","CrossSmall"];
-    if (workType==="TOMESEN_M16"||workType==="TOMESEN_M18"||workType==="TOMESEN_M22"||workType==="TOMESEN_M24"||workType==="TOMESEN_M35")
-        return ["Hirazoko","Ichimonji","Normal","YoseRelay","Yose"];
-    return ["Hirazoko","Normal","YoseRelay","Yose","CrossSmall"];
+    var def = getWorkTypeDefinition(workType);
+    return def && def.ui && def.ui.styles ? def.ui.styles : [];
 }
 
 // ========== Section 3: 定数 ==========
 
-var WORK_TYPE_GROUPS = [
-    {label:"主要ネジ系",   items:[{value:"J_M8_200",label:"M8 φ2.0"},{value:"J_M8_300",label:"M8 φ3.0"},{value:"M12",label:"M12"},{value:"M15",label:"M15"},{value:"M18",label:"M18"},{value:"M22",label:"M22"},{value:"G78",label:"G7/8"},{value:"M40",label:"M40"}]},
-    {label:"主要ネジMH系", items:[{value:"M12_MH",label:"M12MH"},{value:"M15_MH",label:"M15MH"},{value:"M18_MH",label:"M18MH"},{value:"M22_MH",label:"M22MH"},{value:"G78_MH",label:"G7/8MH"},{value:"M40_MH",label:"M40MH"}]},
-    {label:"スーパー系",   items:[{value:"M8_21",label:"S-M8 φ2.1"},{value:"M8_31",label:"S-M8 φ3.1"},{value:"S_M12",label:"S-M12"},{value:"S_M15",label:"S-M15"},{value:"S_G12",label:"S-G12"},{value:"S_G38",label:"S-G38"},{value:"S_G78",label:"S-G78"}]},
-    {label:"G18系",       items:[{value:"G18_40",label:"G18 φ4"},{value:"G18_42",label:"G18 φ4.2"},{value:"G18_6175",label:"G18 φ6.175"},{value:"G18_62",label:"G18 φ6.2"},{value:"G18_655",label:"G18 φ6.55"},{value:"G18_40_MH",label:"G18 φ4MH"},{value:"G18_42_MH",label:"G18 φ4.2MH"},{value:"G18_6175_MH",label:"G18 φ6.175MH"},{value:"G18_62_MH",label:"G18 φ6.2MH"},{value:"G18_655_MH",label:"G18 φ6.55MH"}]},
-    {label:"ST系",        items:[{value:"G12B_G_ST_12175_8",label:"G12ST φ12.175 →8"},{value:"G78_ST_20175",label:"G78ST φ20.175"},{value:"G78_ST_20175_16",label:"G78ST φ20.175 →16"},{value:"M42X3_25175",label:"M42ST φ25.175"},{value:"M42X3_25175_16",label:"M42ST φ25.175 →16"},{value:"M42X3_25175_20",label:"M42ST φ25.175 →20"},{value:"M42X3_25175_22",label:"M42ST φ25.175 →22"}]},
-    {label:"トメセン系",   items:[{value:"TOMESEN_M16",label:"M16 TOMESEN"},{value:"TOMESEN_M18",label:"M18 TOMESEN"},{value:"TOMESEN_M22",label:"M22 TOMESEN"},{value:"TOMESEN_M24",label:"M24 TOMESEN"},{value:"TOMESEN_M35",label:"M35 TOMESEN"}]},
-    {label:"チューブ系",   items:[{value:"Tube",label:"TUBE"},{value:"Tube_MH",label:"TUBEMH"}]},
-];
+/* ワーク種別グループのグループ表示順。個々のワーク種別（value/label/表示順）は
+   各テンプレJSの registerWorkType(ui.group / ui.label / ui.order) から取得し、
+   buildWorkTypeGroups() で従来の WORK_TYPE_GROUPS と同じ構造を再構成する。 */
+var WORK_TYPE_GROUP_ORDER = ["主要ネジ系","主要ネジMH系","スーパー系","G18系","ST系","トメセン系","チューブ系"];
+function buildWorkTypeGroups() {
+    var grouped = Object.create(null);
+    Object.keys(workTypeRegistry).forEach(function(id) {
+        var def = workTypeRegistry[id];
+        var g = def.ui.group;
+        if (!grouped[g]) grouped[g] = [];
+        grouped[g].push({value:id, label:def.ui.label, order:def.ui.order||0});
+    });
+    return WORK_TYPE_GROUP_ORDER.map(function(g) {
+        return {
+            label: g,
+            items: (grouped[g]||[]).sort(function(a,b){return a.order-b.order;})
+                .map(function(it){return {value:it.value, label:it.label};}),
+        };
+    });
+}
+var WORK_TYPE_GROUPS = buildWorkTypeGroups();
 var ATE_PRESETS = [
     {value:"42.5",label:"42.5（15角）",kaku:true},{value:"41",label:"41（18角）",kaku:true},
     {value:"39.5",label:"39.5（21角）",kaku:true},{value:"37.5",label:"37.5（25角）",kaku:true},
@@ -186,15 +188,12 @@ var DRAW_REV_OPTIONS = ["NONE","A","B","C","D","E"];
 var DRILL_QUICK_BTNS = [{v:"20.4",lbl:"20.4<br><small>φ29</small>"},{v:"16.8",lbl:"16.8<br><small>φ23</small>"},{v:"14.4",lbl:"14.4<br><small>φ19</small>"},{v:"11.4",lbl:"11.4<br><small>φ14</small>"},{v:"7.2",lbl:"7.2<br><small>φ7</small>"}];
 
 /* ドリルの刃長制限（mm）。物理的な工具の長さによる上限で、超えても加工自体は止めない（警告のみ）。
-   G18系・M8/ASWD系はワーク種別で一意に決まる。M12はHGDR工具のときのみG18系と同じ54mm制限が掛かる
-   （getDrillMaxDepthMMで判定、下記マップには含めない）。 */
-var DRILL_MAX_DEPTH_MM = {
-    G18_40:54, G18_42:54, G18_62:54, G18_655:54, G18_6175:54,
-    G18_40_MH:54, G18_42_MH:54, G18_62_MH:54, G18_655_MH:54, G18_6175_MH:54,
-    M8_21:24, M8_31:30, J_M8_300:30, J_M8_200:24,
-};
+   G18系・M8/ASWD系はワーク種別で一意に決まり、各テンプレJSの registerWorkType(machining.drillMaxDepthMm)
+   に持つ。M12はHGDR工具のときのみG18系と同じ54mm制限が掛かる（静的値ではないため下記で判定）。 */
 function getDrillMaxDepthMM(wt) {
-    if (DRILL_MAX_DEPTH_MM[wt]!=null) return DRILL_MAX_DEPTH_MM[wt];
+    var def = getWorkTypeDefinition(wt);
+    var v = def && def.machining ? def.machining.drillMaxDepthMm : null;
+    if (v != null) return v;
     if (isM12Like(wt) && classifyDrillMode(wt)==="g1") return 54; // M12×HGDRはG18と同じ物理ドリル
     return null;
 }
@@ -218,15 +217,18 @@ var screenStack = [];
 
 // ========== Section 5: ナビゲーション ==========
 
+/* MH系 / チューブ系の判定は各テンプレJSの registerWorkType(features.mh / features.tube) から取得する。 */
 function isMHWorkType(wt) {
-    return wt==="M12_MH"||wt==="M15_MH"||wt==="M18_MH"||wt==="M22_MH"||wt==="M40_MH"||wt==="G78_MH"||
-           wt==="G18_40_MH"||wt==="G18_42_MH"||wt==="G18_62_MH"||wt==="G18_655_MH"||wt==="G18_6175_MH"||
-           wt==="Tube_MH";
+    var def = getWorkTypeDefinition(wt);
+    return Boolean(def && def.features && def.features.mh);
 }
 function isM12Like(wt)   { return wt==="M12"||wt==="M12_MH"; }
 function isG18Small(wt)  { return wt==="G18_40"||wt==="G18_42"||wt==="G18_40_MH"||wt==="G18_42_MH"; }
 function isCrossStyle(s) { return s==="CrossSmall"; }
-function isTubeWorkType(wt) { return wt==="Tube"||wt==="Tube_MH"; }
+function isTubeWorkType(wt) {
+    var def = getWorkTypeDefinition(wt);
+    return Boolean(def && def.features && def.features.tube);
+}
 /* ドリル深さの自動計算式を持つスタイルか（Normal＝通常バイト加工は式が無く常に手入力）。
    一覧は computeDrillDepthAuto() の分岐と対応させること。 */
 function styleHasDrillAutoCalc(st) {

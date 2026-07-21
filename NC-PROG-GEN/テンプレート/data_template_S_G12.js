@@ -157,3 +157,21 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "S_G12",
+    ui: {
+        label: "S-G12",
+        group: "スーパー系",
+        order: 50,
+        styles: ["Hirazoko", "Normal", "YoseRelay", "Yose", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: 10,
+        drillDiameterMm: 7,
+        flatBottomToolDiameterMm: 8,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: false, tube: false },
+    template: template_S_G12,
+});

@@ -150,3 +150,21 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "S_M15",
+    ui: {
+        label: "S-M15",
+        group: "スーパー系",
+        order: 40,
+        styles: ["Hirazoko", "Normal", "YoseRelay", "Yose", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: 6.5,
+        drillDiameterMm: 3.3,
+        flatBottomToolDiameterMm: 6,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: false, tube: false },
+    template: template_S_M15,
+});

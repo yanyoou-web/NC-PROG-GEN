@@ -76,3 +76,21 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "G18_655_MH",
+    ui: {
+        label: "G18 φ6.55MH",
+        group: "G18系",
+        order: 100,
+        styles: ["Hirazoko", "Normal", "YoseRelay"],
+    },
+    machining: {
+        idDiameterMm: 6.55,
+        drillDiameterMm: 4.15,
+        flatBottomToolDiameterMm: 4,
+        drillMaxDepthMm: 54,
+    },
+    features: { mh: true, tube: false },
+    template: template_G18_655_MH,
+});

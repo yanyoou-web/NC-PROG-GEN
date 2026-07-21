@@ -66,3 +66,22 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "Tube_MH",
+    ui: {
+        label: "TUBEMH",
+        group: "チューブ系",
+        order: 20,
+        styles: ["Hirazoko", "Normal", "YoseRelay", "Yose", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: null,
+        drillDiameterMm: null,
+        flatBottomToolDiameterMm: null,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: true, tube: true },
+    behavior: "tube",
+    template: template_Tube_MH,
+});

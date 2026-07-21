@@ -18,7 +18,8 @@
     "test:e2e": "node scripts/test-e2e-validation.mjs",
     "check:templates": "node scripts/check-template-placeholders.mjs",
     "check:files": "node scripts/check-referenced-files-exist.mjs",
-    "check": "npm run lint && npm run format:check && npm run test && npm run check:templates && npm run check:files"
+    "check:worktypes": "node scripts/check-work-types.mjs",
+    "check": "npm run lint && npm run format:check && npm run test && npm run check:templates && npm run check:files && npm run check:worktypes"
   },
   "devDependencies": {
     "eslint": "^10.2.1",

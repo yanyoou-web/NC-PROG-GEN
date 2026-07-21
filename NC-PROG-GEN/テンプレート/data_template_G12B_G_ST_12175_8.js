@@ -99,3 +99,22 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "G12B_G_ST_12175_8",
+    ui: {
+        label: "G12ST φ12.175 →8",
+        group: "ST系",
+        order: 10,
+        styles: ["Hirazoko", "Normal", "YoseRelay", "Yose", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: 8,
+        drillDiameterMm: 7,
+        flatBottomToolDiameterMm: 8,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: false, tube: false },
+    behavior: "g12b",
+    template: template_G12B_G_ST_12175_8,
+});

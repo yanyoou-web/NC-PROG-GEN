@@ -60,6 +60,9 @@ export default [
         // data.js / data-v2.js globals
         machines: 'readonly',
         tubeData: 'readonly',
+        workTypeRegistry: 'readonly',
+        registerWorkType: 'readonly',
+        getWorkTypeDefinition: 'readonly',
         // テンプレートグローバル（テンプレートディレクトリから自動生成）
         ...templateGlobals
       }
