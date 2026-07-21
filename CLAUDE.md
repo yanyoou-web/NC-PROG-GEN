@@ -24,7 +24,7 @@
   - `gui-v2.js` は `logic-v2.js` が参照する補助関数（`isMHWorkType` 等）を持つため、`logic-v2.js` より前に置く。
 - 生成フロー: `wizardState` → `buildInputFromState()`（gui-v2.js）→ `generateGCode(input, machineName)`（logic-v2.js）→ `{ displayHtml, plainText }`（`plainText` がコピー・保存用の Gコード）。呼び出す直前に `currentInternalStyle = wizardState.internalStyle;` で同期させる（logic-v2.js が内部でこの値を参照するため）。
 - **入力チェック**: 業種固有ルール（idDepth>7、CrossSmall 相手径±0.5mm ルールなど）は logic-v2.js の4関数（`validateBasicSelections` / `validateDrawNumAndAuthor` / `validateCommonNumericFields` / `validateStyleSpecificRules`）に分離され、`validateDomainRules()` として合成して `generateGCode()` の最終ゲートから呼ばれる。ウィザードの「加工深さ」画面の「次へ」（gui-v2.js の `next-depths` アクション）でも図番・作成者チェックを除く3関数を早期に呼ぶ。新ルールは該当関数に追加し、**ロジックを二重実装しない**。
-- **isXxxWorkType ヘルパーパターン**: 複数の workType を1グループとして扱う判定関数（例: `isTomesenWorkType` = M16/M18/M22/M24/M35）。新規追加時は logic-v2.js 冒頭の既存 `isXxxWorkType` 群と並べて定義する（`FLAT_BOTTOM_TOOL_DIA_MM` などの定数より前）。加工スタイルの選択肢絞り込みは gui-v2.js の `getAvailableStyles(workType)`（純粋関数）で行い、デフォルト分岐で足りなければ専用分岐を追加する。
+- **isXxxWorkType ヘルパーパターン**: 複数の workType を1グループとして扱う判定関数（例: `isTomesenWorkType` = M16/M18/M22/M24/M35）。ドリルブロック選択など固定データ化していない分岐で使う。新規追加時は logic-v2.js 冒頭の既存 `isXxxWorkType` 群と並べて定義する（`FLAT_BOTTOM_TOOL_DIA_MM` などの定数より前）。加工スタイルの選択肢は各テンプレJSの `registerWorkType(ui.styles)` で定義し、gui-v2.js の `getAvailableStyles(workType)` がレジストリから取得する（workType ごとの専用分岐は不要）。
 
 ## ファイルごとの変更可否
 
@@ -49,8 +49,8 @@
 - `テンプレート/` は**ワーク種別1つにつき1ファイル**（例: `data_template_M18.js` = M18用ひな形）。`{{変数名}}` は実行時にアプリが実際の数値へ置き換える。
 - **`.nc` ファイル（削除禁止）**: ユーザーが内容を改変・検討している**草稿段階**のテンプレート。`<script>` タグに未登録で「どこからも参照されていない」ように見えるが、これは正常な状態。**未参照であることだけを理由に削除候補・未使用ファイルと判断してはならない**。ユーザーの明示的な指示がない限り内容も変更しない。
 - 確定後のプロセス: `.nc`（草稿）→ ユーザーが内容を確定 → `.js` にリネーム → `registerWorkType` を追記 → `npm run gen:template-scripts` で `gui-v2.html` の `<script>` を同期 → 結線の残作業（特殊処理が要る場合の behavior 追加など）を実施。
-- **新規テンプレート追加**: 触るファイルは固定5つ（`gui-v2.html` / `logic-v2.js` / `gui-v2.js` / `data-v2.js` / `blocks-v2.js`）。標準手順は `docs/template-add-checklist.md`。
-  - ブリーフ（作業指示書: ワーク種別名・内径Φ・ドリルφ・バイトΦ・`getAvailableStyles` への専用分岐の要否）とテンプレート JS を一緒に受け取る。加工仕様3点（内径Φ・ドリルφ・バイトΦ）が明記されていれば再確認せず実装してよい（ブリーフがない場合のみ確認する）。
+- **新規テンプレート追加**: 標準ワーク種別はテンプレJSへの `registerWorkType` 追加と `npm run gen:template-scripts`（`gui-v2.html` の `<script>` 同期）が基本。新工具が要れば `data-v2.js`、特殊処理が要れば behavior を足す（`gui-v2.js`/`logic-v2.js` への workType 分岐は不要）。標準手順は `docs/template-add-checklist.md`。
+  - ブリーフ（作業指示書: ワーク種別名・内径Φ・ドリルφ・バイトΦ・許可スタイルなど `registerWorkType(ui/machining)` に書く情報）とテンプレート JS を一緒に受け取る。加工仕様3点（内径Φ・ドリルφ・バイトΦ）が明記されていれば再確認せず実装してよい（ブリーフがない場合のみ確認する）。
   - 内径Φ＝バイトΦ（同径）時の `{{平底_内径仕上出口}}` は `U-.2`、異径時は `X{toolDia}.F.03`（`computeFlatBottomExitLine` の仕様、`blocks-v2.js`）。
 
 ## ワーク種別レジストリ（段階移行フェーズ1〜8）

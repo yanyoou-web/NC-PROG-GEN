@@ -51,7 +51,7 @@ NC-PROG-GEN/                  # リポジトリルート
   ```
 
 - 生成フロー: ウィザード入力（`wizardState`）→ `buildInputFromState()`（gui-v2.js）→ `generateGCode(input, machineName)`（logic-v2.js）→ テンプレートの `{{...}}` プレースホルダーを実数値・ブロック文字列へ置換 → `{ displayHtml, plainText }` を返す（`plainText` がコピー・保存用の Gコード）。
-- テンプレートは **1 ワーク種別 = 1 ファイル**（`テンプレート/data_template_*.js`）。既存テンプレートの Gコード本文は原則変更しない。
+- テンプレートは **1 ワーク種別 = 1 ファイル**（`テンプレート/data_template_*.js`）。既存テンプレートの Gコード本文は原則変更しない。各ファイルは末尾で `registerWorkType(...)` を呼び、ワーク固有情報（UI表示・加工径・許可スタイル・属性・behavior）を `data-v2.js` のレジストリへ登録する。`gui-v2.js` / `logic-v2.js` / `blocks-v2.js` はこの登録情報を参照するため、workType ごとの分岐を持たない。
 
 ## 開発環境
 
@@ -66,13 +66,18 @@ npm install                        # eslint / prettier / playwright
 
 | コマンド | 内容 |
 |---|---|
-| `npm run check` | **総合ゲート**: lint → format:check → test → check:templates → check:files。マージ前に必ず通す |
+| `npm run check` | **総合ゲート**: lint → format:check → test → check:templates → check:files → check:worktypes → check:machine-tools → check:template-reg → check:template-scripts。マージ前に必ず通す |
 | `npm test` | 単体・回帰・ゴールデンテスト一式（tube / calc / drill-depth / id-depth / golden） |
 | `npm run test:golden` | ゴールデン（スナップショット）テスト |
 | `npm run test:golden:update` | スナップショット更新（`UPDATE_GOLDEN=1`）。差分は必ず内容を確認してからコミットする |
 | `npm run test:e2e` | Playwright によるブラウザ E2E（`check` 非包含。初回は `npx playwright install chromium`） |
 | `npm run check:templates` | テンプレート内の `{{key}}` が logic-v2.js 側で定義済みか静的検証 |
 | `npm run check:files` | `gui-v2.html` が参照するファイルの実在チェック |
+| `npm run check:worktypes` | ワーク種別レジストリ整合性（径マップのリファクタ前一致・登録漏れ・behavior 妥当性） |
+| `npm run check:machine-tools` | テンプレの使う `{{機械キー}}` が全機種の機械定義に存在するか（空 `""` は設備差で正常） |
+| `npm run check:template-reg` | テンプレJSの読込漏れ・孤立テンプレ（未参照の `const template_XXX`）検出 |
+| `npm run check:template-scripts` | `gui-v2.html` のテンプレ `<script>` が実ファイルと同期済みか（`--check`） |
+| `npm run gen:template-scripts` | `gui-v2.html` のテンプレ `<script>` を `テンプレート/*.js` から自動同期 |
 | `npm run lint` / `lint:fix` | ESLint（アプリ JS と scripts/*.mjs） |
 | `npm run format` / `format:check` | Prettier（設定ファイル・docs/*.md・.vscode/*.json が対象） |
 
@@ -84,7 +89,7 @@ npm install                        # eslint / prettier / playwright
 
 ## テンプレート追加
 
-新規ワーク種別の追加で触るファイルは固定5つ: `gui-v2.html` / `logic-v2.js` / `gui-v2.js` / `data-v2.js` / `blocks-v2.js`。標準手順（フェーズ0〜5のチェックリスト）は [docs/template-add-checklist.md](docs/template-add-checklist.md) を参照。
+ワーク固有情報（UI表示・加工径・許可スタイル・属性など）は各テンプレJSの `registerWorkType(...)` に集約されており（ワーク種別レジストリ）、`gui-v2.js` / `logic-v2.js` は登録情報を参照する。**標準ワーク種別の追加はテンプレJSに `registerWorkType` を書き、`npm run gen:template-scripts` で `gui-v2.html` の `<script>` を同期するだけ**で UI 表示・生成まで通る（新工具が要れば `data-v2.js`、特殊処理が要れば behavior を追加）。標準手順（フェーズ0〜5のチェックリスト）は [docs/template-add-checklist.md](docs/template-add-checklist.md) を参照。
 
 `テンプレート/` 内に `.nc` ファイルがある場合、それは検討中の**草稿**です。`<script>` 未登録で未参照に見えても正常な状態なので、削除・変更しないでください。
 
