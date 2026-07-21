@@ -8,7 +8,8 @@
 
 ## よく使うコマンド
 
-- `npm run check` — 総合ゲート（lint → format:check → test → check:templates → check:files → check:worktypes → check:machine-tools → check:template-reg）。マージ前に必ず通す。
+- `npm run check` — 総合ゲート（lint → format:check → test → check:templates → check:files → check:worktypes → check:machine-tools → check:template-reg → check:template-scripts）。マージ前に必ず通す。
+- `npm run gen:template-scripts` — `gui-v2.html` のテンプレ `<script>` 群を `テンプレート/*.js` から自動同期する（`scripts/gen-template-scripts.mjs`）。**新規テンプレJS追加時は手で `<script>` を書かずこれを実行する。** `check:template-scripts`（`--check`）が `npm run check` で同期済みかを検証する。
 - `npm run check:worktypes` — ワーク種別レジストリ整合性チェック（`scripts/check-work-types.mjs`）。自動生成した径マップがリファクタ前の値と一致するか、登録漏れ・UI/レジストリの不一致がないかを検証する。
 - `npm run check:machine-tools` — 機械キー充足チェック（`scripts/check-machine-tools.mjs`）。テンプレが使う `{{機械キー}}` が全機種の機械定義に存在するかを検証する（未定義＝エラー。空 `""` は設備差による意図的設定として正常扱い）。
 - `npm run check:template-reg` — テンプレート結線チェック（`scripts/check-template-registration.mjs`）。テンプレJSが `gui-v2.html` の `<script>` で読み込まれているか（読込漏れ）、各 `const template_XXX` が registerWorkType か behavior から参照されているか（孤立テンプレ）を検証する。
@@ -47,7 +48,7 @@
 
 - `テンプレート/` は**ワーク種別1つにつき1ファイル**（例: `data_template_M18.js` = M18用ひな形）。`{{変数名}}` は実行時にアプリが実際の数値へ置き換える。
 - **`.nc` ファイル（削除禁止）**: ユーザーが内容を改変・検討している**草稿段階**のテンプレート。`<script>` タグに未登録で「どこからも参照されていない」ように見えるが、これは正常な状態。**未参照であることだけを理由に削除候補・未使用ファイルと判断してはならない**。ユーザーの明示的な指示がない限り内容も変更しない。
-- 確定後のプロセス: `.nc`（草稿）→ ユーザーが内容を確定 → `.js` にリネーム → `gui-v2.html` に `<script>` 追加 → 結線の残作業（`isXxxWorkType` 判定・`getAvailableStyles` 絞り込み・ブリーフ仕様の反映）を実施。
+- 確定後のプロセス: `.nc`（草稿）→ ユーザーが内容を確定 → `.js` にリネーム → `registerWorkType` を追記 → `npm run gen:template-scripts` で `gui-v2.html` の `<script>` を同期 → 結線の残作業（特殊処理が要る場合の behavior 追加など）を実施。
 - **新規テンプレート追加**: 触るファイルは固定5つ（`gui-v2.html` / `logic-v2.js` / `gui-v2.js` / `data-v2.js` / `blocks-v2.js`）。標準手順は `docs/template-add-checklist.md`。
   - ブリーフ（作業指示書: ワーク種別名・内径Φ・ドリルφ・バイトΦ・`getAvailableStyles` への専用分岐の要否）とテンプレート JS を一緒に受け取る。加工仕様3点（内径Φ・ドリルφ・バイトΦ）が明記されていれば再確認せず実装してよい（ブリーフがない場合のみ確認する）。
   - 内径Φ＝バイトΦ（同径）時の `{{平底_内径仕上出口}}` は `U-.2`、異径時は `X{toolDia}.F.03`（`computeFlatBottomExitLine` の仕様、`blocks-v2.js`）。
