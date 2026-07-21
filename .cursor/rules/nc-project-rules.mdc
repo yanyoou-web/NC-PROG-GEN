@@ -51,7 +51,7 @@ alwaysApply: true
 
 ## テンプレート追加手順
 
-- 新規テンプレート追加時は、ブリーフ（作業指示書：ワーク種別名・内径Φ・ドリルφ・バイトΦ・`getAvailableStyles` への専用分岐が必要かなど）とテンプレートJSファイルを一緒に Agent に送る。
+- 新規テンプレート追加時は、ブリーフ（作業指示書：ワーク種別名・内径Φ・ドリルφ・バイトΦ・許可スタイルなど `registerWorkType(ui/machining)` に書く情報）とテンプレートJSファイルを一緒に Agent に送る。標準ワーク種別は `registerWorkType` 追加と `npm run gen:template-scripts`（`<script>` 同期）が基本で、`gui-v2.js`/`logic-v2.js` への workType 分岐は不要。
 - ブリーフに加工仕様3点（内径Φ・ドリルφ・バイトΦ）が明記されていれば Agent は再確認せず実装してよい（ブリーフがない場合のみ確認する）。
 - 内径Φ＝バイトΦ（同径）時の `{{平底_内径仕上出口}}` は `U-.2`、異径時は `X{toolDia}.F.03`（`computeFlatBottomExitLine` の仕様、`blocks-v2.js`）。
 
@@ -75,10 +75,10 @@ alwaysApply: true
 
 ## isXxxWorkType ヘルパーパターン
 
-複数の workType を1つのグループとして束ね、同じルールで扱いたいときに使う判定関数のパターンです。例えば `isTomesenWorkType` は M16/M18/M22/M24/M35 を「トメセン系」としてまとめて扱います。
+複数の workType を1つのグループとして束ね、同じルールで扱いたいときに使う判定関数のパターンです。例えば `isTomesenWorkType` は M16/M18/M22/M24/M35 を「トメセン系」としてまとめて扱います。ドリルブロック選択など、まだ固定データ化していない分岐で使います。
 
 - 新規追加時は `logic-v2.js` 冒頭、既存の `isXxxWorkType` 群と並べて定義する（`FLAT_BOTTOM_TOOL_DIA_MM` などの定数より前に置く）。
-- 加工スタイルの選択肢絞り込みは `gui-v2.js` の `getAvailableStyles(workType)`（純粋関数）で行う。`else` デフォルト分岐では足りない場合は専用分岐を追加する。
+- 加工スタイルの選択肢は各テンプレJSの `registerWorkType(ui.styles)` で定義し、`gui-v2.js` の `getAvailableStyles(workType)` がレジストリから取得する（workType ごとの専用分岐は不要）。
 
 ---
 
