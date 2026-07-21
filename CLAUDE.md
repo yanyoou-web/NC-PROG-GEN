@@ -8,8 +8,9 @@
 
 ## よく使うコマンド
 
-- `npm run check` — 総合ゲート（lint → format:check → test → check:templates → check:files → check:worktypes）。マージ前に必ず通す。
+- `npm run check` — 総合ゲート（lint → format:check → test → check:templates → check:files → check:worktypes → check:machine-tools）。マージ前に必ず通す。
 - `npm run check:worktypes` — ワーク種別レジストリ整合性チェック（`scripts/check-work-types.mjs`）。自動生成した径マップがリファクタ前の値と一致するか、登録漏れ・UI/レジストリの不一致がないかを検証する。
+- `npm run check:machine-tools` — 機械キー充足チェック（`scripts/check-machine-tools.mjs`）。テンプレが使う `{{機械キー}}` が全機種の機械定義に存在するかを検証する（未定義＝エラー。空 `""` は設備差による意図的設定として正常扱い）。
 - `npm run test:golden` — ゴールデンテスト。`npm run test:golden:update` で更新（`UPDATE_GOLDEN=1` 形式のため POSIX シェルで実行）。
 - `npm run test:e2e` — Playwright E2E（`check` 非包含。初回は `npx playwright install chromium`）。
 
@@ -62,7 +63,7 @@
   - `blocks-v2.js`: `computeFlatBottomExitLine()` はワーク固有のデフォルト出口行・許容差・加工径を `flatBottomExit`/`machining` から取得する（共通の判定アルゴリズムのみ関数側に残す）。
   - **特殊処理は名前付き behavior（`logic-v2.js` の `WORK_TYPE_BEHAVIORS`）**: 固定データだけで処理できないワーク種別は `registerWorkType(behavior)` に名前（`"tube"`/`"m40"`/`"g12b"`/`"m12"`）を持たせ、対応する `applyXxxBehavior()` へ振り分ける。未指定は `"standard"`（`registerWorkType(template)` をそのまま使う）。
   - → **新規の標準ワーク種別は、テンプレJSの `registerWorkType` と `gui-v2.html` の `<script>` 追加だけで UI 表示・生成まで通る**（`gui-v2.js`/`logic-v2.js` へ workType ごとの分岐を足す必要はない）。特殊処理が要る場合のみ新しい behavior 関数を追加する。
-- 生成される Gコードはリファクタ前と完全一致する（全ゴールデンケース＋全45種×全スタイルで出力差分ゼロを確認済み）。`npm run check:worktypes` が全ワーク種別について径マップ一致・レジストリ整合・behavior 名の妥当性を機械的に保証する。
+- 生成される Gコードはリファクタ前と完全一致する（全ゴールデンケース＋全45種×全スタイルで出力差分ゼロを確認済み）。`npm run check:worktypes` が全ワーク種別について径マップ一致・レジストリ整合・behavior 名の妥当性を、`npm run check:machine-tools` がテンプレの使う機械キーの全機種充足を、機械的に保証する。
 
 ## 参照ドキュメント
 
