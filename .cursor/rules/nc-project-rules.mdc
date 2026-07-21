@@ -45,7 +45,7 @@ alwaysApply: true
 - `{{変数名}}` は実行時にアプリが実際の数値へ置き換える。
 - Gコード本文の書き換えは機械への指示内容を変えるため、**新規ワーク種別追加時以外は触らない**。既存テンプレートへの行追加・削除は、他の同種テンプレートとの整合性を確認しながら慎重に行う。
 - **`.nc` ファイル（削除禁止）：** ユーザーが内容を改変・検討している**草稿段階**のテンプレート。`<script>` タグに未登録で「どこからも参照されていない」ように見えるが、これは正常な状態。**AIはこの状態だけを理由に削除候補・未使用ファイルと判断してはならない**。ユーザーの明示的な指示がない限り内容も変更しない。
-  確定後のプロセス: `.nc`（草稿） → ユーザーが内容を確定 → `.js` にリネーム → `gui-v2.html` に `<script src="テンプレート/xxxx.js">` を追加 → 「テンプレート追加手順」の残作業（`isXxxWorkType` 判定・`getAvailableStyles` 絞り込み・ブリーフ仕様の反映）を実施。
+  確定後のプロセス: `.nc`（草稿） → ユーザーが内容を確定 → `.js` にリネーム → `registerWorkType` を追記 → `npm run gen:template-scripts` で `gui-v2.html` の `<script>` を同期 → 「テンプレート追加手順」の残作業（特殊処理が要る場合の behavior 追加など）を実施。
 
 ---
 
@@ -69,7 +69,7 @@ alwaysApply: true
   - `blocks-v2.js`: `computeFlatBottomExitLine()` はワーク固有のデフォルト出口行・許容差・加工径を `flatBottomExit`/`machining` から取得する（共通の判定アルゴリズムのみ関数側に残す）。
   - **特殊処理は名前付き behavior（`logic-v2.js` の `WORK_TYPE_BEHAVIORS`）**: 固定データだけで処理できないワーク種別は `registerWorkType(behavior)` に名前（`"tube"`/`"m40"`/`"g12b"`/`"m12"`）を持たせ、対応する `applyXxxBehavior()` へ振り分ける。未指定は `"standard"`（`registerWorkType(template)` をそのまま使う）。
   - → **新規の標準ワーク種別は、テンプレJSの `registerWorkType` と `gui-v2.html` の `<script>` 追加だけで UI 表示・生成まで通る**（`gui-v2.js`/`logic-v2.js` へ workType ごとの分岐を足す必要はない）。特殊処理が要る場合のみ新しい behavior 関数を追加する。
-- 生成される Gコードはリファクタ前と完全一致する（全ゴールデンケース＋全45種×全スタイルで出力差分ゼロを確認済み）。`npm run check:worktypes`（`scripts/check-work-types.mjs`）が全ワーク種別について径マップ一致・レジストリ整合・behavior 名の妥当性を、`npm run check:machine-tools`（`scripts/check-machine-tools.mjs`）がテンプレの使う機械キーの全機種充足を、`npm run check:template-reg`（`scripts/check-template-registration.mjs`）がテンプレJSの読込漏れ・孤立テンプレ（未参照の `const template_XXX`）を、機械的に保証する（いずれも `npm run check` に含む。空 `""` は設備差による意図的設定として正常扱い）。
+- 生成される Gコードはリファクタ前と完全一致する（全ゴールデンケース＋全45種×全スタイルで出力差分ゼロを確認済み）。`npm run check:worktypes`（`scripts/check-work-types.mjs`）が全ワーク種別について径マップ一致・レジストリ整合・behavior 名の妥当性を、`npm run check:machine-tools`（`scripts/check-machine-tools.mjs`）がテンプレの使う機械キーの全機種充足を、`npm run check:template-reg`（`scripts/check-template-registration.mjs`）がテンプレJSの読込漏れ・孤立テンプレ（未参照の `const template_XXX`）を、機械的に保証する（いずれも `npm run check` に含む。空 `""` は設備差による意図的設定として正常扱い）。テンプレ `<script>` は `npm run gen:template-scripts` で `gui-v2.html` に自動同期でき（`check:template-scripts` が `--check` で同期済みを検証）、手作業の追加漏れを構造的に無くす。
 
 ---
 
