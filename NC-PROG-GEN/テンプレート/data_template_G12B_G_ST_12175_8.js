@@ -115,5 +115,6 @@ registerWorkType({
         drillMaxDepthMm: null,
     },
     features: { mh: false, tube: false },
+    behavior: "g12b",
     template: template_G12B_G_ST_12175_8,
 });

@@ -85,8 +85,9 @@ const dump = JSON.parse(
             registry: Object.keys(workTypeRegistry).map(function (id) {
                 var d = workTypeRegistry[id];
                 return { id: id, group: d.ui.group, label: d.ui.label, order: d.ui.order,
-                         styles: d.ui.styles || [] };
+                         styles: d.ui.styles || [], behavior: d.behavior || "standard" };
             }),
+            behaviorNames: typeof WORK_TYPE_BEHAVIORS !== "undefined" ? Object.keys(WORK_TYPE_BEHAVIORS) : [],
             uiIds: WORK_TYPE_GROUPS.reduce(function (a, g) {
                 return a.concat(g.items.map(function (it) { return it.value; }));
             }, [])
@@ -128,7 +129,13 @@ for (const [g, orders] of Object.entries(byGroup)) {
     check(new Set(orders).size === orders.length, `registry: グループ「${g}」内で order が重複しています`);
 }
 
-// 4) UI（WORK_TYPE_GROUPS）に出る全 workType がレジストリに存在し、逆も成り立つ（集合一致）
+// 4) behavior が WORK_TYPE_BEHAVIORS に定義済みであること（未定義の behavior を検出）
+const behaviorSet = new Set(dump.behaviorNames);
+for (const r of dump.registry) {
+    check(behaviorSet.has(r.behavior), `registry: 未定義の behavior が指定されています（${r.id} → "${r.behavior}"）`);
+}
+
+// 5) UI（WORK_TYPE_GROUPS）に出る全 workType がレジストリに存在し、逆も成り立つ（集合一致）
 const regSet = new Set(idsInRegistry);
 const uiSet = new Set(dump.uiIds);
 for (const id of uiSet) check(regSet.has(id), `UI に出る workType がレジストリ未登録: ${id}`);

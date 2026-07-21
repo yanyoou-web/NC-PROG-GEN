@@ -228,5 +228,6 @@ registerWorkType({
         drillMaxDepthMm: null,
     },
     features: { mh: false, tube: false },
+    behavior: "m12",
     template: template_M12HSS,
 });

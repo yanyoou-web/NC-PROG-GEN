@@ -82,5 +82,6 @@ registerWorkType({
         drillMaxDepthMm: null,
     },
     features: { mh: true, tube: true },
+    behavior: "tube",
     template: template_Tube_MH,
 });

@@ -567,6 +567,137 @@ function validateDomainRules(input) {
     ];
 }
 
+// --- ワーク種別ごとの特殊処理（behavior） ---
+// 標準ワーク種別は registerWorkType(template) をそのまま使う（applyStandardBehavior）。
+// 固定データだけでは処理できないワーク種別（Tube のデータ置換・M40 の x50u8・
+// G12B のノーズR・M12/M12_MH のバリアント選択）は、各テンプレJSの registerWorkType に
+// behavior 名（"tube"/"m40"/"g12b"/"m12"）を持たせ、下記の名前付き関数へ振り分ける。
+//
+// 各 behavior 関数は ctx = { input, replaceMap, machineConfig, flatBottomExitLine, definition }
+// を受け取り、選択したテンプレート本文（文字列）を返す。テンプレート選択と同時に必要な
+// replaceMap への追記もここで行う。生成を中断すべきエラー時のみ { error: {...} } を返す。
+
+function applyStandardBehavior(ctx) {
+    const def = ctx.definition;
+    if (def && typeof def.template === "string") return def.template;
+    // 未登録の workType は従来どおり template_G78 をフォールバックとする
+    return typeof template_G78 !== "undefined" ? template_G78 : "";
+}
+
+function applyTubeBehavior(ctx) {
+    const { input, replaceMap, machineConfig, flatBottomExitLine } = ctx;
+    let finalCode =
+        input.workType === "Tube"
+            ? typeof template_Tube !== "undefined"
+                ? template_Tube
+                : ""
+            : typeof template_Tube_MH !== "undefined"
+              ? template_Tube_MH
+              : "";
+    if (typeof tubeData !== "undefined" && tubeData[input.tubeSpec]) {
+        const tSpec = tubeData[input.tubeSpec];
+        const L = parseFloat(input.tubeLength);
+        // 規格に toolKey がない場合は、標準的な "内径ダイヤΦ4" をデフォルトにします
+        const toolKey = tSpec.toolKey || "内径ダイヤΦ4";
+        const toolT = machineConfig[toolKey];
+
+        if (!toolT) {
+            return {
+                error: {
+                    displayHtml: `<span style="color:red; font-weight:bold;">エラー: 機械定義に Tube加工用の工具 "${toolKey}" が見つかりません。</span>`,
+                    plainText: null,
+                },
+            };
+        }
+        replaceMap["チューブ内径バイト"] = wrapH(toolT);
+
+        replaceMap["チューブ_平底_仕上一行"] = wrapH(combineTubeFlatBottomFinishLine(tSpec.toolDia, flatBottomExitLine));
+
+        const OD = tSpec.od;
+        const ID = tSpec.id;
+        const R = tSpec.r;
+        const D_Drill_Str = tSpec.drill;
+        replaceMap["入力_外径"] = wrapH(ncFormat(OD));
+        replaceMap["入力_内径"] = wrapH(ncFormat(ID));
+        replaceMap["入力_長さ"] = wrapH(ncFormat(L));
+        replaceMap["入力_R"] = wrapH(ncFormat(R));
+        replaceMap["ドリル"] = wrapH(D_Drill_Str);
+
+        let drillVal = 0;
+        if (D_Drill_Str && D_Drill_Str.startsWith("DR")) drillVal = parseFloat(D_Drill_Str.replace("DR", ""));
+
+        replaceMap["L"] = wrapH(ncFormat(L.toFixed(3)));
+        replaceMap["母材幅"] = wrapH(ncFormat((OD / Math.SQRT2).toFixed(3)));
+        replaceMap["チューブ_外径荒加工径"] = wrapH(ncFormat((OD + R + R + 2.6).toFixed(3)));
+        replaceMap["チューブ_端面始点"] = input.m99p100 ? "" : wrapH(ncFormat((OD + R + R + 4.6).toFixed(3)));
+        const _mcNum = parseFloat(tSpec.MC);
+        replaceMap["MC丸"] = input.m99p100
+            ? !isNaN(_mcNum)
+                ? wrapH(ncFormat(_mcNum.toFixed(3)))
+                : "テンプレート未設定"
+            : "";
+        replaceMap["OD+0.1"] = wrapH(ncFormat((OD + 0.1).toFixed(3)));
+        replaceMap["Drill-1"] = wrapH(ncFormat((drillVal - 1.0).toFixed(3)));
+        replaceMap["ID+0.6"] = wrapH(ncFormat((ID + 0.6).toFixed(3)));
+        replaceMap["OD-0.6"] = wrapH(ncFormat((OD - 0.6).toFixed(3)));
+        replaceMap["L-R"] = wrapH(ncFormat((L - R).toFixed(3)));
+        replaceMap["L-0.3"] = wrapH(ncFormat((L - 0.3).toFixed(3)));
+        replaceMap["L-0.5"] = wrapH(ncFormat((L - 0.5).toFixed(3)));
+        replaceMap["OD+2R"] = wrapH(ncFormat((OD + R + R).toFixed(3)));
+        replaceMap["OD+2R+0.1"] = wrapH(ncFormat((OD + R + R + 0.1).toFixed(3)));
+    }
+    return finalCode;
+}
+
+function applyM40Behavior(ctx) {
+    const { input, replaceMap } = ctx;
+    let finalCode = typeof template_M40 !== "undefined" ? template_M40 : "";
+    if (input.m99Mode === "x50u8") {
+        // X50.U8.処理: プレースホルダー代入前にテンプレート内の固定値を置換
+        finalCode = finalCode.replace("G71U4.5R.5", "G71U8.0R.5");
+        finalCode = finalCode.replace("N22X{{最大径-5}}F.35", "N22X56.F.35");
+        // 残った {{最大径-5}} (line 20) を空にし、{{最大径50}} で "50." を出力
+        replaceMap["最大径-5"] = "";
+        replaceMap["最大径50"] = wrapH("50.");
+    }
+    return finalCode;
+}
+
+function applyG12BBehavior(ctx) {
+    const { input, replaceMap } = ctx;
+    let finalCode = typeof template_G12B_G_ST_12175_8 !== "undefined" ? template_G12B_G_ST_12175_8 : "";
+    // 根本ノーズR あり/なし 分岐
+    if (input.g12bNoseR === "r05") {
+        replaceMap["G12B_ノーズRZ"] = "Z-14.5\nG2X22.Z-15.R.5";
+        replaceMap["G12B_ノーズRN22"] = "G1";
+        replaceMap["G12B_ノーズRX"] = "22.1";
+    } else {
+        replaceMap["G12B_ノーズRZ"] = "Z-15.";
+        replaceMap["G12B_ノーズRN22"] = "";
+        replaceMap["G12B_ノーズRX"] = "21.1";
+    }
+    return finalCode;
+}
+
+function applyM12Behavior(ctx) {
+    const { input } = ctx;
+    const ft = input.m12FinishType || "hss";
+    if (input.workType === "M12_MH") {
+        const v = ft === "baito" ? template_M12BAITO_MH : ft === "hss" ? template_M12HSS_MH : template_M12HGDR_MH;
+        return typeof v !== "undefined" ? v : "";
+    }
+    const v = ft === "baito" ? template_M12BAITO : ft === "hss" ? template_M12HSS : template_M12HGDR;
+    return typeof v !== "undefined" ? v : "";
+}
+
+const WORK_TYPE_BEHAVIORS = {
+    standard: applyStandardBehavior,
+    tube: applyTubeBehavior,
+    m40: applyM40Behavior,
+    g12b: applyG12BBehavior,
+    m12: applyM12Behavior,
+};
+
 // --- Gコード生成（メイン）---
 
 function generateGCode(input, machineName) {
@@ -929,107 +1060,21 @@ function generateGCode(input, machineName) {
 
 
     // --- 6. テンプレート選択・生成 ---
+    // ワーク種別ごとの behavior（registerWorkType の behavior 名。既定 "standard"）で振り分ける。
+    // 特殊処理（Tube/M40/G12B/M12系）は名前付き behavior 関数側で完結する。
     let finalCode = "";
-
-    if (input.workType === "Tube" || input.workType === "Tube_MH") {
-        if (input.workType === "Tube") {
-            if (typeof template_Tube !== "undefined") finalCode = template_Tube;
-        } else {
-            if (typeof template_Tube_MH !== "undefined") finalCode = template_Tube_MH;
-        }
-        if (typeof tubeData !== "undefined" && tubeData[input.tubeSpec]) {
-            const tSpec = tubeData[input.tubeSpec];
-            const L = parseFloat(input.tubeLength);
-            // 規格に toolKey がない場合は、標準的な "内径ダイヤΦ4" をデフォルトにします
-            const toolKey = tSpec.toolKey || "内径ダイヤΦ4";
-            const toolT = machineConfig[toolKey];
-
-            if (!toolT) {
-                return {
-                    displayHtml: `<span style="color:red; font-weight:bold;">エラー: 機械定義に Tube加工用の工具 "${toolKey}" が見つかりません。</span>`,
-                    plainText: null,
-                };
-            }
-            replaceMap["チューブ内径バイト"] = wrapH(toolT);
-
-            replaceMap["チューブ_平底_仕上一行"] = wrapH(
-                combineTubeFlatBottomFinishLine(tSpec.toolDia, flatBottomExitLine)
-            );
-
-            const OD = tSpec.od;
-            const ID = tSpec.id;
-            const R = tSpec.r;
-            const D_Drill_Str = tSpec.drill;
-            replaceMap["入力_外径"] = wrapH(ncFormat(OD));
-            replaceMap["入力_内径"] = wrapH(ncFormat(ID));
-            replaceMap["入力_長さ"] = wrapH(ncFormat(L));
-            replaceMap["入力_R"] = wrapH(ncFormat(R));
-            replaceMap["ドリル"] = wrapH(D_Drill_Str);
-
-            let drillVal = 0;
-            if (D_Drill_Str && D_Drill_Str.startsWith("DR")) drillVal = parseFloat(D_Drill_Str.replace("DR", ""));
-
-            replaceMap["L"] = wrapH(ncFormat(L.toFixed(3)));
-            replaceMap["母材幅"] = wrapH(ncFormat((OD / Math.SQRT2).toFixed(3)));
-            replaceMap["チューブ_外径荒加工径"] = wrapH(ncFormat((OD + R + R + 2.6).toFixed(3)));
-            replaceMap["チューブ_端面始点"] = input.m99p100 ? "" : wrapH(ncFormat((OD + R + R + 4.6).toFixed(3)));
-            const _mcNum = parseFloat(tSpec.MC);
-            replaceMap["MC丸"] = input.m99p100
-                ? !isNaN(_mcNum)
-                    ? wrapH(ncFormat(_mcNum.toFixed(3)))
-                    : "テンプレート未設定"
-                : "";
-            replaceMap["OD+0.1"] = wrapH(ncFormat((OD + 0.1).toFixed(3)));
-            replaceMap["Drill-1"] = wrapH(ncFormat((drillVal - 1.0).toFixed(3)));
-            replaceMap["ID+0.6"] = wrapH(ncFormat((ID + 0.6).toFixed(3)));
-            replaceMap["OD-0.6"] = wrapH(ncFormat((OD - 0.6).toFixed(3)));
-            replaceMap["L-R"] = wrapH(ncFormat((L - R).toFixed(3)));
-            replaceMap["L-0.3"] = wrapH(ncFormat((L - 0.3).toFixed(3)));
-            replaceMap["L-0.5"] = wrapH(ncFormat((L - 0.5).toFixed(3)));
-            replaceMap["OD+2R"] = wrapH(ncFormat((OD + R + R).toFixed(3)));
-            replaceMap["OD+2R+0.1"] = wrapH(ncFormat((OD + R + R + 0.1).toFixed(3)));
-        }
-    } else if (input.workType === "M40") {
-        if (typeof template_M40 !== "undefined") finalCode = template_M40;
-        if (input.m99Mode === "x50u8") {
-            // X50.U8.処理: プレースホルダー代入前にテンプレート内の固定値を置換
-            finalCode = finalCode.replace("G71U4.5R.5", "G71U8.0R.5");
-            finalCode = finalCode.replace("N22X{{最大径-5}}F.35", "N22X56.F.35");
-            // 残った {{最大径-5}} (line 20) を空にし、{{最大径50}} で "50." を出力
-            replaceMap["最大径-5"] = "";
-            replaceMap["最大径50"] = wrapH("50.");
-        }
-    } else if (input.workType === "G12B_G_ST_12175_8") {
-        if (typeof template_G12B_G_ST_12175_8 !== "undefined") finalCode = template_G12B_G_ST_12175_8;
-        // 根本ノーズR あり/なし 分岐
-        if (input.g12bNoseR === "r05") {
-            replaceMap["G12B_ノーズRZ"]   = "Z-14.5\nG2X22.Z-15.R.5";
-            replaceMap["G12B_ノーズRN22"] = "G1";
-            replaceMap["G12B_ノーズRX"]   = "22.1";
-        } else {
-            replaceMap["G12B_ノーズRZ"]   = "Z-15.";
-            replaceMap["G12B_ノーズRN22"] = "";
-            replaceMap["G12B_ノーズRX"]   = "21.1";
-        }
-    } else if (input.workType === "M12_MH") {
-        const ft = input.m12FinishType || "hss";
-        const m12mhv = ft === "baito" ? template_M12BAITO_MH : ft === "hss" ? template_M12HSS_MH : template_M12HGDR_MH;
-        if (typeof m12mhv !== "undefined") finalCode = m12mhv;
-    } else if (input.workType === "M12") {
-        const ft = input.m12FinishType || "hss";
-        const m12v = ft === "baito" ? template_M12BAITO : ft === "hss" ? template_M12HSS : template_M12HGDR;
-        if (typeof m12v !== "undefined") finalCode = m12v;
-    } else {
-        // 標準ワーク種別: テンプレート本文をレジストリ（各テンプレJSの registerWorkType）から取得する。
-        // 上の特殊ケース（Tube / M40 / G12B / M12・M12_MH のバリアント選択）以外はすべてここを通る。
-        // 未登録の workType は従来どおり template_G78 をフォールバックとする。
-        // （M40 / G12B / M12系の特殊処理は移行後段フェーズで behavior 化予定）
+    {
         const _def = getWorkTypeDefinition(input.workType);
-        if (_def && typeof _def.template === "string") {
-            finalCode = _def.template;
-        } else if (typeof template_G78 !== "undefined") {
-            finalCode = template_G78;
-        }
+        const _behavior = WORK_TYPE_BEHAVIORS[(_def && _def.behavior) || "standard"] || applyStandardBehavior;
+        const _result = _behavior({
+            input: input,
+            replaceMap: replaceMap,
+            machineConfig: machineConfig,
+            flatBottomExitLine: flatBottomExitLine,
+            definition: _def,
+        });
+        if (_result && _result.error) return _result.error;
+        finalCode = _result;
     }
 
     if (!finalCode) {
