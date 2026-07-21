@@ -247,5 +247,6 @@ registerWorkType({
         drillMaxDepthMm: null,
     },
     features: { mh: false, tube: false },
+    flatBottomExit: { defaultLine: "U-.2(X16)" },
     template: template_G78,
 });
