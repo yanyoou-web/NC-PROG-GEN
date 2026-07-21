@@ -2,8 +2,9 @@
 
 ## プロジェクト概要
 
-- フォーム入力から NC旋盤（NCL044/NCL015/NCL085/NCL012）向けの Gコードを自動生成する静的 Web アプリ。アプリ本体は入れ子の `NC-PROG-GEN/gui-v2.html`（一問一答ウィザード。ビルドなし・ES モジュール不使用のグローバルスクリプト方式）。
-- **生成 Gコードは機械に直接送り込まれる。** 出力が一文字違うだけで機械・工具・製品の損傷につながるため、出力に関わるファイル（`logic-v2.js` / `blocks-v2.js` / `テンプレート/`）の変更は慎重に扱う。
+- フォームに加工条件（機械・ワーク種別・寸法など）を入力すると、**NC旋盤向けのGコード（工作機械への命令文）を自動生成する** Web アプリ。生成された Gコードは NC旋盤（NCL044/NCL015/NCL085/NCL012 の4機種、`assets/data-v2.js` に定義）に直接送り込んで使用する。
+- **入力値・出力が一文字でも間違っていると機械が誤動作する危険がある**ため、出力に関わるファイル（`logic-v2.js` / `blocks-v2.js` / `テンプレート/`）の変更はすべて慎重に扱う。
+- 画面本体は `NC-PROG-GEN/gui-v2.html`（入れ子ディレクトリ内。一問一答形式のウィザード）。`-v2` は開発初期の呼称の名残で、現在はこれが唯一の画面。ビルドなし・ES モジュール不使用のグローバルスクリプト方式。将来画面を作り直す場合は接尾辞 `-v3` でファイルを複製し、変更可否表とファイル構成を更新する。
 
 ## よく使うコマンド
 
@@ -13,24 +14,40 @@
 
 ## アーキテクチャの要点
 
-- `gui-v2.html` の `<script>` 読み込み順は厳守: `data-v2.js → i18n-v2.js → テンプレート群 → blocks-v2.js → validators-v2.js → gui-v2.js → logic-v2.js → preview-v2.js`
-- 生成フロー: `wizardState` → `buildInputFromState()`（gui-v2.js）→ `generateGCode(input, machineName)`（logic-v2.js）→ `{ displayHtml, plainText }`。呼び出し直前に `currentInternalStyle = wizardState.internalStyle;` で同期させる。
-- ドメインバリデーションは logic-v2.js の4関数（`validateBasicSelections` / `validateDrawNumAndAuthor` / `validateCommonNumericFields` / `validateStyleSpecificRules`）に分離。新ルールは該当関数に追加し、ロジックを二重実装しない。
-- テンプレートは 1 ワーク種別 = 1 ファイル（`NC-PROG-GEN/テンプレート/data_template_*.js`）。`{{...}}` プレースホルダーを logic-v2.js が置換する。
+- `gui-v2.html` の `<script>` 読み込み順は厳守:
+  `data-v2.js → i18n-v2.js → テンプレート群 → blocks-v2.js → validators-v2.js → gui-v2.js → logic-v2.js → preview-v2.js`
+  - `validators-v2.js` は gui/logic 両方が使う共通ユーティリティ（`$id`・数値整形・エスケープ・半角変換）を持つため、両者より前に置く。
+  - `gui-v2.js` は `logic-v2.js` が参照する補助関数（`isMHWorkType` 等）を持つため、`logic-v2.js` より前に置く。
+- 生成フロー: `wizardState` → `buildInputFromState()`（gui-v2.js）→ `generateGCode(input, machineName)`（logic-v2.js）→ `{ displayHtml, plainText }`（`plainText` がコピー・保存用の Gコード）。呼び出す直前に `currentInternalStyle = wizardState.internalStyle;` で同期させる（logic-v2.js が内部でこの値を参照するため）。
+- **入力チェック**: 業種固有ルール（idDepth>7、CrossSmall 相手径±0.5mm ルールなど）は logic-v2.js の4関数（`validateBasicSelections` / `validateDrawNumAndAuthor` / `validateCommonNumericFields` / `validateStyleSpecificRules`）に分離され、`validateDomainRules()` として合成して `generateGCode()` の最終ゲートから呼ばれる。ウィザードの「加工深さ」画面の「次へ」（gui-v2.js の `next-depths` アクション）でも図番・作成者チェックを除く3関数を早期に呼ぶ。新ルールは該当関数に追加し、**ロジックを二重実装しない**。
+- **isXxxWorkType ヘルパーパターン**: 複数の workType を1グループとして扱う判定関数（例: `isTomesenWorkType` = M16/M18/M22/M24/M35）。新規追加時は logic-v2.js 冒頭の既存 `isXxxWorkType` 群と並べて定義する（`FLAT_BOTTOM_TOOL_DIA_MM` などの定数より前）。加工スタイルの選択肢絞り込みは gui-v2.js の `getAvailableStyles(workType)`（純粋関数）で行い、デフォルト分岐で足りなければ専用分岐を追加する。
 
 ## ファイルごとの変更可否
 
-| ファイル・フォルダ | 変更可否 |
-|---|---|
-| `テンプレート/` | 既存の変更禁止（新規追加のみ可）。`.nc` は草稿につき、未参照に見えても削除・変更禁止 |
-| `assets/data-v2.js` | 機械追加時のみ変更可 |
-| `assets/blocks-v2.js` | 数値調整のみ可（構造変更禁止） |
-| `assets/logic-v2.js` | 機能追加・バグ修正のため変更可（慎重に） |
-| `assets/i18n-v2.js` | 翻訳・ラベル追加時のみ変更可 |
-| `gui-v2.html` | `<script>` の追加・並び替え中心。骨格の変更は影響大につき慎重に |
-| `assets/gui-v2.js` / `gui-v2.css` / `validators-v2.js` / `preview-v2.js` | 自由に変更可 |
+> **安全の大原則:**
+> - Gコード・Mコードへの変更は「機械への直接指示の変更」として扱う。機械ごとに G/M コードの役割が異なるため、他機種での動作を前提にしない（役割の共通化をしない）。
+> - 下表のファイルを誤って書き換えると工作機械が誤動作し、機械・工具・製品の損傷や事故につながる可能性がある。
 
-- 新規テンプレート追加で触るのは固定5ファイル（`gui-v2.html` / `logic-v2.js` / `gui-v2.js` / `data-v2.js` / `blocks-v2.js`）。手順は `docs/template-add-checklist.md` を参照。
+パス表記は `NC-PROG-GEN/` 配下からの相対パス。
+
+| ファイル・フォルダ | 役割 | 変更可否 |
+|---|---|---|
+| `テンプレート/` 内 全ファイル | Gコードのひな形。`{{}}` に実際の数値が埋め込まれる | **原則変更しない**（新規追加が基本。既存の変更はユーザーの明示的な指示がある場合のみ、同種テンプレートとの整合確認と golden 差分レビューを必須として慎重に行う。`.nc` は草稿→後述） |
+| `assets/data-v2.js` | 機械ごとのMコード・工具オフセット定義 | 機械追加時のみ変更可 |
+| `assets/blocks-v2.js` | 加工ブロック文字列の組み立て | 数値調整のみ可（構造変更禁止） |
+| `assets/logic-v2.js` | Gコード生成ロジック本体（`generateGCode`） | 機能追加・バグ修正のため変更可（慎重に） |
+| `assets/i18n-v2.js` | UI文言（ja/en/vi） | 翻訳・ラベル追加時のみ変更可 |
+| `gui-v2.html` | 画面の骨格・スクリプト読み込み順の定義 | 主に `<script>` タグの追加・並び替え。骨格（header/footer/設定ドロワー等）の変更は影響大につき慎重に |
+| `assets/gui-v2.js` / `gui-v2.css` / `validators-v2.js` / `preview-v2.js` | 画面制御・スタイル・共通ユーティリティ・プレビュー | 自由に変更可 |
+
+## テンプレート運用
+
+- `テンプレート/` は**ワーク種別1つにつき1ファイル**（例: `data_template_M18.js` = M18用ひな形）。`{{変数名}}` は実行時にアプリが実際の数値へ置き換える。
+- **`.nc` ファイル（削除禁止）**: ユーザーが内容を改変・検討している**草稿段階**のテンプレート。`<script>` タグに未登録で「どこからも参照されていない」ように見えるが、これは正常な状態。**未参照であることだけを理由に削除候補・未使用ファイルと判断してはならない**。ユーザーの明示的な指示がない限り内容も変更しない。
+- 確定後のプロセス: `.nc`（草稿）→ ユーザーが内容を確定 → `.js` にリネーム → `gui-v2.html` に `<script>` 追加 → 結線の残作業（`isXxxWorkType` 判定・`getAvailableStyles` 絞り込み・ブリーフ仕様の反映）を実施。
+- **新規テンプレート追加**: 触るファイルは固定5つ（`gui-v2.html` / `logic-v2.js` / `gui-v2.js` / `data-v2.js` / `blocks-v2.js`）。標準手順は `docs/template-add-checklist.md`。
+  - ブリーフ（作業指示書: ワーク種別名・内径Φ・ドリルφ・バイトΦ・`getAvailableStyles` への専用分岐の要否）とテンプレート JS を一緒に受け取る。加工仕様3点（内径Φ・ドリルφ・バイトΦ）が明記されていれば再確認せず実装してよい（ブリーフがない場合のみ確認する）。
+  - 内径Φ＝バイトΦ（同径）時の `{{平底_内径仕上出口}}` は `U-.2`、異径時は `X{toolDia}.F.03`（`computeFlatBottomExitLine` の仕様、`blocks-v2.js`）。
 
 ## 参照ドキュメント
 
@@ -38,7 +55,7 @@
 - `docs/golden-tests.md` — ゴールデンテストの仕組みとケース追加手順
 - `docs/template-add-checklist.md` — テンプレート追加実装の標準手順
 - `docs/drilling-rules.md` — ドリル加工の分岐ルール
-- `.cursor/rules/nc-project-rules.mdc` — Cursor 向け開発ルール（変更可否表・実装パターンの原典）
+- `.cursor/rules/nc-project-rules.mdc` — Cursor 向け開発ルール（本ファイルと同内容を保つ。片方を変えたらもう片方も更新する）
 
 ## git / PR運用
 
