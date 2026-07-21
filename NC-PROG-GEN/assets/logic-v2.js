@@ -683,8 +683,8 @@ function generateGCode(input, machineName) {
     }
 
     // ── 数値・計算式フィールドの正規化（最終防衛ライン） ──
-    // 画面側はフォーカスアウト時に計算式を数値へ自動計算・置換するが（gui-v2.js
-    // の applyNumericFormulaOnBlur）、JSONインポート等その仕組みを経由しない
+    // 画面側はフォーカスアウト時・Enter遷移時に計算式を数値へ自動計算・置換するが
+    // （gui-v2.js の commitNumericField）、JSONインポート等その仕組みを経由しない
     // 経路で値が渡ってくる可能性もある。ここで同じ evaluateFormula 系のロジック
     // （parseSimpleNumberOrFormula）を使って正規化しておくことで、以降のチェック・
     // 計算処理が常に同じ「計算済みの数値」を見るようにする。評価できない値は

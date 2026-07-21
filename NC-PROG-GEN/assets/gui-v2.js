@@ -165,16 +165,13 @@ function getAvailableStyles(workType) {
 // ========== Section 3: 定数 ==========
 
 var WORK_TYPE_GROUPS = [
-    {label:"ねじ系",   items:[{value:"M12",label:"M12"},{value:"M15",label:"M15"},{value:"M18",label:"M18"},{value:"M22",label:"M22"},{value:"G78",label:"G78"},{value:"M40",label:"M40"}]},
-    {label:"ねじ系 MH",items:[{value:"M12_MH",label:"M12-MH"},{value:"M15_MH",label:"M15-MH"},{value:"M18_MH",label:"M18-MH"},{value:"M22_MH",label:"M22-MH"},{value:"G78_MH",label:"G78-MH"},{value:"M40_MH",label:"M40-MH"}]},
-    {label:"S-M系",    items:[{value:"S_G12",label:"S-G12"},{value:"S_G38",label:"S-G38"},{value:"S_G78",label:"S-G78"},{value:"S_M12",label:"S-M12"},{value:"S_M15",label:"S-M15"}]},
-    {label:"G18系",    items:[{value:"G18_40",label:"φ4.0"},{value:"G18_42",label:"φ4.2"},{value:"G18_62",label:"φ6.2"},{value:"G18_655",label:"φ6.55"},{value:"G18_6175",label:"φ6.175"},{value:"G18_40_MH",label:"φ4.0 MH"},{value:"G18_42_MH",label:"φ4.2 MH"},{value:"G18_62_MH",label:"φ6.2 MH"},{value:"G18_655_MH",label:"φ6.55 MH"},{value:"G18_6175_MH",label:"φ6.175 MH"}]},
-    {label:"M42X3系",  items:[{value:"M42X3_25175",label:"φ25.175 ST"},{value:"M42X3_25175_16",label:"→φ16"},{value:"M42X3_25175_20",label:"→φ20"},{value:"M42X3_25175_22",label:"→φ22"}]},
-    {label:"G78-ST系", items:[{value:"G78_ST_20175",label:"φ20.175 ST"},{value:"G78_ST_20175_16",label:"→φ16"}]},
-    {label:"M8系",     items:[{value:"M8_21",label:"S-M8 φ2.1"},{value:"M8_31",label:"S-M8 φ3.1"},{value:"J_M8_300",label:"次世代M8 φ3.0"},{value:"J_M8_200",label:"次世代M8 φ2.0"}]},
-    {label:"トメセン",  items:[{value:"TOMESEN_M16",label:"M16"},{value:"TOMESEN_M18",label:"M18"},{value:"TOMESEN_M22",label:"M22"},{value:"TOMESEN_M24",label:"M24"},{value:"TOMESEN_M35",label:"M35"}]},
-    {label:"特殊",     items:[{value:"G12B_G_ST_12175_8",label:"G12B-ST-12.175-8"}]},
-    {label:"チューブ", items:[{value:"Tube",label:"チューブ"},{value:"Tube_MH",label:"チューブ MH"}]},
+    {label:"主要ネジ系",   items:[{value:"J_M8_200",label:"M8 φ2.0"},{value:"J_M8_300",label:"M8 φ3.0"},{value:"M12",label:"M12"},{value:"M15",label:"M15"},{value:"M18",label:"M18"},{value:"M22",label:"M22"},{value:"G78",label:"G7/8"},{value:"M40",label:"M40"}]},
+    {label:"主要ネジMH系", items:[{value:"M12_MH",label:"M12MH"},{value:"M15_MH",label:"M15MH"},{value:"M18_MH",label:"M18MH"},{value:"M22_MH",label:"M22MH"},{value:"G78_MH",label:"G7/8MH"},{value:"M40_MH",label:"M40MH"}]},
+    {label:"スーパー系",   items:[{value:"M8_21",label:"S-M8 φ2.1"},{value:"M8_31",label:"S-M8 φ3.1"},{value:"S_M12",label:"S-M12"},{value:"S_M15",label:"S-M15"},{value:"S_G12",label:"S-G12"},{value:"S_G38",label:"S-G38"},{value:"S_G78",label:"S-G78"}]},
+    {label:"G18系",       items:[{value:"G18_40",label:"G18 φ4"},{value:"G18_42",label:"G18 φ4.2"},{value:"G18_6175",label:"G18 φ6.175"},{value:"G18_62",label:"G18 φ6.2"},{value:"G18_655",label:"G18 φ6.55"},{value:"G18_40_MH",label:"G18 φ4MH"},{value:"G18_42_MH",label:"G18 φ4.2MH"},{value:"G18_6175_MH",label:"G18 φ6.175MH"},{value:"G18_62_MH",label:"G18 φ6.2MH"},{value:"G18_655_MH",label:"G18 φ6.55MH"}]},
+    {label:"ST系",        items:[{value:"G12B_G_ST_12175_8",label:"G12ST φ12.175 →8"},{value:"G78_ST_20175",label:"G78ST φ20.175"},{value:"G78_ST_20175_16",label:"G78ST φ20.175 →16"},{value:"M42X3_25175",label:"M42ST φ25.175"},{value:"M42X3_25175_16",label:"M42ST φ25.175 →16"},{value:"M42X3_25175_20",label:"M42ST φ25.175 →20"},{value:"M42X3_25175_22",label:"M42ST φ25.175 →22"}]},
+    {label:"トメセン系",   items:[{value:"TOMESEN_M16",label:"M16 TOMESEN"},{value:"TOMESEN_M18",label:"M18 TOMESEN"},{value:"TOMESEN_M22",label:"M22 TOMESEN"},{value:"TOMESEN_M24",label:"M24 TOMESEN"},{value:"TOMESEN_M35",label:"M35 TOMESEN"}]},
+    {label:"チューブ系",   items:[{value:"Tube",label:"TUBE"},{value:"Tube_MH",label:"TUBEMH"}]},
 ];
 var ATE_PRESETS = [
     {value:"42.5",label:"42.5（15角）",kaku:true},{value:"41",label:"41（18角）",kaku:true},
@@ -356,8 +353,7 @@ function buildCrumbBarHTML() {
     if (wizardState.machine)
         chips.push(wizardState.machine);
     if (wizardState.workType) {
-        var wl=wizardState.workType==="Tube"?"チューブ":getWorkTypeShortLabel(wizardState.workType);
-        chips.push(wl);
+        chips.push(getWorkTypeShortLabel(wizardState.workType));
     }
     if (isTubeWorkType(wizardState.workType)&&wizardState.tubeSpec)
         chips.push(wizardState.tubeSpec+(wizardState.tubeLength?" "+wizardState.tubeLength+"mm":""));
@@ -447,7 +443,7 @@ function buildHistoryScreen() {
         }
         var drawNum = "PM-"+(st.drawNumA||"---")+"-"+(st.drawNumB||"")
             +(st.drawRev&&st.drawRev!=="NONE"?st.drawRev:"");
-        var wt = st.workType==="Tube"?"チューブ":(getWorkTypeShortLabel(st.workType)||st.workType||"");
+        var wt = getWorkTypeShortLabel(st.workType)||st.workType||"";
         var style = STYLE_LABELS_SHORT[st.internalStyle]||"";
         var sub = [st.machine, wt, style, st.workerName].filter(Boolean).join(" › ");
         return '<button class="wiz-history-item" data-action="restore-history" data-value="'+idx+'">'
@@ -1525,8 +1521,7 @@ function initValidation() {
         var run = fieldValidatorFor(el.id);
         el.addEventListener("input", function() { run(el); });
         el.addEventListener("blur",  function() {
-            applyNumericFormulaOnBlur(el); // フォーカスアウト時に計算式を数値へ置き換える
-            run(el);
+            commitNumericField(el); // フォーカスアウト時に計算式を数値へ置き換え、入力チェックを実行
         });
     });
 }
@@ -1600,20 +1595,25 @@ function validatePartnerDField(el) {
     el.classList.toggle("wiz-input--invalid", !result.ok);
     return result.ok;
 }
-// フォーカスアウト時、入力値が数値または計算式として解釈できれば、
-// 計算結果の数値そのものに置き換える（例:「10.5+2.3」→「12.8」）。
-// 解釈できない場合は何もしない（validatePositive 側でエラー表示される）。
+// 数式の確定と検証を行う共通関数。フォーカスアウト時と、Enter キーで「次へ」を
+// 実行する直前の両方から呼ぶ（旧 applyNumericFormulaOnBlur を整理したもの）。
+// 入力値が数値または計算式として解釈できれば、計算結果の数値そのものに
+// 置き換える（例:「10.5+2.3」→「12.8」）。解釈できない場合は値を書き換えない
+// （後段の入力チェックでエラー表示される）。
 // 値をJSから書き換えるだけでは input イベントが発火しないため、CP値・内径深さ等の
 // 連動表示（updateCPDisplay 等、"input" イベント購読側）が入力途中の古い値のまま
 // 固まってしまう。そのため値を書き換えた後に input イベントを明示的に発火させる。
-function applyNumericFormulaOnBlur(el) {
+// 戻り値: fieldValidatorFor(el.id) による入力チェックの成否（false なら遷移不可）。
+function commitNumericField(el) {
     var v = el.value.trim();
-    if (v === "") return;
-    var num = parseSimpleNumberOrFormula(v);
-    if (!isNaN(num)) {
-        el.value = String(num);
-        el.dispatchEvent(new Event("input", { bubbles: true }));
+    if (v !== "") {
+        var num = parseSimpleNumberOrFormula(v);
+        if (!isNaN(num)) {
+            el.value = String(num);
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+        }
     }
+    return fieldValidatorFor(el.id)(el);
 }
 
 // ---- 半角チェック（全角文字などを即座に消去する） ----
@@ -1704,12 +1704,24 @@ document.addEventListener("DOMContentLoaded", function() {
     // Enter キーで画面内の「次へ」ボタンをクリック
     document.addEventListener("keydown", function(e) {
         if (e.key !== "Enter") return;
-        var tag = document.activeElement && document.activeElement.tagName;
+        if (e.isComposing || e.keyCode === 229) return; // IMEの変換確定Enterでは遷移しない
+        var active = document.activeElement;
+        var tag = active && active.tagName;
         if (tag === "BUTTON" || tag === "TEXTAREA" || tag === "SELECT") return;
         var main = document.getElementById("wiz-main");
         if (!main) return;
         var prim = main.querySelector(".wiz-btn-primary[data-action]");
-        if (prim) { e.preventDefault(); prim.click(); }
+        if (!prim) return;
+        e.preventDefault();
+        // 四則演算対応欄（.validate-positive）にフォーカス中なら、blur を待たずに
+        // ここで数式を確定させてから遷移する。確定後の値で連動表示（CP値等）も
+        // input イベント経由で更新される。不正な式（「1+」「1/0」や 0 以下）は
+        // エラー表示のまま遷移しない。値の置き換えは commitNumericField 内で
+        // 完結するため、遷移後に旧要素の blur が重なってもクリックは1回のみ。
+        if (active && active.classList && active.classList.contains("validate-positive")) {
+            if (!commitNumericField(active)) return;
+        }
+        prim.click();
     });
 
     renderScreen("start");
