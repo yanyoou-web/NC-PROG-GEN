@@ -19,6 +19,7 @@
 /* global computeFlatBottomExitLine, combineTubeFlatBottomFinishLine */
 /* global $id, currentInternalStyle */
 /* global isMHWorkType, isTubeWorkType */
+/* global workTypeRegistry */
 // ========== 生成ロジック ==========
 /**
  * logic.js
@@ -27,49 +28,26 @@
 
 // --- 定数・ワーク定義マップ ---
 
-// ワーク種別ごとの内径大径(D)定義マップ
-const WORK_ID_MAP = {
-    M40: 22.0,
-    M22: 10.0,
-    M18: 8.0,
-    M15: 6.0,
-    M12: 4.0,
-    G78: 16.0,
-    M40_MH: 22.0,
-    M22_MH: 10.0,
-    M18_MH: 8.0,
-    M15_MH: 6.0,
-    M12_MH: 4.0,
-    G78_MH: 16.0,
-    G18_40: 4.0,
-    G18_42: 4.15,
-    G18_62: 6.2,
-    G18_655: 6.55,
-    G18_6175: 6.175,
-    G18_40_MH: 4.0,
-    G18_42_MH: 4.15,
-    G18_62_MH: 6.2,
-    G18_655_MH: 6.55,
-    G18_6175_MH: 6.175,
-    M42X3_25175: 25.175,
-    M42X3_25175_20: 20.0,
-    M42X3_25175_22: 22.0,
-    M42X3_25175_16: 16.0,
-    G12B_G_ST_12175_8: 8.0,
-    TOMESEN_M16: 8.0,
-    TOMESEN_M18: 10.0,
-    TOMESEN_M22: 12.0,
-    TOMESEN_M24: 16.0,
-    TOMESEN_M35: 22.0,
-    S_G12: 10.0,
-    S_G38: 8.0,
-    S_G78: 16.0,
-    S_M12: 4.4,
-    S_M15: 6.5,
-    // G78-ST系: ストレート20.175 / φ16段付（段付は最奥のφ16を加工径とする。M42X3系と同方式）
-    G78_ST_20175: 20.175,
-    G78_ST_20175_16: 16.0,
-};
+/* ワーク種別レジストリ（data-v2.js の workTypeRegistry。テンプレートJSが登録）から
+   径マップを自動生成する共通ヘルパー。
+   値が null / undefined のワーク種別はキーごと除外する。これにより「そのワーク種別を
+   マップに載せない＝ルックアップで undefined になる」という従来の各マップの状態を
+   そのまま再現する（例: WORK_ID_MAP に M8_21 が無い、DRILL_DIA_MAP の Tube:null など）。 */
+function createWorkTypeValueMap(getValue) {
+    const result = {};
+    Object.keys(workTypeRegistry).forEach(function (id) {
+        const value = getValue(workTypeRegistry[id]);
+        if (value !== null && value !== undefined) {
+            result[id] = value;
+        }
+    });
+    return result;
+}
+
+// ワーク種別ごとの内径大径(D)定義マップ（各テンプレートJSの machining.idDiameterMm から生成）
+const WORK_ID_MAP = createWorkTypeValueMap(function (d) {
+    return d.machining ? d.machining.idDiameterMm : null;
+});
 
 /** G18 HGDR 系（φ6.2 / φ6.55 / φ6.175）：同一のスタイル制限・DRILLSHIAGE（G74 仕上げブロック） */
 function isG18HgdrSeriesWorkType(wt) {
@@ -132,91 +110,19 @@ function isJM8ASWDWorkType(wt) {
     return wt === "J_M8_300" || wt === "J_M8_200";
 }
 
-/** 平底で使う内径ダイヤの公称径（mm）。テンプレの {{内径ダイヤΦ*}} と対応 */
-const FLAT_BOTTOM_TOOL_DIA_MM = {
-    M40: 16.0,
-    M22: 8.0,
-    M18: 8.0,
-    M15: 6.0,
-    G78: 16.0,
-    // G18 HGDR 系: 加工径(6.x) とバイト径 4 が異なるため computeFlatBottomExitLine は X4.F.03 に分岐
-    G18_62: 4.0,
-    G18_655: 4.0,
-    G18_6175: 4.0,
-    G18_62_MH: 4.0,
-    G18_655_MH: 4.0,
-    G18_6175_MH: 4.0,
-    // G18_40 / G18_42 / MH variants: ドリル仕上げ中心のため本マップに載せない（toolDia 未定義 → defaultLine の U-.2）
-    // M42X3_25175 系: 内径ダイヤΦ16 使用。φ16段付のみ toolDia=idDia で U-.2、他は X16.F.03
-    M42X3_25175: 16,
-    M42X3_25175_20: 16,
-    M42X3_25175_22: 16,
-    M42X3_25175_16: 16,
-    G12B_G_ST_12175_8: 8,
-    // トメセン系: M16/M18/M22 → Φ8バイト、M24/M35 → Φ16バイト
-    TOMESEN_M16: 8,
-    TOMESEN_M18: 8,
-    TOMESEN_M22: 8,
-    TOMESEN_M24: 16,
-    TOMESEN_M35: 16,
-    // S-M系: N3 の {{内径ダイヤΦ*}} 工具に対応
-    S_G12: 8,
-    S_G38: 6,
-    S_G78: 16,
-    S_M12: 4,
-    S_M15: 6,
-    // G78-ST系: 内径ダイヤΦ16 使用。φ16段付のみ toolDia=idDia で U-.2、ストレートは X16.F.03
-    G78_ST_20175: 16,
-    G78_ST_20175_16: 16,
-};
+/* 平底で使う内径ダイヤの公称径（mm）。テンプレの {{内径ダイヤΦ*}} と対応。
+   各テンプレートJSの machining.flatBottomToolDiameterMm から生成する。
+   平底工具径を持たないワーク種別（値 null）は載らない（例: M12・G18_40/42・MH主要ネジ系。
+   computeFlatBottomExitLine が toolDia 未定義として defaultLine の U-.2 を出す）。 */
+const FLAT_BOTTOM_TOOL_DIA_MM = createWorkTypeValueMap(function (d) {
+    return d.machining ? d.machining.flatBottomToolDiameterMm : null;
+});
 
-// ドリル径データベース
-const DRILL_DIA_MAP = {
-    M40: 14.0,
-    G78: 14.0,
-    M22: 7.0,
-    M18: 7.0,
-    M15: 3.3,
-    M12: 4.05,
-    M40_MH: 14.0,
-    G78_MH: 14.0,
-    M22_MH: 7.0,
-    M18_MH: 7.0,
-    M15_MH: 3.3,
-    M12_MH: 4.05,
-    G18_40: 4.05,
-    G18_42: 4.15,
-    G18_62: 4.15,
-    G18_655: 4.15,
-    G18_6175: 4.15,
-    G18_40_MH: 4.05,
-    G18_42_MH: 4.15,
-    G18_62_MH: 4.15,
-    G18_655_MH: 4.15,
-    G18_6175_MH: 4.15,
-    M42X3_25175: 25.175,
-    M42X3_25175_20: 20.0,
-    M42X3_25175_22: 22.0,
-    M42X3_25175_16: 16.0,
-    M8_21: 2.1,
-    M8_31: 3.0,
-    J_M8_300: 3.0,
-    J_M8_200: 2.0,
-    G12B_G_ST_12175_8: 7.0,
-    TOMESEN_M16: 7.0,
-    TOMESEN_M18: 7,
-    TOMESEN_M22: 10.7,
-    TOMESEN_M24: 14,
-    TOMESEN_M35: 14,
-    S_G12: 7.0,
-    S_G38: 7.0,
-    S_G78: 14.0,
-    S_M12: 3.3,
-    S_M15: 3.3,
-    G78_ST_20175: 14.0,
-    G78_ST_20175_16: 14.0,
-    Tube: null,
-};
+// ドリル径データベース（各テンプレートJSの machining.drillDiameterMm から生成）。
+// ドリル径を持たないワーク種別（値 null。Tube 系など）は載らない。
+const DRILL_DIA_MAP = createWorkTypeValueMap(function (d) {
+    return d.machining ? d.machining.drillDiameterMm : null;
+});
 
 /** ASWD ドリル肩の高さ (mm) — ドリル公称径をキーとする */
 const ASWD_SHOULDER_MM = { 4.0: 0.96, 3.0: 0.70, 2.1: 0.50, 2.0: 0.50 };

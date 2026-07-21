@@ -116,3 +116,21 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "M8_21",
+    ui: {
+        label: "S-M8 φ2.1",
+        group: "スーパー系",
+        order: 10,
+        styles: ["Ichimonji", "YoseRelay", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: null,
+        drillDiameterMm: 2.1,
+        flatBottomToolDiameterMm: null,
+        drillMaxDepthMm: 24,
+    },
+    features: { mh: false, tube: false },
+    template: template_M8_21,
+});

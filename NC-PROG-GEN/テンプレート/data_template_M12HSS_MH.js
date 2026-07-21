@@ -210,3 +210,21 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "M12_MH",
+    ui: {
+        label: "M12MH",
+        group: "主要ネジMH系",
+        order: 10,
+        styles: ["Ichimonji", "Normal", "YoseRelay", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: 4,
+        drillDiameterMm: 4.05,
+        flatBottomToolDiameterMm: null,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: true, tube: false },
+    template: template_M12HSS_MH,
+});

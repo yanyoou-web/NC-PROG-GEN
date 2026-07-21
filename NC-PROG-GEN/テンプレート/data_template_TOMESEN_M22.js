@@ -79,3 +79,21 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "TOMESEN_M22",
+    ui: {
+        label: "M22 TOMESEN",
+        group: "トメセン系",
+        order: 30,
+        styles: ["Hirazoko", "Ichimonji", "Normal", "YoseRelay", "Yose"],
+    },
+    machining: {
+        idDiameterMm: 12,
+        drillDiameterMm: 10.7,
+        flatBottomToolDiameterMm: 8,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: false, tube: false },
+    template: template_TOMESEN_M22,
+});

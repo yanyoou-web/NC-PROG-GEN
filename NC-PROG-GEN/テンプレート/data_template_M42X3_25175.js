@@ -190,3 +190,75 @@ const template_M42X3_25175    = _m42Header("42X3-ST-G-25.175")     + _M42X3_2517
 const template_M42X3_25175_20 = _m42Header("M42X3-ST-G-25.175-20") + _M42X3_25175_N1N4 + _M42X3_25175_20_N5 + _M42X3_25175_20_N6 + _M42X3_25175_FOOTER;
 const template_M42X3_25175_22 = _m42Header("M42X3-ST-G-25.175-22") + _M42X3_25175_N1N4 + _M42X3_25175_22_N5 + _M42X3_25175_22_N6 + _M42X3_25175_FOOTER;
 const template_M42X3_25175_16 = _m42Header("M42X3-ST-G-25.175-16") + _M42X3_25175_N1N4 + _M42X3_25175_16_N5 + _M42X3_25175_16_N6 + _M42X3_25175_FOOTER;
+
+registerWorkType({
+    id: "M42X3_25175",
+    ui: {
+        label: "M42ST φ25.175",
+        group: "ST系",
+        order: 40,
+        styles: ["Hirazoko", "Normal", "Yose", "YoseRelay"],
+    },
+    machining: {
+        idDiameterMm: 25.175,
+        drillDiameterMm: 25.175,
+        flatBottomToolDiameterMm: 16,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: false, tube: false },
+    template: template_M42X3_25175,
+});
+
+registerWorkType({
+    id: "M42X3_25175_16",
+    ui: {
+        label: "M42ST φ25.175 →16",
+        group: "ST系",
+        order: 50,
+        styles: ["Hirazoko", "Normal", "Yose", "YoseRelay"],
+    },
+    machining: {
+        idDiameterMm: 16,
+        drillDiameterMm: 16,
+        flatBottomToolDiameterMm: 16,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: false, tube: false },
+    template: template_M42X3_25175_16,
+});
+
+registerWorkType({
+    id: "M42X3_25175_20",
+    ui: {
+        label: "M42ST φ25.175 →20",
+        group: "ST系",
+        order: 60,
+        styles: ["Hirazoko", "Normal", "Yose", "YoseRelay"],
+    },
+    machining: {
+        idDiameterMm: 20,
+        drillDiameterMm: 20,
+        flatBottomToolDiameterMm: 16,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: false, tube: false },
+    template: template_M42X3_25175_20,
+});
+
+registerWorkType({
+    id: "M42X3_25175_22",
+    ui: {
+        label: "M42ST φ25.175 →22",
+        group: "ST系",
+        order: 70,
+        styles: ["Hirazoko", "Normal", "Yose", "YoseRelay"],
+    },
+    machining: {
+        idDiameterMm: 22,
+        drillDiameterMm: 22,
+        flatBottomToolDiameterMm: 16,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: false, tube: false },
+    template: template_M42X3_25175_22,
+});

@@ -8,7 +8,8 @@
 
 ## よく使うコマンド
 
-- `npm run check` — 総合ゲート（lint → format:check → test → check:templates → check:files）。マージ前に必ず通す。
+- `npm run check` — 総合ゲート（lint → format:check → test → check:templates → check:files → check:worktypes）。マージ前に必ず通す。
+- `npm run check:worktypes` — ワーク種別レジストリ整合性チェック（`scripts/check-work-types.mjs`）。自動生成した径マップがリファクタ前の値と一致するか、登録漏れ・UI/レジストリの不一致がないかを検証する。
 - `npm run test:golden` — ゴールデンテスト。`npm run test:golden:update` で更新（`UPDATE_GOLDEN=1` 形式のため POSIX シェルで実行）。
 - `npm run test:e2e` — Playwright E2E（`check` 非包含。初回は `npx playwright install chromium`）。
 
@@ -48,6 +49,16 @@
 - **新規テンプレート追加**: 触るファイルは固定5つ（`gui-v2.html` / `logic-v2.js` / `gui-v2.js` / `data-v2.js` / `blocks-v2.js`）。標準手順は `docs/template-add-checklist.md`。
   - ブリーフ（作業指示書: ワーク種別名・内径Φ・ドリルφ・バイトΦ・`getAvailableStyles` への専用分岐の要否）とテンプレート JS を一緒に受け取る。加工仕様3点（内径Φ・ドリルφ・バイトΦ）が明記されていれば再確認せず実装してよい（ブリーフがない場合のみ確認する）。
   - 内径Φ＝バイトΦ（同径）時の `{{平底_内径仕上出口}}` は `U-.2`、異径時は `X{toolDia}.F.03`（`computeFlatBottomExitLine` の仕様、`blocks-v2.js`）。
+
+## ワーク種別レジストリ（段階移行フェーズ1〜3）
+
+ワーク固有情報をテンプレートJSに集約するリファクタの**基盤部分**を導入済み。**まだ移行途中**であり、UI分岐とテンプレート選択は従来コードのまま動く点に注意する。
+
+- **登録機構（`data-v2.js`）**: `workTypeRegistry`・`registerWorkType(definition)`・`getWorkTypeDefinition(workType)` を持つ。`data-v2.js` はテンプレート群より先に読み込まれるため、各テンプレートJSが読み込み時に自身を登録すると、`logic-v2.js` がマップを組み立てる時点でレジストリが埋まっている。
+- **各テンプレートJSの末尾**に `registerWorkType({ id, ui:{label,group,order,styles}, machining:{idDiameterMm,drillDiameterMm,flatBottomToolDiameterMm,drillMaxDepthMm}, features:{mh,tube}, template })` を持つ（既存の `const template_XXX` はそのまま残す）。M12/M12_MH は既定バリアント（HSS）のファイルで1回だけ登録し、M42X3系の4種は同一ファイルにまとめて登録する。
+- **自動生成されるもの（`logic-v2.js`）**: `WORK_ID_MAP` / `DRILL_DIA_MAP` / `FLAT_BOTTOM_TOOL_DIA_MM` はハードコードをやめ、`createWorkTypeValueMap()` でレジストリの `machining.*` から生成する。値が `null` のワーク種別はキーごと除外（＝従来マップに載っていなかった状態を再現）。→ **加工径3種（内径Φ・ドリルφ・平底工具径）はテンプレートの `registerWorkType` に書く。`logic-v2.js` のマップは編集しない。**
+- **まだ移行していないもの（重要）**: `gui-v2.js` の `WORK_TYPE_GROUPS` / `getAvailableStyles` / `DRILL_MAX_DEPTH_MM` と、`logic-v2.js` のテンプレート選択 `if-else` チェーンは**従来定義のまま**。そのため新規テンプレート追加時は、`registerWorkType` に加えて**これら従来の結線も引き続き必要**で、`registerWorkType` の `ui`/`machining` の値は gui 側の定義と一致させること（重複は移行の後段フェーズで解消予定）。
+- 生成される Gコードはリファクタ前と完全一致する（全ゴールデンケースで出力差分ゼロを確認済み）。`npm run check:worktypes` が全ワーク種別についてこの一致を機械的に保証する。
 
 ## 参照ドキュメント
 

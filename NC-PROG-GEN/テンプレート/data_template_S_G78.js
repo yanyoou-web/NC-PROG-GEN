@@ -160,3 +160,21 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "S_G78",
+    ui: {
+        label: "S-G78",
+        group: "スーパー系",
+        order: 70,
+        styles: ["Hirazoko", "Normal", "YoseRelay", "Yose", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: 16,
+        drillDiameterMm: 14,
+        flatBottomToolDiameterMm: 16,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: false, tube: false },
+    template: template_S_G78,
+});
