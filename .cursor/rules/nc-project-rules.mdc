@@ -69,7 +69,7 @@ alwaysApply: true
   - `blocks-v2.js`: `computeFlatBottomExitLine()` はワーク固有のデフォルト出口行・許容差・加工径を `flatBottomExit`/`machining` から取得する（共通の判定アルゴリズムのみ関数側に残す）。
   - **特殊処理は名前付き behavior（`logic-v2.js` の `WORK_TYPE_BEHAVIORS`）**: 固定データだけで処理できないワーク種別は `registerWorkType(behavior)` に名前（`"tube"`/`"m40"`/`"g12b"`/`"m12"`）を持たせ、対応する `applyXxxBehavior()` へ振り分ける。未指定は `"standard"`（`registerWorkType(template)` をそのまま使う）。
   - → **新規の標準ワーク種別は、テンプレJSの `registerWorkType` と `gui-v2.html` の `<script>` 追加だけで UI 表示・生成まで通る**（`gui-v2.js`/`logic-v2.js` へ workType ごとの分岐を足す必要はない）。特殊処理が要る場合のみ新しい behavior 関数を追加する。
-- 生成される Gコードはリファクタ前と完全一致する（全ゴールデンケース＋全45種×全スタイルで出力差分ゼロを確認済み）。`npm run check:worktypes`（`scripts/check-work-types.mjs`）が全ワーク種別について径マップ一致・レジストリ整合・behavior 名の妥当性を、`npm run check:machine-tools`（`scripts/check-machine-tools.mjs`）がテンプレの使う機械キーの全機種充足を、機械的に保証する（いずれも `npm run check` に含む。空 `""` は設備差による意図的設定として正常扱い）。
+- 生成される Gコードはリファクタ前と完全一致する（全ゴールデンケース＋全45種×全スタイルで出力差分ゼロを確認済み）。`npm run check:worktypes`（`scripts/check-work-types.mjs`）が全ワーク種別について径マップ一致・レジストリ整合・behavior 名の妥当性を、`npm run check:machine-tools`（`scripts/check-machine-tools.mjs`）がテンプレの使う機械キーの全機種充足を、`npm run check:template-reg`（`scripts/check-template-registration.mjs`）がテンプレJSの読込漏れ・孤立テンプレ（未参照の `const template_XXX`）を、機械的に保証する（いずれも `npm run check` に含む。空 `""` は設備差による意図的設定として正常扱い）。
 
 ---
 
