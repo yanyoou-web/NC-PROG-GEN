@@ -108,7 +108,7 @@ registerWorkType({
         label: "G12ST φ12.175 →8",
         group: "ST系",
         order: 10,
-        styles: ["Hirazoko", "Normal", "YoseRelay", "Yose", "CrossSmall"],
+        styles: ["Hirazoko", "Normal", "CrossSmall"],
     },
     machining: {
         idDiameterMm: 8,
