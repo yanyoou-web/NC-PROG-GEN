@@ -16,19 +16,21 @@ if errorlevel 1 (
     echo [エラー] Git が見つかりません。
     echo Git for Windows をインストールしてから再実行してください。
     echo.
-    pause
-    exit /b 1
+    goto :keep_open
 )
 
-git rev-parse --is-inside-work-tree >nul 2>&1
+echo 現在の変更状況を確認しています...
+echo.
+git status
 if errorlevel 1 (
-    echo [エラー] このフォルダは Git リポジトリではありません。
+    echo.
+    echo [エラー] このフォルダの変更状況を確認できませんでした。
     echo pull.bat はリポジトリのルートフォルダに置いて実行してください。
     echo.
-    pause
-    exit /b 1
+    goto :keep_open
 )
 
+echo.
 echo main ブランチに切り替えています...
 git checkout main
 if errorlevel 1 (
@@ -36,8 +38,7 @@ if errorlevel 1 (
     echo [エラー] main ブランチへの切り替えに失敗しました。
     echo ローカルに未コミットの変更が残っていないか確認してください。
     echo.
-    pause
-    exit /b 1
+    goto :keep_open
 )
 
 echo.
@@ -50,8 +51,7 @@ if errorlevel 1 (
     echo   同期に失敗しました。上記のメッセージを確認してください。
     echo ============================================
     echo.
-    pause
-    exit /b 1
+    goto :keep_open
 )
 
 echo.
@@ -59,6 +59,10 @@ echo ============================================
 echo   MAIN ブランチとの同期が完了しました。
 echo ============================================
 echo.
-pause
+
+:keep_open
+echo このままコマンドを入力できます。
+echo 画面を閉じるときは exit と入力してください。
+echo.
 endlocal
-exit /b 0
+cmd /k
