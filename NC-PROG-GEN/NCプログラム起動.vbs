@@ -6,7 +6,7 @@ Option Explicit
 ' - 起動が重なった場合も、同じ画面を複数開かない
 ' - 新しく開く前にNAS上のgui-v2.htmlを確認する
 ' - NAS上のgui-v2.htmlが見つからない場合は日本語で案内する
-' - 通常は760×900px、小さいモニターでは表示可能範囲の90％に縮小して中央へ移動する
+' - 通常は800×945px、小さいモニターでは表示可能範囲の90％に縮小して中央へ移動する
 '
 ' 今後追加できる機能の候補
 ' - Edge／Chromeを起動時に選択できるようにする
@@ -207,8 +207,8 @@ Function RestoreExistingEdgeWindow(windowTitle)
         "$monitorInfo.rcWork.Left" & vbCrLf & _
         "    $workHeight = $monitorInfo.rcWork.Bottom - " & _
         "$monitorInfo.rcWork.Top" & vbCrLf & _
-        "    $targetWidth = [Math]::Min(760, [int]($workWidth * 0.90))" & vbCrLf & _
-        "    $targetHeight = [Math]::Min(900, [int]($workHeight * 0.90))" & vbCrLf & _
+        "    $targetWidth = [Math]::Min(800, [int]($workWidth * 0.90))" & vbCrLf & _
+        "    $targetHeight = [Math]::Min(945, [int]($workHeight * 0.90))" & vbCrLf & _
         "    $centerX = $monitorInfo.rcWork.Left + " & _
         "[int](($workWidth - $targetWidth) / 2)" & vbCrLf & _
         "    $centerY = $monitorInfo.rcWork.Top + " & _
