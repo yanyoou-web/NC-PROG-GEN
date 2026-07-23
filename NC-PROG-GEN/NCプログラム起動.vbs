@@ -7,6 +7,7 @@ Option Explicit
 ' - 新しく開く前にNAS上のgui-v2.htmlを確認する
 ' - NAS上のgui-v2.htmlが見つからない場合は日本語で案内する
 ' - 初回起動時に専用アイコン付きのデスクトップショートカットを作成する
+' - VBSを起動するたびに、通常表示の画面を現在のモニター中央へ移動する
 '
 ' 今後追加できる機能の候補
 ' - Edge／Chromeを起動時に選択できるようにする
@@ -79,6 +80,7 @@ Function RestoreExistingEdgeWindow(windowTitle)
         "[System.StringComparison]::OrdinalIgnoreCase) } | " & _
         "Select-Object -First 1" & vbCrLf & _
         "if ($null -eq $process) { exit 1 }" & vbCrLf & _
+        "$process.Refresh()" & vbCrLf & _
         "$memberDefinition = @'" & vbCrLf & _
         "[System.Runtime.InteropServices.DllImport(""user32.dll"")]" & vbCrLf & _
         "public static extern bool IsIconic(System.IntPtr hWnd);" & vbCrLf & _
@@ -86,6 +88,30 @@ Function RestoreExistingEdgeWindow(windowTitle)
         "public static extern bool ShowWindowAsync(System.IntPtr hWnd, int nCmdShow);" & vbCrLf & _
         "[System.Runtime.InteropServices.DllImport(""user32.dll"")]" & vbCrLf & _
         "public static extern bool SetForegroundWindow(System.IntPtr hWnd);" & vbCrLf & _
+        "[System.Runtime.InteropServices.DllImport(""user32.dll"")]" & vbCrLf & _
+        "public static extern bool IsZoomed(System.IntPtr hWnd);" & vbCrLf & _
+        "[System.Runtime.InteropServices.StructLayout(" & _
+        "System.Runtime.InteropServices.LayoutKind.Sequential)]" & vbCrLf & _
+        "public struct RECT { public int Left; public int Top; " & _
+        "public int Right; public int Bottom; }" & vbCrLf & _
+        "[System.Runtime.InteropServices.StructLayout(" & _
+        "System.Runtime.InteropServices.LayoutKind.Sequential)]" & vbCrLf & _
+        "public struct MONITORINFO { public int cbSize; public RECT rcMonitor; " & _
+        "public RECT rcWork; public int dwFlags; }" & vbCrLf & _
+        "[System.Runtime.InteropServices.DllImport(""user32.dll"")]" & vbCrLf & _
+        "public static extern bool GetWindowRect(" & _
+        "System.IntPtr hWnd, out RECT lpRect);" & vbCrLf & _
+        "[System.Runtime.InteropServices.DllImport(""user32.dll"")]" & vbCrLf & _
+        "public static extern System.IntPtr MonitorFromWindow(" & _
+        "System.IntPtr hWnd, uint dwFlags);" & vbCrLf & _
+        "[System.Runtime.InteropServices.DllImport(""user32.dll"", " & _
+        "CharSet=System.Runtime.InteropServices.CharSet.Auto)]" & vbCrLf & _
+        "public static extern bool GetMonitorInfo(" & _
+        "System.IntPtr hMonitor, ref MONITORINFO lpmi);" & vbCrLf & _
+        "[System.Runtime.InteropServices.DllImport(""user32.dll"")]" & vbCrLf & _
+        "public static extern bool SetWindowPos(System.IntPtr hWnd, " & _
+        "System.IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, " & _
+        "uint uFlags);" & vbCrLf & _
         "'@" & vbCrLf & _
         "Add-Type -Name NativeMethods -Namespace Launcher " & _
         "-MemberDefinition $memberDefinition" & vbCrLf & _
@@ -93,6 +119,32 @@ Function RestoreExistingEdgeWindow(windowTitle)
         "if ([Launcher.NativeMethods]::IsIconic($windowHandle)) {" & vbCrLf & _
         "    [void][Launcher.NativeMethods]::ShowWindowAsync($windowHandle, 9)" & vbCrLf & _
         "    Start-Sleep -Milliseconds 100" & vbCrLf & _
+        "}" & vbCrLf & _
+        "if (-not [Launcher.NativeMethods]::IsZoomed($windowHandle)) {" & vbCrLf & _
+        "    $rect = New-Object 'Launcher.NativeMethods+RECT'" & vbCrLf & _
+        "    $monitorInfo = New-Object 'Launcher.NativeMethods+MONITORINFO'" & vbCrLf & _
+        "    $monitorInfo.cbSize = " & _
+        "[System.Runtime.InteropServices.Marshal]::SizeOf($monitorInfo)" & vbCrLf & _
+        "    $monitor = [Launcher.NativeMethods]::MonitorFromWindow(" & _
+        "$windowHandle, 2)" & vbCrLf & _
+        "    if ([Launcher.NativeMethods]::GetWindowRect(" & _
+        "$windowHandle, [ref]$rect) -and " & vbCrLf & _
+        "        [Launcher.NativeMethods]::GetMonitorInfo(" & _
+        "$monitor, [ref]$monitorInfo)) {" & vbCrLf & _
+        "        $windowWidth = $rect.Right - $rect.Left" & vbCrLf & _
+        "        $windowHeight = $rect.Bottom - $rect.Top" & vbCrLf & _
+        "        $workWidth = $monitorInfo.rcWork.Right - " & _
+        "$monitorInfo.rcWork.Left" & vbCrLf & _
+        "        $workHeight = $monitorInfo.rcWork.Bottom - " & _
+        "$monitorInfo.rcWork.Top" & vbCrLf & _
+        "        $centerX = $monitorInfo.rcWork.Left + " & _
+        "[int](($workWidth - $windowWidth) / 2)" & vbCrLf & _
+        "        $centerY = $monitorInfo.rcWork.Top + " & _
+        "[int](($workHeight - $windowHeight) / 2)" & vbCrLf & _
+        "        [void][Launcher.NativeMethods]::SetWindowPos(" & _
+        "$windowHandle, [System.IntPtr]::Zero, $centerX, $centerY, " & _
+        "0, 0, 69)" & vbCrLf & _
+        "    }" & vbCrLf & _
         "}" & vbCrLf & _
         "[void][Launcher.NativeMethods]::SetForegroundWindow($windowHandle)" & vbCrLf & _
         "exit 0"
@@ -347,6 +399,12 @@ End If
 ' Open the HTML file in a dedicated Edge app window.
 shell.Run """" & edgePath & """ --app=""" & fileUrl & """", 1, False
 
-' Keep the lock briefly while Edge creates its window.
-WScript.Sleep 4000
+' Wait for the new window, then move it to the center as well.
+WScript.Sleep 1500
+
+If Not RestoreExistingEdgeWindow(appTitle) Then
+    WScript.Sleep 2500
+    RestoreExistingEdgeWindow appTitle
+End If
+
 ReleaseLaunchLock lockPath
