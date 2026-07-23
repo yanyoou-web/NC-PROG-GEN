@@ -211,7 +211,7 @@ var wizardState = {
     m12FinishType:"hss", m12CrossMethod:"hss_oku", g18CrossMethod:"hgdr_oku",
     valPartnerD:"", cpVal:"", okuBiteEnabled:false,
     m99Mode:"off",
-    drawNumA:"", drawNumB:"2", drawRev:"NONE", processNum:"2", workerName:"",
+    drawNumA:"", drawNumB:"2", drawRev:"NONE", processNum:"1", workerName:"",
 };
 var screenStack = [];
 
