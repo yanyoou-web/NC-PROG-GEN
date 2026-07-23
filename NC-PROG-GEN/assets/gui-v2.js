@@ -211,7 +211,7 @@ var wizardState = {
     m12FinishType:"hss", m12CrossMethod:"hss_oku", g18CrossMethod:"hgdr_oku",
     valPartnerD:"", cpVal:"", okuBiteEnabled:false,
     m99Mode:"off",
-    drawNumA:"", drawNumB:"2", drawRev:"NONE", processNum:"1", workerName:"",
+    drawNumA:"", drawNumB:"2", drawRev:"NONE", processNum:"2", workerName:"",
 };
 var screenStack = [];
 
@@ -864,12 +864,12 @@ function buildDrawNumScreen() {
     return '<div class="wiz-question"><h2 class="wiz-q-title">図番・作成者を入力してください</h2>'
         +'<div class="wiz-form"><label class="wiz-lbl">図番</label>'
         +'<div class="wiz-drawnum-row"><span class="wiz-fix">PM-</span>'
-        +'<input class="wiz-input wiz-input--sm" id="v1a" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.drawNumA)+'" />'
+        +'<input class="wiz-input wiz-input--sm" id="v1a" type="text" inputmode="numeric" maxlength="5" value="'+escapeHtml(wizardState.drawNumA)+'" />'
         +'<span class="wiz-fix">-</span>'
-        +'<input class="wiz-input wiz-input--xs" id="v1b" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.drawNumB)+'" />'
+        +'<input class="wiz-input wiz-input--xs" id="v1b" type="number" min="0" max="9999" step="1" value="'+escapeHtml(wizardState.drawNumB)+'" oninput="if(this.value.length>4)this.value=this.value.slice(0,4)" />'
         +'<select class="wiz-select" id="v1c">'+revOpts+'</select>'
         +'<span class="wiz-fix">=No,</span>'
-        +'<input class="wiz-input wiz-input--xs" id="v2" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.processNum)+'" /></div>'
+        +'<input class="wiz-input wiz-input--xs" id="v2" type="number" min="0" max="9" step="1" value="'+escapeHtml(wizardState.processNum)+'" oninput="if(this.value.length>1)this.value=this.value.slice(0,1)" /></div>'
         +'<label class="wiz-lbl" for="worker-name">作成者</label>'
         +'<input class="wiz-input" id="worker-name" type="text" value="'+escapeHtml(wizardState.workerName)+'" />'
         +'<div class="wiz-author-presets">'+authorBtns+'</div></div>'
