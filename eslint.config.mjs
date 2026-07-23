@@ -60,6 +60,9 @@ export default [
         // data.js / data-v2.js globals
         machines: 'readonly',
         tubeData: 'readonly',
+        workTypeRegistry: 'readonly',
+        registerWorkType: 'readonly',
+        getWorkTypeDefinition: 'readonly',
         // テンプレートグローバル（テンプレートディレクトリから自動生成）
         ...templateGlobals
       }
@@ -92,14 +95,6 @@ export default [
     files: ['NC-PROG-GEN/assets/data-v2.js'],
     rules: {
       'no-redeclare': 'off'
-    }
-  },
-  {
-    files: ['NC-PROG-GEN/assets/logic-v2.js'],
-    languageOptions: {
-      globals: {
-        isMHWorkType: 'readonly'
-      }
     }
   },
   {

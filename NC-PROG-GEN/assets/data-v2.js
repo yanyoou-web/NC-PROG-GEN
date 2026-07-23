@@ -63,6 +63,7 @@ M99`,
         外径仕上げバイト: "T0223",
         外径荒: "T0202",
         内径荒: "T0303",
+        スーパー: "T1111",
         M8スーパー: "T0707",
         M8内径荒: "T0101",
         ドリルASWD: "",
@@ -114,6 +115,7 @@ G28U0W0M1
         外径仕上げバイト: "T0515",
         外径荒: "T0505",
         内径荒: "T0202",
+        スーパー: "T0101",
         M8スーパー: "T0101",
         M8内径荒: "T0606",
         ドリルASWD: "",
@@ -161,6 +163,7 @@ M30
         外径仕上げバイト: "T0111",
         外径荒: "T0101",
         内径荒: "T0202",
+        スーパー: "T0808",
         M8スーパー: "T0808",
         M8内径荒: "T0202",
         ドリルASWD: "",
@@ -205,6 +208,7 @@ M30`,
         外径仕上げバイト: "T0511",
         外径荒: "T0505",
         内径荒: "T0202",
+        スーパー: "T0101",
         M8スーパー: "T0101",
         M8内径荒: "T0606",
         ドリルASWD: "",
@@ -247,6 +251,7 @@ M99`,
         外径仕上げバイト: "T0511",
         外径荒: "T0505",
         内径荒: "T0202",
+        スーパー: "T0101",
         M8スーパー: "T0101",
         M8内径荒: "T0606",
         ドリルASWD: "",
@@ -393,7 +398,7 @@ const tubeData = {
         od: 25.0,
         id: 22.0,
         r: 1.0,
-        drill: "DR19.0",
+        drill: "DR14.0",
         MC: "36",
         lengths: [38, 39],
         toolKey: "内径ダイヤΦ16",
@@ -403,7 +408,7 @@ const tubeData = {
         od: 25.4,
         id: 22.2,
         r: 1.0,
-        drill: "DR19.0",
+        drill: "DR14.0",
         MC: "37",
         lengths: [38, 39, 61],
         toolKey: "内径ダイヤΦ16",
@@ -430,3 +435,46 @@ const tubeData = {
         toolDia: 16.0,
     },
 };
+
+// ========== ワーク種別レジストリ ==========
+// 1つのワーク種別に関する情報（UI表示・加工径・属性など）を、Gコードテンプレート本文と
+// 一緒に テンプレート/data_template_*.js 側で宣言・登録するための共通機構。
+//
+// 読み込み順は data-v2.js が最初 → テンプレート群 → blocks/gui/logic の順のため、
+// 各テンプレートJSが読み込み時に registerWorkType() を呼ぶことで、logic-v2.js が
+// トップレベルでマップを組み立てる時点までにレジストリが埋まっている。
+//
+// !! 段階移行中（フェーズ1〜3）!!
+//   このレジストリから自動生成するのは径マップ（logic-v2.js の WORK_ID_MAP /
+//   DRILL_DIA_MAP / FLAT_BOTTOM_TOOL_DIA_MM）のみ。UI分岐・テンプレート選択・
+//   blocks の分岐は従来コードのまま。生成される Gコードは変更前と完全一致する。
+const workTypeRegistry = Object.create(null);
+
+/**
+ * ワーク種別を登録する。テンプレートJSの末尾から呼び出す。
+ * @param {object} definition ワーク種別定義（id / ui / machining / features / template 等）
+ */
+function registerWorkType(definition) {
+    if (!definition || !definition.id) {
+        throw new Error("workType IDが設定されていません");
+    }
+    if (workTypeRegistry[definition.id]) {
+        throw new Error("workType IDが重複しています: " + definition.id);
+    }
+    if (!definition.ui || !definition.ui.label || !definition.ui.group) {
+        throw new Error("UI情報が不足しています: " + definition.id);
+    }
+    if (typeof definition.template !== "string" || definition.template.length === 0) {
+        throw new Error("テンプレート本文がありません: " + definition.id);
+    }
+    workTypeRegistry[definition.id] = definition;
+}
+
+/**
+ * 登録済みワーク種別定義を取得する。未登録なら null。
+ * @param {string} workType workType ID
+ * @returns {object|null}
+ */
+function getWorkTypeDefinition(workType) {
+    return workTypeRegistry[workType] || null;
+}

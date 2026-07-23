@@ -1,0 +1,15 @@
+{
+  "description": "チューブ Hirazoko・内径Φ=バイトΦ(6=6)のとき平底仕上出口は「U-.2」のみ、結合結果は「X6.U-.2」になること。旧: scripts/verify-tube-x6u2.mjs の spec86 ケース。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "Tube",
+    "internalStyle": "Hirazoko",
+    "tubeSpec": "8x6 (R0.5)",
+    "tubeLength": "18",
+    "ateLength": "20",
+    "maxOD": "16",
+    "idDepth": "18",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}

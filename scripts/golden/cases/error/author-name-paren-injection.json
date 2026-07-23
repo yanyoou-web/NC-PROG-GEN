@@ -1,0 +1,13 @@
+{
+  "description": "作成者名に丸カッコを含むGコード断片が混入した場合、最終ゲートで生成エラーとして拒否されること。scripts/test-e2e-validation.mjs の同名テスト（画面のガードを迂回するケース）と対になる、generateGCode自体の防御を確認するゴールデン。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "M18",
+    "internalStyle": "Normal",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "idDepth": "15",
+    "drawNumA": "12345",
+    "workerName": "YAMADA)G0X0"
+  }
+}

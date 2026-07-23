@@ -231,3 +231,22 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "G78",
+    ui: {
+        label: "G7/8",
+        group: "主要ネジ系",
+        order: 70,
+        styles: ["Hirazoko", "Normal", "YoseRelay", "Yose", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: 16,
+        drillDiameterMm: 14,
+        flatBottomToolDiameterMm: 16,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: false, tube: false },
+    flatBottomExit: { defaultLine: "U-.2(X16)" },
+    template: template_G78,
+});

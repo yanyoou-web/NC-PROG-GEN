@@ -1,0 +1,16 @@
+{
+  "description": "G78-ST系 →φ16（20.175&16段付）・Normalの基本ケース。内径深さはN3の段Z-16.09より深い値を使う。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "G78_ST_20175_16",
+    "internalStyle": "Normal",
+    "ateLength": "20",
+    "maxOD": "47.376",
+    "idDepth": "25",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "calcMode": "normal",
+    "valStockA": "33.5",
+    "valStockB": "33.5"
+  }
+}

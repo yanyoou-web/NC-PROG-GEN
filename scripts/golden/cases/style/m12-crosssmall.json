@@ -1,0 +1,14 @@
+{
+  "description": "M12・CrossSmall。G18系/M8系のCrossSmallとは異なりresolveM12Profile()経由でm12CrossMethod（既定値hss_oku）に基づく分岐を通る。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "M12",
+    "internalStyle": "CrossSmall",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "valPartnerD": "10",
+    "cpVal": "8",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}

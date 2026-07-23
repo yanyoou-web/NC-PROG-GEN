@@ -1,0 +1,14 @@
+{
+  "description": "G18系 φ4.15 MH・CrossSmallの基本ケース。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "G18_42_MH",
+    "internalStyle": "CrossSmall",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "valPartnerD": "5",
+    "cpVal": "8"
+  }
+}

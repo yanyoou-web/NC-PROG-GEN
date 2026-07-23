@@ -34,7 +34,6 @@
  */
 
 /* global wrapH, ncFormat */              // アプリ内部の数値フォーマット関数（変更不要）
-/* global WORK_ID_MAP, FLAT_BOTTOM_TOOL_DIA_MM */  // ワーク定数マップ（logic.js 定義）
 
 
 // ========== Gコードブロック生成 ==========
@@ -291,41 +290,42 @@ function getOkuBiteBlockG18(cpStr, machineConfig) {
  * 異なるなら X[バイト径].F.03 を出力する。
  * （チューブは tubeData.toolDia が無い規格では U-.2 のまま）
  *
+ * ワーク固有の設定（デフォルト出口行・許容差・加工径/バイト径）は、各テンプレJSの
+ * registerWorkType（data-v2.js の workTypeRegistry）から取得する。この関数自体は
+ * 共通の判定アルゴリズムのみを持つ。
+ *
  * ※ この関数は数値の判定ロジックを含むため数値の直接変更は開発者へ依頼してください。
  */
 function computeFlatBottomExitLine(input) {
     const wt = input.workType;
     const st = input.internalStyle;
-
-    function defaultLine() {
-        if (wt === "G78" || wt === "M40") return "U-.2(X16)";
-        if (wt === "M22") return "U-.2(X8)";
-        return "U-.2";
-    }
+    const def = getWorkTypeDefinition(wt);
+    const cfg = (def && def.flatBottomExit) || {};
+    // 未設定時のデフォルト出口行は "U-.2"（G78/M40 は "U-.2(X16)"、M22 は "U-.2(X8)"、
+    // S_G78 は "U-.3" をテンプレJSの flatBottomExit.defaultLine に持つ）
+    const defaultLine = cfg.defaultLine || "U-.2";
 
     // 平底(Hirazoko)以外は id≒toolDia の出し分けをせず defaultLine のみ
-    if (st !== "Hirazoko") return defaultLine();
+    if (st !== "Hirazoko") return defaultLine;
 
-    let idDia   = null;
+    let idDia = null;
     let toolDia = null;
 
     if (wt === "Tube" && typeof tubeData !== "undefined" && input.tubeSpec && tubeData[input.tubeSpec]) {
         const t = tubeData[input.tubeSpec];
-        idDia   = t.id;
+        idDia = t.id;
         toolDia = t.toolDia;
-    } else if (wt === "M12") {
-        return "U-.2";
-    } else {
-        idDia   = WORK_ID_MAP[wt];
-        toolDia = FLAT_BOTTOM_TOOL_DIA_MM[wt];
+    } else if (def && def.machining) {
+        idDia = def.machining.idDiameterMm;
+        toolDia = def.machining.flatBottomToolDiameterMm;
     }
 
     if (idDia == null || toolDia == null || isNaN(idDia) || isNaN(toolDia)) {
-        return defaultLine();
+        return defaultLine;
     }
 
-    const eps = 0.02;
-    if (Math.abs(idDia - toolDia) < eps) return defaultLine();
+    const eps = cfg.toleranceMm != null ? cfg.toleranceMm : 0.02;
+    if (Math.abs(idDia - toolDia) < eps) return defaultLine;
 
     return "X" + ncFormat(toolDia) + "F.03";   // ← 平底仕上げ送り速度（F値）
 }

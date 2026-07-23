@@ -1,0 +1,118 @@
+const template_G78_ST_20175=`%
+O{{入力_工程No}}(PM-{{入力_図番}}=No,{{入力_工程No}}=Q)
+(G78-ST-G-20.175-R1)
+({{入力_日付}})(ATE={{入力_アテ長さ}})({{入力_作成者}})
+{{機械名ヘッダー}}
+{{初期設定ブロック}}
+
+N1(DR14.0){{扉閉じ}}
+G0G40G97S750M3{{ドリルT}}
+X0Z30.{{M51}}
+Z3.
+{{DRILL_BLOCK}}
+G0Z30.{{M59}}
+X200.{{M459}}
+M1(TSUKAMIKAE)
+G28U0W0M1
+
+N2(OUT-30.1){{扉閉じ}}
+G0G40G97S750M3{{外径荒}}
+X{{最大径-5}}Z30.{{M51}}(-X-)
+Z3.
+
+(M99P100){{M99P100}}
+
+G71U4.5R.5
+G71P21Q22U5.W.2F.2
+N21G0X27.7
+G1Z.1F.08
+X30.1Z-1.1
+Z-14.
+X30.2Z-14.4
+Z-15.
+G2X32.2Z-16.R1.
+N22G1X{{最大径-5}}F.35(-X-)
+N100
+G0X27.7
+G1Z.1F.08
+X30.1Z-1.1
+Z-14.
+X30.2Z-14.4
+Z-15.
+G2X32.2Z-16.R1.
+G1X32.4
+{{最大径+角}}Z-15.F.3
+G1Z-16.F.03
+{{最大径+3}}X32.3F.08(-X-)
+G0Z0.
+G1X22.F.08
+X13.F.13
+G0Z30.{{M59}}
+{{M459}}
+G28U0W0M1
+
+N3(IN-20.175-5.5){{扉閉じ}}
+G0G40G97S350M3{{内径ダイヤΦ16}}
+X24.Z30.{{M51}}
+Z3.
+G1Z.1F.2
+X18.Z-5.5F.08
+U-.3
+G0Z30.{{M59}}
+M1
+M3S350
+X26.64{{M51}}
+Z1.
+G1Z.1F.3
+X20.175Z-5.5F.03
+Z-{{入力_内径深さ}}F.05S500(-Z-){{ヨセパス}}
+{{平底_内径仕上出口}}
+G0Z30.{{M59}}
+G28U0W0M1
+
+{{ヨセブロック}}(YOSE Blocks)
+
+{{M53/M61/M408}}(M53/M61/M408)
+
+N4(G78-Z14.7-R.25-MAX1.2){{扉閉じ}}
+G0G40G97S650M3{{ネジ切り}}
+X32.Z30.{{M51}}
+Z5.
+G76P010500
+G76X27.87Z-14.7P1200Q350F1.8143
+G0Z30.{{M59}}
+{{M459}}
+G28U0W0M1
+
+N5(NEJI-MEN){{扉閉じ}}
+G0G40G97S600M3{{外径荒}}
+X33.Z30.{{M51}}
+Z2.
+G1Z-1.6F2.
+X30.5F.5
+X26.9Z.2F.04
+G0Z30.{{M59}}
+{{M459}}
+G28U0W0M1
+
+{{終了設定ブロック}}
+%
+`;
+
+registerWorkType({
+    id: "G78_ST_20175",
+    ui: {
+        label: "G78ST φ20.175",
+        group: "ST系",
+        order: 20,
+        styles: ["Hirazoko", "Normal", "YoseRelay", "Yose", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: 20.175,
+        drillDiameterMm: 14,
+        flatBottomToolDiameterMm: 16,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: false, tube: false },
+    template: template_G78_ST_20175,
+});

@@ -1,0 +1,16 @@
+{
+  "description": "S-M系 S_G38・Normalの基本ケース（PPドラフトからのテンプレート本実装）。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "S_G38",
+    "internalStyle": "Normal",
+    "ateLength": "20",
+    "maxOD": "47.376",
+    "idDepth": "15",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "calcMode": "normal",
+    "valStockA": "33.5",
+    "valStockB": "33.5"
+  }
+}

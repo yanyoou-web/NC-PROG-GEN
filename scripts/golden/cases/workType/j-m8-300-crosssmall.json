@@ -1,0 +1,14 @@
+{
+  "description": "次世代M8 φ3.0（ASWD系）・CrossSmallの基本ケース。getAvailableStyles()上CrossSmall以外選択不可。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "J_M8_300",
+    "internalStyle": "CrossSmall",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "valPartnerD": "10",
+    "cpVal": "8"
+  }
+}

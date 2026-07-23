@@ -1,0 +1,17 @@
+{
+  "description": "S_M15・CrossSmall（横穴＆中バリ処理）。内径深さは CP と相手径から calcCrossSmallFinishDepth で自動計算（加工径=WORK_ID_MAP[S_M15]=6.5）。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "S_M15",
+    "internalStyle": "CrossSmall",
+    "ateLength": "20",
+    "maxOD": "47.376",
+    "valPartnerD": "10",
+    "cpVal": "8",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "calcMode": "normal",
+    "valStockA": "33.5",
+    "valStockB": "33.5"
+  }
+}

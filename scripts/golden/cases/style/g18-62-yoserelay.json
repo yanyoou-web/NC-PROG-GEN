@@ -1,0 +1,15 @@
+{
+  "description": "G18系 φ6.2・YoseRelay。回帰ケースを兼ねる: m18-yoserelayと同じくrelayIdDepth/relayDrillDepthの丸め漏れバグ（toFixed(3)追加）を検知する。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "G18_62",
+    "internalStyle": "YoseRelay",
+    "ateLength": "20",
+    "maxOD": "30.1",
+    "yoseD": "10",
+    "yoseTotalLength": "50",
+    "yosePartnerDepth": "20",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}

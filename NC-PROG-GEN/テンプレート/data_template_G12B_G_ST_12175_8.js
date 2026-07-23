@@ -68,10 +68,12 @@ G1Z.1F.1
 X12.175Z-4.F.04
 Z-12.F.05S500
 X8.Z-14.09F.04S300
-Z-{{入力_内径深さ}}F.05(-Z-)
+Z-{{入力_内径深さ}}F.05(-Z-){{ヨセパス}}
 {{平底_内径仕上出口}}
 G0Z30.{{M59}}
 G28U0W0M1
+
+{{ヨセブロック}}(YOSE Blocks)
 
 {{M53/M61/M408}}(M53/M61/M408)
 
@@ -99,3 +101,22 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "G12B_G_ST_12175_8",
+    ui: {
+        label: "G12ST φ12.175 →8",
+        group: "ST系",
+        order: 10,
+        styles: ["Hirazoko", "Normal", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: 8,
+        drillDiameterMm: 7,
+        flatBottomToolDiameterMm: 8,
+        drillMaxDepthMm: null,
+    },
+    features: { mh: false, tube: false },
+    behavior: "g12b",
+    template: template_G12B_G_ST_12175_8,
+});

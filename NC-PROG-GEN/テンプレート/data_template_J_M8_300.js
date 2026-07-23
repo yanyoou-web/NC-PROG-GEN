@@ -146,3 +146,21 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "J_M8_300",
+    ui: {
+        label: "M8 φ3.0",
+        group: "主要ネジ系",
+        order: 20,
+        styles: ["CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: null,
+        drillDiameterMm: 3,
+        flatBottomToolDiameterMm: null,
+        drillMaxDepthMm: 30,
+    },
+    features: { mh: false, tube: false },
+    template: template_J_M8_300,
+});

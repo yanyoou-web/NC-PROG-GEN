@@ -85,3 +85,21 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "G18_40",
+    ui: {
+        label: "G18 φ4",
+        group: "G18系",
+        order: 10,
+        styles: ["YoseRelay", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: 4,
+        drillDiameterMm: 4.05,
+        flatBottomToolDiameterMm: null,
+        drillMaxDepthMm: 54,
+    },
+    features: { mh: false, tube: false },
+    template: template_G18_40,
+});

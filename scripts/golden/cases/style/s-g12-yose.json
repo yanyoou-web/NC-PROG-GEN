@@ -1,0 +1,17 @@
+{
+  "description": "S_G12・Yose。相手径(yoseD)は 3 < yoseD < 内径加工寸法(WORK_ID_MAP[S_G12]=10) の範囲が必要。yoseMethod既定=2（バイト2本）で {{ヨセブロック}} が展開される。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "S_G12",
+    "internalStyle": "Yose",
+    "ateLength": "20",
+    "maxOD": "47.376",
+    "idDepth": "20",
+    "yoseD": "6",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "calcMode": "normal",
+    "valStockA": "33.5",
+    "valStockB": "33.5"
+  }
+}

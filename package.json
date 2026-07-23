@@ -9,11 +9,21 @@
     "format:check": "prettier package.json eslint.config.mjs .prettierrc.json docs/**/*.md .vscode/**/*.json --check",
     "test:tube": "node scripts/verify-tube-x6u2.mjs",
     "test:calc": "node --test scripts/test-calc-functions.mjs",
-    "test": "npm run test:tube && npm run test:calc",
+    "test:drill-depth-auto": "node --test scripts/test-drill-depth-auto.mjs",
+    "test:drill-depth-manual-ui": "node --test scripts/test-drill-depth-manual-ui.mjs",
+    "test:id-depth-manual-ui": "node --test scripts/test-id-depth-manual-ui.mjs",
+    "test:golden": "node --test scripts/test-golden.mjs",
+    "test:golden:update": "UPDATE_GOLDEN=1 node --test scripts/test-golden.mjs",
+    "test": "npm run test:tube && npm run test:calc && npm run test:drill-depth-auto && npm run test:drill-depth-manual-ui && npm run test:id-depth-manual-ui && npm run test:golden",
     "test:e2e": "node scripts/test-e2e-validation.mjs",
     "check:templates": "node scripts/check-template-placeholders.mjs",
     "check:files": "node scripts/check-referenced-files-exist.mjs",
-    "check": "npm run lint && npm run format:check && npm run test && npm run check:templates && npm run check:files"
+    "check:worktypes": "node scripts/check-work-types.mjs",
+    "check:machine-tools": "node scripts/check-machine-tools.mjs",
+    "check:template-reg": "node scripts/check-template-registration.mjs",
+    "check:template-scripts": "node scripts/gen-template-scripts.mjs --check",
+    "gen:template-scripts": "node scripts/gen-template-scripts.mjs",
+    "check": "npm run lint && npm run format:check && npm run test && npm run check:templates && npm run check:files && npm run check:worktypes && npm run check:machine-tools && npm run check:template-reg && npm run check:template-scripts"
   },
   "devDependencies": {
     "eslint": "^10.2.1",

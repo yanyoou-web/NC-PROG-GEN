@@ -1,0 +1,16 @@
+{
+  "description": "G78_ST_20175・Hirazoko（平底）。内径D(20.175)≠バイト径(16)のため {{平底_内径仕上出口}} が X16.F.03 になる分岐を守る（M42X3_25175と同方式）。ドリル深さは idDepth+0.1 の自動計算。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "G78_ST_20175",
+    "internalStyle": "Hirazoko",
+    "ateLength": "20",
+    "maxOD": "47.376",
+    "idDepth": "25",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "calcMode": "normal",
+    "valStockA": "33.5",
+    "valStockB": "33.5"
+  }
+}

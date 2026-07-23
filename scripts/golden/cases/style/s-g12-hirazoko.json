@@ -1,0 +1,16 @@
+{
+  "description": "S_G12・Hirazoko。toolDia(8)≠内径D(10)のためN3出口が X8.F.03 になる分岐を守る。ドリル深さ=内径深さ+0.1、仕上げ深さ=+0.2。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "S_G12",
+    "internalStyle": "Hirazoko",
+    "ateLength": "20",
+    "maxOD": "47.376",
+    "idDepth": "20",
+    "drawNumA": "12345",
+    "workerName": "YAMADA",
+    "calcMode": "normal",
+    "valStockA": "33.5",
+    "valStockB": "33.5"
+  }
+}

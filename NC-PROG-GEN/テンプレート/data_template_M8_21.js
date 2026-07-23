@@ -67,7 +67,7 @@ G0G40G97S350M3{{M8内径荒}}
 X4.9Z30.{{M51}}
 Z1.
 G1Z0F.1
-X3.8Z-2.053F.03 check
+X3.8Z-2.053F.03
 Z-5.2F.1S500
 X1.6{{M458}}
 {{M459}}
@@ -116,3 +116,21 @@ G28U0W0M1
 {{終了設定ブロック}}
 %
 `;
+
+registerWorkType({
+    id: "M8_21",
+    ui: {
+        label: "S-M8 φ2.1",
+        group: "スーパー系",
+        order: 10,
+        styles: ["Ichimonji", "YoseRelay", "CrossSmall"],
+    },
+    machining: {
+        idDiameterMm: null,
+        drillDiameterMm: 2.1,
+        flatBottomToolDiameterMm: null,
+        drillMaxDepthMm: 24,
+    },
+    features: { mh: false, tube: false },
+    template: template_M8_21,
+});

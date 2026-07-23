@@ -8,6 +8,7 @@
 /* global navigator */
 /* global generateGCode */
 /* global validateBasicSelections, validateCommonNumericFields, validateStyleSpecificRules */
+/* global validateCrossSmallPartnerDia, validateYoseDDiameter */
 /* global isM8WorkType, isYoseMachiningStyle, isYoseRelayStyle */
 /* global calcSpecialDrillZ, calcYoseRelayMetrics, calcCrossSmallFinishDepth */
 /* global DRILL_DIA_MAP */
@@ -144,34 +145,36 @@ var STYLE_ICON_HTML = {
         +'</g></svg></div>',
 };
 
+/* 許可する加工スタイルは各テンプレJSの registerWorkType(ui.styles) から取得する
+   （データは data-v2.js の workTypeRegistry 経由）。 */
 function getAvailableStyles(workType) {
-    if (workType==="J_M8_300"||workType==="J_M8_200") return ["CrossSmall"];
-    if (workType==="M8_21"||workType==="M8_31") return ["Ichimonji","YoseRelay","CrossSmall"];
-    if (workType==="G18_40"||workType==="G18_42"||workType==="G18_40_MH"||workType==="G18_42_MH")
-        return ["YoseRelay","CrossSmall"];
-    if (workType==="G18_62"||workType==="G18_655"||workType==="G18_6175"||
-        workType==="G18_62_MH"||workType==="G18_655_MH"||workType==="G18_6175_MH")
-        return ["Hirazoko","Normal","YoseRelay"];
-    if (workType==="M42X3_25175"||workType==="M42X3_25175_16"||workType==="M42X3_25175_20"||workType==="M42X3_25175_22")
-        return ["Hirazoko","Normal","Yose","YoseRelay"];
-    if (workType==="M12"||workType==="M12_MH") return ["Ichimonji","Normal","YoseRelay","CrossSmall"];
-    if (workType==="TOMESEN_M16"||workType==="TOMESEN_M18"||workType==="TOMESEN_M22"||workType==="TOMESEN_M24"||workType==="TOMESEN_M35")
-        return ["Hirazoko","Ichimonji","Normal","YoseRelay","Yose"];
-    return ["Hirazoko","Normal","YoseRelay","Yose","CrossSmall"];
+    var def = getWorkTypeDefinition(workType);
+    return def && def.ui && def.ui.styles ? def.ui.styles : [];
 }
 
 // ========== Section 3: 定数 ==========
 
-var WORK_TYPE_GROUPS = [
-    {label:"ねじ系",   items:[{value:"M12",label:"M12"},{value:"M15",label:"M15"},{value:"M18",label:"M18"},{value:"M22",label:"M22"},{value:"G78",label:"G78"},{value:"M40",label:"M40"}]},
-    {label:"ねじ系 MH",items:[{value:"M12_MH",label:"M12-MH"},{value:"M15_MH",label:"M15-MH"},{value:"M18_MH",label:"M18-MH"},{value:"M22_MH",label:"M22-MH"},{value:"G78_MH",label:"G78-MH"},{value:"M40_MH",label:"M40-MH"}]},
-    {label:"G18系",    items:[{value:"G18_40",label:"φ4.0"},{value:"G18_42",label:"φ4.2"},{value:"G18_62",label:"φ6.2"},{value:"G18_655",label:"φ6.55"},{value:"G18_6175",label:"φ6.175"},{value:"G18_40_MH",label:"φ4.0 MH"},{value:"G18_42_MH",label:"φ4.2 MH"},{value:"G18_62_MH",label:"φ6.2 MH"},{value:"G18_655_MH",label:"φ6.55 MH"},{value:"G18_6175_MH",label:"φ6.175 MH"}]},
-    {label:"M42X3系",  items:[{value:"M42X3_25175",label:"φ25.175 ST"},{value:"M42X3_25175_16",label:"→φ16"},{value:"M42X3_25175_20",label:"→φ20"},{value:"M42X3_25175_22",label:"→φ22"}]},
-    {label:"M8系",     items:[{value:"M8_21",label:"S-M8 φ2.1"},{value:"M8_31",label:"S-M8 φ3.1"},{value:"J_M8_300",label:"次世代M8 φ3.0"},{value:"J_M8_200",label:"次世代M8 φ2.0"}]},
-    {label:"トメセン",  items:[{value:"TOMESEN_M16",label:"M16"},{value:"TOMESEN_M18",label:"M18"},{value:"TOMESEN_M22",label:"M22"},{value:"TOMESEN_M24",label:"M24"},{value:"TOMESEN_M35",label:"M35"}]},
-    {label:"特殊",     items:[{value:"G12B_G_ST_12175_8",label:"G12B-ST-12.175-8"}]},
-    {label:"チューブ", items:[{value:"Tube",label:"チューブ"},{value:"Tube_MH",label:"チューブ MH"}]},
-];
+/* ワーク種別グループのグループ表示順。個々のワーク種別（value/label/表示順）は
+   各テンプレJSの registerWorkType(ui.group / ui.label / ui.order) から取得し、
+   buildWorkTypeGroups() で従来の WORK_TYPE_GROUPS と同じ構造を再構成する。 */
+var WORK_TYPE_GROUP_ORDER = ["主要ネジ系","主要ネジMH系","スーパー系","G18系","ST系","トメセン系","チューブ系"];
+function buildWorkTypeGroups() {
+    var grouped = Object.create(null);
+    Object.keys(workTypeRegistry).forEach(function(id) {
+        var def = workTypeRegistry[id];
+        var g = def.ui.group;
+        if (!grouped[g]) grouped[g] = [];
+        grouped[g].push({value:id, label:def.ui.label, order:def.ui.order||0});
+    });
+    return WORK_TYPE_GROUP_ORDER.map(function(g) {
+        return {
+            label: g,
+            items: (grouped[g]||[]).sort(function(a,b){return a.order-b.order;})
+                .map(function(it){return {value:it.value, label:it.label};}),
+        };
+    });
+}
+var WORK_TYPE_GROUPS = buildWorkTypeGroups();
 var ATE_PRESETS = [
     {value:"42.5",label:"42.5（15角）",kaku:true},{value:"41",label:"41（18角）",kaku:true},
     {value:"39.5",label:"39.5（21角）",kaku:true},{value:"37.5",label:"37.5（25角）",kaku:true},
@@ -185,15 +188,12 @@ var DRAW_REV_OPTIONS = ["NONE","A","B","C","D","E"];
 var DRILL_QUICK_BTNS = [{v:"20.4",lbl:"20.4<br><small>φ29</small>"},{v:"16.8",lbl:"16.8<br><small>φ23</small>"},{v:"14.4",lbl:"14.4<br><small>φ19</small>"},{v:"11.4",lbl:"11.4<br><small>φ14</small>"},{v:"7.2",lbl:"7.2<br><small>φ7</small>"}];
 
 /* ドリルの刃長制限（mm）。物理的な工具の長さによる上限で、超えても加工自体は止めない（警告のみ）。
-   G18系・M8/ASWD系はワーク種別で一意に決まる。M12はHGDR工具のときのみG18系と同じ54mm制限が掛かる
-   （getDrillMaxDepthMMで判定、下記マップには含めない）。 */
-var DRILL_MAX_DEPTH_MM = {
-    G18_40:54, G18_42:54, G18_62:54, G18_655:54, G18_6175:54,
-    G18_40_MH:54, G18_42_MH:54, G18_62_MH:54, G18_655_MH:54, G18_6175_MH:54,
-    M8_21:24, M8_31:30, J_M8_300:30, J_M8_200:24,
-};
+   G18系・M8/ASWD系はワーク種別で一意に決まり、各テンプレJSの registerWorkType(machining.drillMaxDepthMm)
+   に持つ。M12はHGDR工具のときのみG18系と同じ54mm制限が掛かる（静的値ではないため下記で判定）。 */
 function getDrillMaxDepthMM(wt) {
-    if (DRILL_MAX_DEPTH_MM[wt]!=null) return DRILL_MAX_DEPTH_MM[wt];
+    var def = getWorkTypeDefinition(wt);
+    var v = def && def.machining ? def.machining.drillMaxDepthMm : null;
+    if (v != null) return v;
     if (isM12Like(wt) && classifyDrillMode(wt)==="g1") return 54; // M12×HGDRはG18と同じ物理ドリル
     return null;
 }
@@ -206,7 +206,7 @@ var wizardState = {
     yoseMethod:"2", yoseAngle:"60", yoseD:"", yoseTotalLength:"", yosePartnerDepth:"",
     maxOD:"", calcMode:"normal", valStockA:"", valStockB:"", valEccA:"", valEccB:"", valCornW:"", valCornH:"",
     ateLength:"",
-    drillMode:"G74", drillDepth:"", drillDepthManual:false, idDepth:"",
+    drillMode:"G74", drillDepth:"", drillDepthManual:false, idDepth:"", idDepthManual:false,
     mhOdTool:"外径荒", g12bNoseR:"none",
     m12FinishType:"hss", m12CrossMethod:"hss_oku", g18CrossMethod:"hgdr_oku",
     valPartnerD:"", cpVal:"", okuBiteEnabled:false,
@@ -217,15 +217,23 @@ var screenStack = [];
 
 // ========== Section 5: ナビゲーション ==========
 
+/* MH系 / チューブ系の判定は各テンプレJSの registerWorkType(features.mh / features.tube) から取得する。 */
 function isMHWorkType(wt) {
-    return wt==="M12_MH"||wt==="M15_MH"||wt==="M18_MH"||wt==="M22_MH"||wt==="M40_MH"||wt==="G78_MH"||
-           wt==="G18_40_MH"||wt==="G18_42_MH"||wt==="G18_62_MH"||wt==="G18_655_MH"||wt==="G18_6175_MH"||
-           wt==="Tube_MH";
+    var def = getWorkTypeDefinition(wt);
+    return Boolean(def && def.features && def.features.mh);
 }
 function isM12Like(wt)   { return wt==="M12"||wt==="M12_MH"; }
 function isG18Small(wt)  { return wt==="G18_40"||wt==="G18_42"||wt==="G18_40_MH"||wt==="G18_42_MH"; }
 function isCrossStyle(s) { return s==="CrossSmall"; }
-function isTubeWorkType(wt) { return wt==="Tube"||wt==="Tube_MH"; }
+function isTubeWorkType(wt) {
+    var def = getWorkTypeDefinition(wt);
+    return Boolean(def && def.features && def.features.tube);
+}
+/* ドリル深さの自動計算式を持つスタイルか（Normal＝通常バイト加工は式が無く常に手入力）。
+   一覧は computeDrillDepthAuto() の分岐と対応させること。 */
+function styleHasDrillAutoCalc(st) {
+    return st==="Hirazoko"||st==="Ichimonji"||st==="CrossSmall"||st==="Yose"||st==="YoseRelay";
+}
 
 /* logic-v2.js のドリルブロック選択チェーンと同じ分類を行う。
    "g1"        = HGDR工具（G18全種・M12×HGDR）→ G74/G1選択不可、常にG1単動固定
@@ -347,8 +355,7 @@ function buildCrumbBarHTML() {
     if (wizardState.machine)
         chips.push(wizardState.machine);
     if (wizardState.workType) {
-        var wl=wizardState.workType==="Tube"?"チューブ":getWorkTypeShortLabel(wizardState.workType);
-        chips.push(wl);
+        chips.push(getWorkTypeShortLabel(wizardState.workType));
     }
     if (isTubeWorkType(wizardState.workType)&&wizardState.tubeSpec)
         chips.push(wizardState.tubeSpec+(wizardState.tubeLength?" "+wizardState.tubeLength+"mm":""));
@@ -438,7 +445,7 @@ function buildHistoryScreen() {
         }
         var drawNum = "PM-"+(st.drawNumA||"---")+"-"+(st.drawNumB||"")
             +(st.drawRev&&st.drawRev!=="NONE"?st.drawRev:"");
-        var wt = st.workType==="Tube"?"チューブ":(getWorkTypeShortLabel(st.workType)||st.workType||"");
+        var wt = getWorkTypeShortLabel(st.workType)||st.workType||"";
         var style = STYLE_LABELS_SHORT[st.internalStyle]||"";
         var sub = [st.machine, wt, style, st.workerName].filter(Boolean).join(" › ");
         return '<button class="wiz-history-item" data-action="restore-history" data-value="'+idx+'">'
@@ -706,7 +713,10 @@ function buildDepthsScreen() {
     var isM8=typeof isM8WorkType==="function"&&isM8WorkType(wt);
     var isCross=isCrossStyle(st);
     var isRelay=st==="YoseRelay";
-    var isManual=wizardState.drillDepthManual;
+    // Normal（通常バイト加工）等、自動計算式そのものが無いスタイルは、手動フラグの値に関わらず
+    // 常に手動入力扱いにする（トグルボタンも「自動計算されます」の案内も出さない）。
+    var hasDrillAutoCalc=styleHasDrillAutoCalc(st);
+    var isManual=wizardState.drillDepthManual||!hasDrillAutoCalc;
 
     // ドリルモード（ワーク種別/加工方法によっては選択不可＝固定のため、その場合は選択UIではなく固定表示にする）
     var drillModeHtml='<div id="drill-mode-section">'+buildDrillModeSectionInner(wt)+'</div>';
@@ -725,7 +735,7 @@ function buildDepthsScreen() {
             +'<button class="depth-manual-link" data-action="toggle-drill-manual">手動で変更</button>'
             +'</div>';
     } else {
-        // 手動入力
+        // 手動入力（自動計算式が無いスタイルは「自動計算に戻す」リンクごと出さない）
         var quickBtns=DRILL_QUICK_BTNS.map(function(b){
             return '<button class="depth-quick-btn" data-action="quick-drill" data-value="'+b.v+'">'+b.lbl+'</button>';
         }).join("");
@@ -733,48 +743,63 @@ function buildDepthsScreen() {
             +'<input class="wiz-input depth-cross-field validate-positive" id="drill-depth" type="text" inputmode="decimal"'
             +' value="'+escapeHtml(wizardState.drillDepth)+'" />'
             +'<div class="depth-quick-row">'+quickBtns+'</div>'
-            +'<button class="depth-manual-link" data-action="toggle-drill-manual">自動計算に戻す'+(autoVal!==null?'（'+escapeHtml(autoVal)+'mm）':'')+'</button>';
+            +(hasDrillAutoCalc
+                ? '<button class="depth-manual-link" data-action="toggle-drill-manual">自動計算に戻す'+(autoVal!==null?'（'+escapeHtml(autoVal)+'mm）':'')+'</button>'
+                : '');
     }
 
     // 一文字（M12・M8以外）: CP入力が必要
     var isIchimonjiNeedsCp = st==="Ichimonji" && !isM12Like(wt) && !(typeof isM8WorkType==="function" && isM8WorkType(wt));
 
-    // 内径深さ / IP（ヨセ中継は自動。交差穴・一文字CP では「IP = 原点〜穴中心距離」として使用）
-    var idAutoVal = isRelay ? computeIdDepthForRelay()
-                 : isTubeWorkType(wt) ? computeIdDepthForTube()
-                 : null;
+    // 内径深さ / IP: 自動で決まる値があるのはヨセ中継（計算式）のみ。
+    // それ以外（通常バイト加工／内径バイト平底／一文字DR平底／交差穴／ヨセ）はMねじ・Gネジ等と
+    // 同じく図面値としてユーザーが手入力する（チューブでも例外ではない）。内径深さはチューブ長さに
+    // 依存しないため、ヨセであってもチューブ長さを自動値として代用してはいけない。
+    // 自動値がある場合も、例外加工向けに手動切替を必ず残す（ドリル深さと同じ導線）。
+    var idAutoVal = isRelay ? computeIdDepthForRelay() : null;
+    var idManual = wizardState.idDepthManual;
     var idLabel = (isCross || isIchimonjiNeedsCp)
         ? (isCross
-            ? 'IP（原点〜穴中心距離）(mm)<span class="depth-ip-hint"> ← CP = IP − 相手径/2</span>'
+            ? 'IP（原点〜穴中心距離）(mm)'
             : 'IP（原点〜一文字位置）(mm)<span class="depth-ip-hint"> ← CP = IP − ドリル径/2</span>')
         : '内径深さ (mm)';
     var idHtml;
-    if (idAutoVal!==null) {
-        var idAutoLabel = isTubeWorkType(wt) ? "自動（規格値）" : "自動計算";
+    if (idAutoVal!==null && !idManual) {
         idHtml='<label class="wiz-lbl">内径深さ</label>'
-            +'<div class="depth-auto-row"><span class="depth-auto-val">'+escapeHtml(idAutoVal)+' mm <span class="depth-auto-badge">'+idAutoLabel+'</span></span></div>';
+            +'<div class="depth-auto-row"><span class="depth-auto-val" id="id-depth-auto-val">'+escapeHtml(idAutoVal)+' mm <span class="depth-auto-badge">自動計算</span></span>'
+            +'<button class="depth-manual-link" data-action="toggle-id-manual">手動で変更</button></div>';
         wizardState.idDepth = idAutoVal;
     } else {
         idHtml='<label class="wiz-lbl" for="id-depth">'+idLabel+'</label>'
             +'<input class="wiz-input depth-cross-field validate-positive" id="id-depth" type="text" inputmode="decimal"'
-            +' value="'+escapeHtml(wizardState.idDepth)+'" />';
+            +' value="'+escapeHtml(wizardState.idDepth)+'" />'
+            +(idAutoVal!==null
+                ? '<button class="depth-manual-link" data-action="toggle-id-manual">自動計算に戻す（'+escapeHtml(idAutoVal)+'mm）</button>'
+                : '');
     }
 
     // 交差穴 / 一文字CP: IP + 相手径 + CP表示
     var cpHtml="";
     if (isCross) {
         var cpComp=computeCP(wizardState.idDepth,wizardState.valPartnerD);
-        var finishDepthHint="";
-        if (st==="CrossSmall" && cpComp) {
-            var fd=computeCrossSmallFinishDepthHint(cpComp, wizardState.valPartnerD);
-            if (fd!==null) finishDepthHint='<p class="depth-finish-hint">内径仕上深さ参考値: '+escapeHtml(fd)+' mm</p>';
+        // 交差穴(小径)の内径深さ = CP + B + 1 は calcCrossSmallFinishDepth で計算できるため、
+        // 「参考値」ではなく他の項目と同じ自動計算バッジ表示にする（IP・相手径から常時追随）
+        var finishDepthHtml="";
+        if (st==="CrossSmall") {
+            var fd=cpComp?computeCrossSmallFinishDepthHint(cpComp, wizardState.valPartnerD):null;
+            finishDepthHtml='<label class="wiz-lbl">内径深さ（自動計算）</label>'
+                +'<div class="depth-auto-row"><span class="depth-auto-val" id="cross-finish-depth-val">'
+                +(fd!==null
+                    ? escapeHtml(fd)+' mm <span class="depth-auto-badge">自動計算</span>'
+                    : '<span style="color:var(--text-sub)">IP・相手径を入力すると自動計算されます</span>')
+                +'</span></div>';
         }
         cpHtml='<label class="wiz-lbl" for="depth-partner-d">相手径 Φ (mm)</label>'
             +'<input class="wiz-input depth-cross-field validate-positive" id="depth-partner-d" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.valPartnerD)+'" />'
             +'<label class="wiz-lbl">CP値 = IP − 相手径/2（自動計算）</label>'
             +'<input class="wiz-input" id="depth-cp-display" type="text" readonly value="'+escapeHtml(cpComp)+'"'
             +' style="background:#1a2030;color:#7ec8e3;font-weight:bold;" />'
-            +finishDepthHint;
+            +finishDepthHtml;
     } else if (isIchimonjiNeedsCp) {
         // 一文字（M12・M8以外）: IP + ドリル径 → CP自動計算（getIchimonjiBlock に渡す）
         var cpCompI = computeCP(wizardState.idDepth, wizardState.valPartnerD);
@@ -820,7 +845,16 @@ function buildDepthsScreen() {
         +'<div class="wiz-form">'
         +m12Html+drillModeHtml
         +idHtml+cpHtml+drillHtml+okuHtml
-        +'</div><button class="wiz-btn-primary" data-action="next-depths">次へ →</button></div>';
+        +'</div><div id="depths-style-warning"></div>'
+        +'<button class="wiz-btn-primary" data-action="next-depths">次へ →</button></div>';
+}
+
+/* 交差穴（小径）相手径±0.5mmルール抵触時: 「通常バイト加工」への切替導線 */
+function buildStyleSwitchWarningHTML(msg) {
+    return '<div class="depths-style-warning">'
+        +'<p class="depths-style-warning__msg">'+escapeHtml(msg)+'</p>'
+        +'<button class="depths-style-warning__btn" data-action="switch-to-normal-style">'
+        +escapeHtml(STYLE_LABELS.Normal)+'に切り替える</button></div>';
 }
 
 /* ---- Q7: 図番・作成者（M99P100はQ5へ移動済み） ---- */
@@ -830,12 +864,12 @@ function buildDrawNumScreen() {
     return '<div class="wiz-question"><h2 class="wiz-q-title">図番・作成者を入力してください</h2>'
         +'<div class="wiz-form"><label class="wiz-lbl">図番</label>'
         +'<div class="wiz-drawnum-row"><span class="wiz-fix">PM-</span>'
-        +'<input class="wiz-input wiz-input--sm" id="v1a" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.drawNumA)+'" />'
+        +'<input class="wiz-input wiz-input--sm" id="v1a" type="text" inputmode="numeric" maxlength="5" value="'+escapeHtml(wizardState.drawNumA)+'" />'
         +'<span class="wiz-fix">-</span>'
-        +'<input class="wiz-input wiz-input--xs" id="v1b" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.drawNumB)+'" />'
+        +'<input class="wiz-input wiz-input--xs" id="v1b" type="number" min="0" max="9999" step="1" value="'+escapeHtml(wizardState.drawNumB)+'" oninput="if(this.value.length>4)this.value=this.value.slice(0,4)" />'
         +'<select class="wiz-select" id="v1c">'+revOpts+'</select>'
         +'<span class="wiz-fix">=No,</span>'
-        +'<input class="wiz-input wiz-input--xs" id="v2" type="text" inputmode="decimal" value="'+escapeHtml(wizardState.processNum)+'" /></div>'
+        +'<input class="wiz-input wiz-input--xs" id="v2" type="number" min="0" max="9" step="1" value="'+escapeHtml(wizardState.processNum)+'" oninput="if(this.value.length>1)this.value=this.value.slice(0,1)" /></div>'
         +'<label class="wiz-lbl" for="worker-name">作成者</label>'
         +'<input class="wiz-input" id="worker-name" type="text" value="'+escapeHtml(wizardState.workerName)+'" />'
         +'<div class="wiz-author-presets">'+authorBtns+'</div></div>'
@@ -855,23 +889,24 @@ function computeCP(idDepth,partnerD) {
     return (d-p/2).toFixed(3);
 }
 
-/* チューブ内径深さ自動計算（tubeData[spec].id から取得） */
-function computeIdDepthForTube() {
-    if (!isTubeWorkType(wizardState.workType)) return null;
-    if (typeof tubeData === "undefined" || !tubeData[wizardState.tubeSpec]) return null;
-    return String(tubeData[wizardState.tubeSpec].id);
+/* チューブのドリル径を解決する（logic-v2.js の resolveDrillDia() と同じ規則を踏襲）。
+   tubeData[規格].drill は "DR2.3" のような表記のため、数値以外を除去して parseFloat する。
+   非チューブは従来通り DRILL_DIA_MAP を使う。 */
+function resolveDrillDiaLive(wt) {
+    if (isTubeWorkType(wt)) {
+        var spec = wizardState.tubeSpec || "";
+        if (typeof tubeData !== "undefined" && tubeData[spec] && tubeData[spec].drill) {
+            return parseFloat(String(tubeData[spec].drill).replace(/[^0-9.]/g, ""));
+        }
+        return NaN;
+    }
+    return typeof DRILL_DIA_MAP !== "undefined" ? (DRILL_DIA_MAP[wt] || NaN) : NaN;
 }
 
 /* ドリル深さ自動計算（logic.js の関数を使用）
    DOM が存在する場合は DOM の現在値を優先して参照する */
 function computeDrillDepthAuto() {
     var wt=wizardState.workType, st=wizardState.internalStyle;
-
-    // Tube: ドリル深さ = チューブ長さ
-    if (wt === "Tube") {
-        var tl = parseFloat(wizardState.tubeLength);
-        return !isNaN(tl) ? String(tl) : null;
-    }
 
     // 内径深さ: DOM 優先（同一画面でリアルタイム計算するため）
     var idDomEl=document.getElementById("id-depth");
@@ -884,7 +919,7 @@ function computeDrillDepthAuto() {
     var cpLive=computeCP(ipVal,pdVal);
     var cp=parseFloat(cpLive||wizardState.cpVal);
 
-    // Hirazoko / Ichimonji: logic.js は idDepth + 0.1 を finalDrillDepth に使用する
+    // Hirazoko / Ichimonji: logic.js は idDepth + 0.1 を finalDrillDepth に使用する（チューブも同じ式）
     if (st==="Hirazoko"||st==="Ichimonji") {
         return !isNaN(idD) ? (idD+0.1).toFixed(3) : null;
     }
@@ -892,19 +927,19 @@ function computeDrillDepthAuto() {
     if ((isM12Like(wt)||isG18Small(wt))&&st==="CrossSmall") {
         return !isNaN(cp) ? (cp+1.2+1).toFixed(3) : null;
     }
-    // 他の CrossSmall: calcSpecialDrillZ(style, drillDia, cp)
+    // 他の CrossSmall: calcSpecialDrillZ(style, drillDia, cp)（チューブは規格ごとの実ドリル径を使用）
     if (isCrossStyle(st)) {
-        if (typeof calcSpecialDrillZ==="undefined"||typeof DRILL_DIA_MAP==="undefined") return null;
-        var dd=DRILL_DIA_MAP[wt]||0; if (!dd||isNaN(cp)) return null;
+        if (typeof calcSpecialDrillZ==="undefined") return null;
+        var dd=resolveDrillDiaLive(wt); if (!dd||isNaN(cp)) return null;
         var z=calcSpecialDrillZ(st,dd,cp); return z!==null?String(z):null;
     }
-    // Yose: calcSpecialDrillZ(style, drillDia, idDepth)
+    // Yose: calcSpecialDrillZ(style, drillDia, idDepth)（チューブは規格ごとの実ドリル径を使用）
     if (st==="Yose") {
-        if (typeof calcSpecialDrillZ==="undefined"||typeof DRILL_DIA_MAP==="undefined") return null;
-        var dd2=DRILL_DIA_MAP[wt]||0; if (!dd2||isNaN(idD)) return null;
+        if (typeof calcSpecialDrillZ==="undefined") return null;
+        var dd2=resolveDrillDiaLive(wt); if (!dd2||isNaN(idD)) return null;
         var z2=calcSpecialDrillZ(st,dd2,idD); return z2!==null?String(z2):null;
     }
-    // YoseRelay: calcYoseRelayMetrics
+    // YoseRelay: calcYoseRelayMetrics（チューブは resolveDrillDia 経由で規格ごとの実ドリル径を使用）
     if (st==="YoseRelay") {
         if (typeof calcYoseRelayMetrics==="undefined") return null;
         var m=calcYoseRelayMetrics({workType:wt,tubeSpec:wizardState.tubeSpec,
@@ -914,7 +949,15 @@ function computeDrillDepthAuto() {
         if (!isNaN(m.relayIdDepth)&&isFinite(m.relayIdDepth)) wizardState.idDepth=m.relayIdDepth.toFixed(3);
         return (!isNaN(m.relayDrillDepth)&&isFinite(m.relayDrillDepth))?m.relayDrillDepth.toFixed(3):null;
     }
+    // Normal 等: 自動計算式なし（他ワーク種別と同様、手動入力が必要）
     return null;
+}
+
+/* ドリル深さ「手動入力」の実効フラグ。styleHasDrillAutoCalc() が false のスタイル（Normal等）は
+   自動計算式そのものが無いため、wizardState.drillDepthManual の値（トグル未操作なら false）に
+   関わらず常に手動入力として扱う。 */
+function isDrillDepthManualEffective() {
+    return wizardState.drillDepthManual || !styleHasDrillAutoCalc(wizardState.internalStyle);
 }
 
 /* YoseRelay の内径深さ自動計算 */
@@ -961,19 +1004,21 @@ function updateCPDisplay() {
     var id=(document.getElementById("id-depth")||{value:""}).value;
     var pd=(document.getElementById("depth-partner-d")||{value:""}).value;
     var el=document.getElementById("depth-cp-display"); if(el) el.value=computeCP(id,pd);
-    // CrossSmall 仕上げ深さ参考値も更新
+    // CrossSmall 内径深さ（自動計算）も更新
     var cpV=computeCP(id,pd);
-    var hint=document.querySelector(".depth-finish-hint");
-    if (hint&&wizardState.internalStyle==="CrossSmall"&&cpV) {
-        var fd=computeCrossSmallFinishDepthHint(cpV, pd);
-        hint.textContent=fd?"内径仕上深さ参考値: "+fd+" mm":"";
+    var finishValEl=document.getElementById("cross-finish-depth-val");
+    if (finishValEl&&wizardState.internalStyle==="CrossSmall") {
+        var fd=cpV?computeCrossSmallFinishDepthHint(cpV, pd):null;
+        finishValEl.innerHTML = fd!==null
+            ? escapeHtml(fd)+' mm <span class="depth-auto-badge">自動計算</span>'
+            : '<span style="color:var(--text-sub)">IP・相手径を入力すると自動計算されます</span>';
     }
     // drillDepth 自動計算表示も更新
     updateDrillDepthDisplay();
 }
 /* drillDepth 自動計算バッジ（#drill-depth-auto-val）をリアルタイムで更新 */
 function updateDrillDepthDisplay() {
-    if (wizardState.drillDepthManual) return;
+    if (isDrillDepthManualEffective()) return;
     var autoRow=document.getElementById("drill-depth-auto-row");
     var autoValEl=document.getElementById("drill-depth-auto-val");
     if (!autoRow||!autoValEl) return; // 手動入力モード（#drill-depth-auto-row が存在しない）
@@ -992,16 +1037,13 @@ function bindDepthInputs() {
     });
 }
 function initDrillAutoCalc() {
-    // 自動計算値をstateに書き込む（手動でない場合）
-    if (!wizardState.drillDepthManual) {
+    // 自動計算値をstateに書き込む（手動でない場合。自動計算式が無いスタイルは常に手動扱い）
+    if (!isDrillDepthManualEffective()) {
         var av=computeDrillDepthAuto();
         if (av!==null) wizardState.drillDepth=av;
     }
-    computeIdDepthForRelay(); // YoseRelay: idDepthを自動セット
-    // Tube: idDepthをtubeDataから自動セット
-    if (wizardState.workType === "Tube") {
-        var tubId = computeIdDepthForTube();
-        if (tubId !== null) wizardState.idDepth = tubId;
+    if (!wizardState.idDepthManual) {
+        computeIdDepthForRelay(); // YoseRelay: idDepthを自動セット
     }
 }
 
@@ -1074,7 +1116,7 @@ function doRestart() {
     wizardState={machine:null,workType:null,tubeSpec:"",tubeLength:"",internalStyle:null,
         yoseMethod:"2",yoseAngle:"60",yoseD:"",yoseTotalLength:"",yosePartnerDepth:"",
         maxOD:"",calcMode:"normal",valStockA:"",valStockB:"",valEccA:"",valEccB:"",valCornW:"",valCornH:"",
-        ateLength:"",drillMode:"G74",drillDepth:"",drillDepthManual:false,idDepth:"",
+        ateLength:"",drillMode:"G74",drillDepth:"",drillDepthManual:false,idDepth:"",idDepthManual:false,
         mhOdTool:"外径荒",g12bNoseR:"none",m12FinishType:"hss",m12CrossMethod:"hss_oku",g18CrossMethod:"hgdr_oku",
         valPartnerD:"",cpVal:"",okuBiteEnabled:false,m99Mode:"off",
         drawNumA:"",drawNumB:"2",drawRev:"NONE",processNum:"1",workerName:""};
@@ -1089,12 +1131,13 @@ function handleAction(action, value) {
             wizardState.workType=value;
             wizardState.internalStyle=(value==="J_M8_300"||value==="J_M8_200")?"CrossSmall":null;
             wizardState.drillDepthManual=false;
+            wizardState.idDepthManual=false;
             advance("q-worktype"); break;
         case "select-tube-spec":   wizardState.tubeSpec=value; wizardState.tubeLength=""; advance("q-tube-spec"); break;
         case "select-tube-length": wizardState.tubeLength=value; advance("q-tube-length"); break;
         case "select-style":
             if (getAvailableStyles(wizardState.workType).indexOf(value)===-1) break;
-            wizardState.internalStyle=value; wizardState.drillDepthManual=false; advance("q-style"); break;
+            wizardState.internalStyle=value; wizardState.drillDepthManual=false; wizardState.idDepthManual=false; advance("q-style"); break;
         case "select-yose-method":
             wizardState.yoseMethod=value;
             document.querySelectorAll("[data-action='select-yose-method']").forEach(function(b){b.classList.toggle("selected",b.dataset.value===value);});
@@ -1113,6 +1156,12 @@ function handleAction(action, value) {
             if(document.getElementById("yose-d") && !wizardState.yoseD){showToast("相手径 Φdを入力してください");return;}
             if(document.getElementById("yose-total-len") && !wizardState.yoseTotalLength){showToast("全長を入力してください");return;}
             if(document.getElementById("yose-partner-depth") && !wizardState.yosePartnerDepth){showToast("相手径深さを入力してください");return;}
+            // 相手径(Φd)と加工径の大小関係チェック（フィールド欄に赤枠+メッセージで表示済み。
+            // blur済みでない場合の保険として、ここでも同じ関数で再チェックしてから次へ進む）。
+            {
+                var _yoseDEl=document.getElementById("yose-d");
+                if (_yoseDEl && !validateYoseDField(_yoseDEl)) return;
+            }
             advance("q-yose-detail"); break;
         case "select-mh-tool":
             wizardState.mhOdTool=value;
@@ -1183,6 +1232,19 @@ function handleAction(action, value) {
             }
             renderScreen("q-depths"); break;
         }
+        case "toggle-id-manual": {
+            var curValId=(document.getElementById("id-depth")||{value:""}).value;
+            if (wizardState.idDepthManual) {
+                // 自動に戻す
+                wizardState.idDepthManual=false;
+                wizardState.idDepth="";
+            } else {
+                // 手動に切替（例外加工向け）
+                wizardState.idDepthManual=true;
+                if (curValId) wizardState.idDepth=curValId;
+            }
+            renderScreen("q-depths"); break;
+        }
         case "quick-drill":
             wizardState.drillDepth=value;
             var di=document.getElementById("drill-depth"); if(di){di.value=value;}
@@ -1207,8 +1269,8 @@ function handleAction(action, value) {
             refreshDrillModeSection();
             break;
         case "next-depths":
-            // 自動計算値を最終確定
-            if (!wizardState.drillDepthManual) {
+            // 自動計算値を最終確定（自動計算式が無いスタイルは常に手動入力欄の値を採用）
+            if (!isDrillDepthManualEffective()) {
                 var av2=computeDrillDepthAuto();
                 if (av2!==null) wizardState.drillDepth=av2;
             } else {
@@ -1225,7 +1287,7 @@ function handleAction(action, value) {
             if (document.getElementById("depth-partner-d") && !wizardState.valPartnerD) {
                 showToast(isCrossStyle(wizardState.internalStyle) ? "相手径を入力してください" : "ドリル径を入力してください"); return;
             }
-            if (wizardState.drillDepthManual && !(document.getElementById("drill-depth")||{value:""}).value.trim()) {
+            if (isDrillDepthManualEffective() && !(document.getElementById("drill-depth")||{value:""}).value.trim()) {
                 showToast("ドリル深さを入力してください"); return;
             }
             // 奥バイトは m12CrossMethod から自動判定 - ここでは何もしない
@@ -1242,12 +1304,29 @@ function handleAction(action, value) {
             // 重複させない（ここまでの画面で入力済みの図番・作成者チェックはまだ対象外）。
             if (typeof validateBasicSelections==="function") {
                 var _earlyInput=buildInputFromState();
+                var _warnEl=document.getElementById("depths-style-warning");
+                if (isCrossStyle(wizardState.internalStyle)) {
+                    // メッセージは #depths-style-warning ボックス（「通常バイト加工へ切替」導線つき）に
+                    // 表示するため、同じ内容のトーストは重ねて出さない（フィールド欄はblur済みなら
+                    // validatePartnerDField により既に赤枠表示済みのはず。保険として再度反映する）。
+                    var _crossCheck=validateCrossSmallPartnerDia(_earlyInput);
+                    if (_warnEl) _warnEl.innerHTML=_crossCheck.ok?"":buildStyleSwitchWarningHTML(_crossCheck.msg);
+                    var _partnerDEl=document.getElementById("depth-partner-d");
+                    if (_partnerDEl) _partnerDEl.classList.toggle("wiz-input--invalid", !_crossCheck.ok);
+                    if (!_crossCheck.ok) return;
+                } else if (_warnEl) {
+                    _warnEl.innerHTML="";
+                }
                 var _earlyErrors=validateBasicSelections(_earlyInput)
                     .concat(validateCommonNumericFields(_earlyInput))
                     .concat(validateStyleSpecificRules(_earlyInput));
                 if (_earlyErrors.length) { showToast(_earlyErrors[0]); return; }
             }
             advance("q-depths"); break;
+        case "switch-to-normal-style":
+            wizardState.internalStyle="Normal";
+            renderScreen("q-depths");
+            break;
         case "set-author":
             wizardState.workerName=value;
             var wi=document.getElementById("worker-name"); if(wi) wi.value=value; break;
@@ -1350,7 +1429,8 @@ function buildInputFromState() {
         drillDepth:wizardState.drillDepth, idDepth:wizardState.idDepth, drillMode:wizardState.drillMode||"G74",
         workType:wizardState.workType, internalStyle:wizardState.internalStyle||"",
         m99Mode:wizardState.workType==="Tube"?"off":(wizardState.m99Mode||"off"),
-        m99p100:wizardState.m99Mode==="on",
+        // Tube_MH は q-maxod 画面（M99P100選択UI）を通らないため、常にON固定で扱う
+        m99p100:wizardState.workType==="Tube_MH"?true:wizardState.m99Mode==="on",
         mhOdTool:wizardState.mhOdTool||"外径荒", g12bNoseR:wizardState.g12bNoseR||"none",
         m12FinishType:isM12Like(wizardState.workType)?m12r.finishType:"hss",
         m12Profile:isM12Like(wizardState.workType)?m12r.profile:"drill_ichi_hira",
@@ -1440,45 +1520,102 @@ function initValidation() {
     document.querySelectorAll(".validate-positive").forEach(function(el) {
         if (el.dataset.valBound) return;
         el.dataset.valBound = "1";
-        el.addEventListener("input", function() { validatePositive(el); });
+        var run = fieldValidatorFor(el.id);
+        el.addEventListener("input", function() { run(el); });
         el.addEventListener("blur",  function() {
-            applyNumericFormulaOnBlur(el); // フォーカスアウト時に計算式を数値へ置き換える
-            validatePositive(el);
+            commitNumericField(el); // フォーカスアウト時に計算式を数値へ置き換え、入力チェックを実行
         });
     });
 }
-function validatePositive(el) {
-    var v = el.value.trim();
+// フィールドIDごとに追加の業種固有チェックを重ねる関数を返す（無ければ共通の正数チェックのみ）。
+// yose-d / depth-partner-d は、以前は generateGCode() の最終ゲートでしか検出されず
+// ウィザードの残り画面を全部入力し終えてから気づく形になっていたため、該当欄を
+// 離れた時点で他の欄と同じテキストボックス型エラーとして即座に表示する。
+function fieldValidatorFor(id) {
+    if (id === "yose-d") return validateYoseDField;
+    if (id === "depth-partner-d") return validatePartnerDField;
+    return validatePositive;
+}
+function setFieldError(el, msg) {
+    el.classList.add("wiz-input--invalid");
     var errId = el.id+"-err";
     var existing = document.getElementById(errId);
-    if (v === "") {
-        el.classList.remove("wiz-input--invalid");
-        if (existing) existing.remove();
-        return true;
+    if (!existing) {
+        existing = document.createElement("div");
+        existing.id = errId; existing.className = "wiz-field-error";
+        el.parentNode.insertBefore(existing, el.nextSibling);
     }
+    existing.textContent = msg;
+}
+function clearFieldError(el) {
+    el.classList.remove("wiz-input--invalid");
+    var existing = document.getElementById(el.id+"-err");
+    if (existing) existing.remove();
+}
+function validatePositive(el) {
+    var v = el.value.trim();
+    if (v === "") { clearFieldError(el); return true; }
     var num = parseSimpleNumberOrFormula(v);
     if (isNaN(num) || num <= 0) {
-        el.classList.add("wiz-input--invalid");
-        if (!existing) {
-            var e = document.createElement("div");
-            e.id = errId; e.className = "wiz-field-error";
-            e.textContent = "正の数値、または + - * / を使った計算式を入力してください";
-            el.parentNode.insertBefore(e, el.nextSibling);
-        }
+        setFieldError(el, "正の数値、または + - * / を使った計算式を入力してください");
         return false;
     }
-    el.classList.remove("wiz-input--invalid");
-    if (existing) existing.remove();
+    clearFieldError(el);
     return true;
 }
-// フォーカスアウト時、入力値が数値または計算式として解釈できれば、
-// 計算結果の数値そのものに置き換える（例:「10.5+2.3」→「12.8」）。
-// 解釈できない場合は何もしない（validatePositive 側でエラー表示される）。
-function applyNumericFormulaOnBlur(el) {
+// ── ヨセ/ヨセ中継: 相手径(Φd)と加工径の大小関係チェック ──
+function validateYoseDField(el) {
+    if (!validatePositive(el)) return false;
+    if (!isYoseMachiningStyle(wizardState.internalStyle) && !isYoseRelayStyle(wizardState.internalStyle)) return true;
+    var result = validateYoseDDiameter({
+        yoseD: el.value,
+        workType: wizardState.workType,
+        tubeSpec: wizardState.tubeSpec,
+        internalStyle: wizardState.internalStyle,
+    });
+    if (!result.ok) { setFieldError(el, result.msg); return false; }
+    clearFieldError(el);
+    return true;
+}
+// ── 交差穴(加工径小): 相手径の±0.5mmルールチェック ──
+// メッセージは「通常バイト加工へ切替」の導線を持つ #depths-style-warning ボックス側に表示するため、
+// このフィールドでは境界線の色のみ切り替え、別テキストのエラーメッセージは重ねて出さない。
+function validatePartnerDField(el) {
+    if (!validatePositive(el)) return false;
+    var warnEl = document.getElementById("depths-style-warning");
+    if (wizardState.internalStyle !== "CrossSmall") {
+        if (warnEl) warnEl.innerHTML = "";
+        return true;
+    }
+    var result = validateCrossSmallPartnerDia({
+        valPartnerD: el.value,
+        workType: wizardState.workType,
+        tubeSpec: wizardState.tubeSpec,
+        internalStyle: wizardState.internalStyle,
+    });
+    if (warnEl) warnEl.innerHTML = result.ok ? "" : buildStyleSwitchWarningHTML(result.msg);
+    el.classList.toggle("wiz-input--invalid", !result.ok);
+    return result.ok;
+}
+// 数式の確定と検証を行う共通関数。フォーカスアウト時と、Enter キーで「次へ」を
+// 実行する直前の両方から呼ぶ（旧 applyNumericFormulaOnBlur を整理したもの）。
+// 入力値が数値または計算式として解釈できれば、計算結果の数値そのものに
+// 置き換える（例:「10.5+2.3」→「12.8」）。解釈できない場合は値を書き換えない
+// （後段の入力チェックでエラー表示される）。
+// 値をJSから書き換えるだけでは input イベントが発火しないため、CP値・内径深さ等の
+// 連動表示（updateCPDisplay 等、"input" イベント購読側）が入力途中の古い値のまま
+// 固まってしまう。そのため値を書き換えた後に input イベントを明示的に発火させる。
+// 戻り値: fieldValidatorFor(el.id) による入力チェックの成否（false なら遷移不可）。
+function commitNumericField(el) {
     var v = el.value.trim();
-    if (v === "") return;
-    var num = parseSimpleNumberOrFormula(v);
-    if (!isNaN(num)) el.value = String(num);
+    if (v !== "") {
+        var num = parseSimpleNumberOrFormula(v);
+        if (!isNaN(num)) {
+            el.value = String(num);
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+    }
+    return fieldValidatorFor(el.id)(el);
 }
 
 // ---- 半角チェック（全角文字などを即座に消去する） ----
@@ -1569,12 +1706,24 @@ document.addEventListener("DOMContentLoaded", function() {
     // Enter キーで画面内の「次へ」ボタンをクリック
     document.addEventListener("keydown", function(e) {
         if (e.key !== "Enter") return;
-        var tag = document.activeElement && document.activeElement.tagName;
+        if (e.isComposing || e.keyCode === 229) return; // IMEの変換確定Enterでは遷移しない
+        var active = document.activeElement;
+        var tag = active && active.tagName;
         if (tag === "BUTTON" || tag === "TEXTAREA" || tag === "SELECT") return;
         var main = document.getElementById("wiz-main");
         if (!main) return;
         var prim = main.querySelector(".wiz-btn-primary[data-action]");
-        if (prim) { e.preventDefault(); prim.click(); }
+        if (!prim) return;
+        e.preventDefault();
+        // 四則演算対応欄（.validate-positive）にフォーカス中なら、blur を待たずに
+        // ここで数式を確定させてから遷移する。確定後の値で連動表示（CP値等）も
+        // input イベント経由で更新される。不正な式（「1+」「1/0」や 0 以下）は
+        // エラー表示のまま遷移しない。値の置き換えは commitNumericField 内で
+        // 完結するため、遷移後に旧要素の blur が重なってもクリックは1回のみ。
+        if (active && active.classList && active.classList.contains("validate-positive")) {
+            if (!commitNumericField(active)) return;
+        }
+        prim.click();
     });
 
     renderScreen("start");

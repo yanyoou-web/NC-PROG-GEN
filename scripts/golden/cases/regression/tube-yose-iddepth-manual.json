@@ -1,0 +1,17 @@
+{
+  "description": "チューブ + ヨセ: 内径深さ(idDepth)はチューブ長さ(tubeLength)に依存せず、手入力した値(15)がそのままヨセのテーパ計算に使われること（tubeLength=25とは異なる値で確認）。drillDepthはgui-v2.jsのcomputeDrillDepthAuto()がidDepth(15)+規格ドリル径(DR7.0)から自動計算する値(0.3*7.0+15-0.4=16.70)を、実際のウィザード操作を模して明示的に設定している。旧バグ: gui-v2.jsのcomputeIdDepthForTubeYose()がチューブ長さを内径深さの自動値として使っていた。",
+  "machine": "NCL044",
+  "wizardState": {
+    "workType": "Tube",
+    "internalStyle": "Yose",
+    "tubeSpec": "12x10 (R1)",
+    "tubeLength": "25",
+    "ateLength": "20",
+    "maxOD": "16",
+    "idDepth": "15",
+    "drillDepth": "16.70",
+    "yoseD": "6",
+    "drawNumA": "12345",
+    "workerName": "YAMADA"
+  }
+}
