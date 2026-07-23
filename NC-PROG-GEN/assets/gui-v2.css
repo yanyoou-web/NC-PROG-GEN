@@ -601,8 +601,8 @@ body {
 }
 .wiz-input--lg   { font-size: 1.1rem; padding: 12px 14px; }
 .wiz-input--hero { font-size: 1.4rem; padding: 16px 18px; text-align: center; }
-.wiz-input--sm   { width: 7ch; text-align: center; }
-.wiz-input--xs   { width: 4ch; text-align: center; }
+.wiz-input--sm   { width: 10ch; text-align: center; }
+.wiz-input--xs   { width: 7ch; text-align: center; }
 
 .wiz-select {
     background: var(--bg-input);
