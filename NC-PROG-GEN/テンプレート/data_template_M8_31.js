@@ -126,9 +126,9 @@ registerWorkType({
         styles: ["Ichimonji", "YoseRelay", "CrossSmall"],
     },
     machining: {
-        idDiameterMm: null,
-        drillDiameterMm: 3,
-        flatBottomToolDiameterMm: null,
+        idDiameterMm: 3.1,
+        drillDiameterMm: 3.1,
+        flatBottomToolDiameterMm: 3.,
         drillMaxDepthMm: 30,
     },
     features: { mh: false, tube: false },
