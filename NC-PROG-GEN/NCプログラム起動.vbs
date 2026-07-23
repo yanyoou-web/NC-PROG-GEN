@@ -159,12 +159,20 @@ Function RestoreExistingEdgeWindow(windowTitle)
         "public static extern bool IsZoomed(System.IntPtr hWnd);" & vbCrLf & _
         "[System.Runtime.InteropServices.StructLayout(" & _
         "System.Runtime.InteropServices.LayoutKind.Sequential)]" & vbCrLf & _
+        "public struct POINT { public int X; public int Y; }" & vbCrLf & _
+        "[System.Runtime.InteropServices.StructLayout(" & _
+        "System.Runtime.InteropServices.LayoutKind.Sequential)]" & vbCrLf & _
         "public struct RECT { public int Left; public int Top; " & _
         "public int Right; public int Bottom; }" & vbCrLf & _
         "[System.Runtime.InteropServices.StructLayout(" & _
         "System.Runtime.InteropServices.LayoutKind.Sequential)]" & vbCrLf & _
         "public struct MONITORINFO { public int cbSize; public RECT rcMonitor; " & _
         "public RECT rcWork; public int dwFlags; }" & vbCrLf & _
+        "[System.Runtime.InteropServices.StructLayout(" & _
+        "System.Runtime.InteropServices.LayoutKind.Sequential)]" & vbCrLf & _
+        "public struct WINDOWPLACEMENT { public int length; public int flags; " & _
+        "public int showCmd; public POINT ptMinPosition; " & _
+        "public POINT ptMaxPosition; public RECT rcNormalPosition; }" & vbCrLf & _
         "[System.Runtime.InteropServices.DllImport(""user32.dll"")]" & vbCrLf & _
         "public static extern System.IntPtr MonitorFromWindow(" & _
         "System.IntPtr hWnd, uint dwFlags);" & vbCrLf & _
@@ -176,15 +184,18 @@ Function RestoreExistingEdgeWindow(windowTitle)
         "public static extern bool SetWindowPos(System.IntPtr hWnd, " & _
         "System.IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, " & _
         "uint uFlags);" & vbCrLf & _
+        "[System.Runtime.InteropServices.DllImport(""user32.dll"")]" & vbCrLf & _
+        "public static extern bool GetWindowPlacement(System.IntPtr hWnd, " & _
+        "ref WINDOWPLACEMENT lpwndpl);" & vbCrLf & _
+        "[System.Runtime.InteropServices.DllImport(""user32.dll"")]" & vbCrLf & _
+        "public static extern bool SetWindowPlacement(System.IntPtr hWnd, " & _
+        "ref WINDOWPLACEMENT lpwndpl);" & vbCrLf & _
         "'@" & vbCrLf & _
         "Add-Type -Name NativeMethods -Namespace Launcher " & _
         "-MemberDefinition $memberDefinition" & vbCrLf & _
         "$windowHandle = $process.MainWindowHandle" & vbCrLf & _
-        "if ([Launcher.NativeMethods]::IsIconic($windowHandle) -or " & _
-        "[Launcher.NativeMethods]::IsZoomed($windowHandle)) {" & vbCrLf & _
-        "    [void][Launcher.NativeMethods]::ShowWindowAsync($windowHandle, 9)" & vbCrLf & _
-        "    Start-Sleep -Milliseconds 100" & vbCrLf & _
-        "}" & vbCrLf & _
+        "$isMinimized = [Launcher.NativeMethods]::IsIconic($windowHandle)" & vbCrLf & _
+        "$isMaximized = [Launcher.NativeMethods]::IsZoomed($windowHandle)" & vbCrLf & _
         "$monitorInfo = New-Object 'Launcher.NativeMethods+MONITORINFO'" & vbCrLf & _
         "$monitorInfo.cbSize = " & _
         "[System.Runtime.InteropServices.Marshal]::SizeOf($monitorInfo)" & vbCrLf & _
@@ -202,9 +213,45 @@ Function RestoreExistingEdgeWindow(windowTitle)
         "[int](($workWidth - $targetWidth) / 2)" & vbCrLf & _
         "    $centerY = $monitorInfo.rcWork.Top + " & _
         "[int](($workHeight - $targetHeight) / 2)" & vbCrLf & _
-        "    [void][Launcher.NativeMethods]::SetWindowPos(" & _
+        "    if ($isMinimized) {" & vbCrLf & _
+        "        $placement = New-Object " & _
+        "'Launcher.NativeMethods+WINDOWPLACEMENT'" & vbCrLf & _
+        "        $placement.length = " & _
+        "[System.Runtime.InteropServices.Marshal]::SizeOf($placement)" & vbCrLf & _
+        "        if ([Launcher.NativeMethods]::GetWindowPlacement(" & _
+        "$windowHandle, [ref]$placement)) {" & vbCrLf & _
+        "            $normalPosition = New-Object " & _
+        "'Launcher.NativeMethods+RECT'" & vbCrLf & _
+        "            $normalPosition.Left = $centerX" & vbCrLf & _
+        "            $normalPosition.Top = $centerY" & vbCrLf & _
+        "            $normalPosition.Right = " & _
+        "$centerX + $targetWidth" & vbCrLf & _
+        "            $normalPosition.Bottom = " & _
+        "$centerY + $targetHeight" & vbCrLf & _
+        "            $placement.rcNormalPosition = $normalPosition" & vbCrLf & _
+        "            $placement.showCmd = 2" & vbCrLf & _
+        "            [void][Launcher.NativeMethods]::SetWindowPlacement(" & _
+        "$windowHandle, [ref]$placement)" & vbCrLf & _
+        "            [void][Launcher.NativeMethods]::ShowWindowAsync(" & _
+        "$windowHandle, 9)" & vbCrLf & _
+        "        } else {" & vbCrLf & _
+        "            [void][Launcher.NativeMethods]::ShowWindowAsync(" & _
+        "$windowHandle, 9)" & vbCrLf & _
+        "            Start-Sleep -Milliseconds 100" & vbCrLf & _
+        "            [void][Launcher.NativeMethods]::SetWindowPos(" & _
         "$windowHandle, [System.IntPtr]::Zero, $centerX, $centerY, " & _
         "$targetWidth, $targetHeight, 68)" & vbCrLf & _
+        "        }" & vbCrLf & _
+        "    } else {" & vbCrLf & _
+        "        if ($isMaximized) {" & vbCrLf & _
+        "            [void][Launcher.NativeMethods]::ShowWindowAsync(" & _
+        "$windowHandle, 9)" & vbCrLf & _
+        "            Start-Sleep -Milliseconds 100" & vbCrLf & _
+        "        }" & vbCrLf & _
+        "        [void][Launcher.NativeMethods]::SetWindowPos(" & _
+        "$windowHandle, [System.IntPtr]::Zero, $centerX, $centerY, " & _
+        "$targetWidth, $targetHeight, 68)" & vbCrLf & _
+        "    }" & vbCrLf & _
         "}" & vbCrLf & _
         "[void][Launcher.NativeMethods]::SetForegroundWindow($windowHandle)" & vbCrLf & _
         "exit 0"
@@ -344,10 +391,11 @@ If Not fso.FileExists(edgePath) Then
     WScript.Quit 1
 End If
 
-' Open the HTML file in a dedicated Edge app window.
-shell.Run """" & edgePath & """ --app=""" & fileUrl & """", 1, False
+' Open minimized, then show the app only after its size and position are ready.
+shell.Run """" & edgePath & """ --start-minimized --app=""" & _
+          fileUrl & """", 1, False
 
-' Wait for the new window, then move it to the center as well.
+' Wait for the minimized window, prepare its size and position, then show it.
 For waitCount = 1 To 6
     WScript.Sleep 1500
 
