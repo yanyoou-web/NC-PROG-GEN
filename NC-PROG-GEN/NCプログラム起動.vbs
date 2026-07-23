@@ -7,7 +7,7 @@ Option Explicit
 ' - 新しく開く前にNAS上のgui-v2.htmlを確認する
 ' - NAS上のgui-v2.htmlが見つからない場合は日本語で案内する
 ' - 初回起動時に専用アイコン付きのデスクトップショートカットを作成する
-' - VBSを起動するたびに、通常表示の画面を現在のモニター中央へ移動する
+' - VBSを起動するたびに、画面をモニター表示範囲の幅・高さ75％にして中央へ移動する
 '
 ' 今後追加できる機能の候補
 ' - Edge／Chromeを起動時に選択できるようにする
@@ -99,9 +99,6 @@ Function RestoreExistingEdgeWindow(windowTitle)
         "public struct MONITORINFO { public int cbSize; public RECT rcMonitor; " & _
         "public RECT rcWork; public int dwFlags; }" & vbCrLf & _
         "[System.Runtime.InteropServices.DllImport(""user32.dll"")]" & vbCrLf & _
-        "public static extern bool GetWindowRect(" & _
-        "System.IntPtr hWnd, out RECT lpRect);" & vbCrLf & _
-        "[System.Runtime.InteropServices.DllImport(""user32.dll"")]" & vbCrLf & _
         "public static extern System.IntPtr MonitorFromWindow(" & _
         "System.IntPtr hWnd, uint dwFlags);" & vbCrLf & _
         "[System.Runtime.InteropServices.DllImport(""user32.dll"", " & _
@@ -116,35 +113,31 @@ Function RestoreExistingEdgeWindow(windowTitle)
         "Add-Type -Name NativeMethods -Namespace Launcher " & _
         "-MemberDefinition $memberDefinition" & vbCrLf & _
         "$windowHandle = $process.MainWindowHandle" & vbCrLf & _
-        "if ([Launcher.NativeMethods]::IsIconic($windowHandle)) {" & vbCrLf & _
+        "if ([Launcher.NativeMethods]::IsIconic($windowHandle) -or " & _
+        "[Launcher.NativeMethods]::IsZoomed($windowHandle)) {" & vbCrLf & _
         "    [void][Launcher.NativeMethods]::ShowWindowAsync($windowHandle, 9)" & vbCrLf & _
         "    Start-Sleep -Milliseconds 100" & vbCrLf & _
         "}" & vbCrLf & _
-        "if (-not [Launcher.NativeMethods]::IsZoomed($windowHandle)) {" & vbCrLf & _
-        "    $rect = New-Object 'Launcher.NativeMethods+RECT'" & vbCrLf & _
-        "    $monitorInfo = New-Object 'Launcher.NativeMethods+MONITORINFO'" & vbCrLf & _
-        "    $monitorInfo.cbSize = " & _
+        "$monitorInfo = New-Object 'Launcher.NativeMethods+MONITORINFO'" & vbCrLf & _
+        "$monitorInfo.cbSize = " & _
         "[System.Runtime.InteropServices.Marshal]::SizeOf($monitorInfo)" & vbCrLf & _
-        "    $monitor = [Launcher.NativeMethods]::MonitorFromWindow(" & _
+        "$monitor = [Launcher.NativeMethods]::MonitorFromWindow(" & _
         "$windowHandle, 2)" & vbCrLf & _
-        "    if ([Launcher.NativeMethods]::GetWindowRect(" & _
-        "$windowHandle, [ref]$rect) -and " & vbCrLf & _
-        "        [Launcher.NativeMethods]::GetMonitorInfo(" & _
+        "if ([Launcher.NativeMethods]::GetMonitorInfo(" & _
         "$monitor, [ref]$monitorInfo)) {" & vbCrLf & _
-        "        $windowWidth = $rect.Right - $rect.Left" & vbCrLf & _
-        "        $windowHeight = $rect.Bottom - $rect.Top" & vbCrLf & _
-        "        $workWidth = $monitorInfo.rcWork.Right - " & _
+        "    $workWidth = $monitorInfo.rcWork.Right - " & _
         "$monitorInfo.rcWork.Left" & vbCrLf & _
-        "        $workHeight = $monitorInfo.rcWork.Bottom - " & _
+        "    $workHeight = $monitorInfo.rcWork.Bottom - " & _
         "$monitorInfo.rcWork.Top" & vbCrLf & _
-        "        $centerX = $monitorInfo.rcWork.Left + " & _
-        "[int](($workWidth - $windowWidth) / 2)" & vbCrLf & _
-        "        $centerY = $monitorInfo.rcWork.Top + " & _
-        "[int](($workHeight - $windowHeight) / 2)" & vbCrLf & _
-        "        [void][Launcher.NativeMethods]::SetWindowPos(" & _
+        "    $targetWidth = [int]($workWidth * 0.75)" & vbCrLf & _
+        "    $targetHeight = [int]($workHeight * 0.75)" & vbCrLf & _
+        "    $centerX = $monitorInfo.rcWork.Left + " & _
+        "[int](($workWidth - $targetWidth) / 2)" & vbCrLf & _
+        "    $centerY = $monitorInfo.rcWork.Top + " & _
+        "[int](($workHeight - $targetHeight) / 2)" & vbCrLf & _
+        "    [void][Launcher.NativeMethods]::SetWindowPos(" & _
         "$windowHandle, [System.IntPtr]::Zero, $centerX, $centerY, " & _
-        "0, 0, 69)" & vbCrLf & _
-        "    }" & vbCrLf & _
+        "$targetWidth, $targetHeight, 68)" & vbCrLf & _
         "}" & vbCrLf & _
         "[void][Launcher.NativeMethods]::SetForegroundWindow($windowHandle)" & vbCrLf & _
         "exit 0"
