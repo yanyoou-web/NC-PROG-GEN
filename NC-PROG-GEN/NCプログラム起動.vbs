@@ -6,7 +6,6 @@ Option Explicit
 ' - 起動が重なった場合も、同じ画面を複数開かない
 ' - 新しく開く前にNAS上のgui-v2.htmlを確認する
 ' - NAS上のgui-v2.htmlが見つからない場合は日本語で案内する
-' - 初回起動時に専用アイコン付きのデスクトップショートカットを作成する
 ' - 通常は760×900px、小さいモニターでは表示可能範囲の90％に縮小して中央へ移動する
 '
 ' 今後追加できる機能の候補
@@ -35,7 +34,6 @@ Dim lockPath
 Dim hasLaunchLock
 Dim waitCount
 Dim nasMessage
-Dim iconSourcePath
 
 appTitle = "NC" & _
            ChrW(&H30D7) & ChrW(&H30ED) & ChrW(&H30B0) & _
@@ -266,115 +264,6 @@ Sub ReleaseLaunchLock(folderPath)
     On Error GoTo 0
 End Sub
 
-Function CreateShortcutIcon(sourcePngPath, destinationIconPath)
-    Dim tempFolder
-    Dim tempPsPath
-    Dim psFile
-    Dim psScript
-    Dim command
-    Dim exitCode
-
-    CreateShortcutIcon = False
-
-    If Not fso.FileExists(sourcePngPath) Then
-        Exit Function
-    End If
-
-    tempFolder = shell.ExpandEnvironmentStrings("%TEMP%")
-    tempPsPath = fso.BuildPath(tempFolder, fso.GetTempName & ".ps1")
-
-    psScript = _
-        "param([string]$SourcePng, [string]$DestinationIco)" & vbCrLf & _
-        "Add-Type -AssemblyName System.Drawing" & vbCrLf & _
-        "$bitmap = [System.Drawing.Bitmap]::FromFile($SourcePng)" & vbCrLf & _
-        "try {" & vbCrLf & _
-        "    $icon = [System.Drawing.Icon]::FromHandle($bitmap.GetHicon())" & vbCrLf & _
-        "    try {" & vbCrLf & _
-        "        $stream = [System.IO.File]::Open(" & _
-        "$DestinationIco, [System.IO.FileMode]::Create)" & vbCrLf & _
-        "        try { $icon.Save($stream) } finally { $stream.Dispose() }" & vbCrLf & _
-        "    } finally { $icon.Dispose() }" & vbCrLf & _
-        "} finally { $bitmap.Dispose() }" & vbCrLf & _
-        "if (Test-Path -LiteralPath $DestinationIco) { exit 0 }" & vbCrLf & _
-        "exit 1"
-
-    On Error Resume Next
-    Set psFile = fso.CreateTextFile(tempPsPath, True, False)
-
-    If Err.Number = 0 Then
-        psFile.Write psScript
-        psFile.Close
-
-        command = "powershell.exe -NoProfile -NonInteractive " & _
-                  "-ExecutionPolicy Bypass -WindowStyle Hidden -File """ & _
-                  tempPsPath & """ """ & sourcePngPath & """ """ & _
-                  destinationIconPath & """"
-        exitCode = shell.Run(command, 0, True)
-
-        If Err.Number = 0 And exitCode = 0 And _
-           fso.FileExists(destinationIconPath) Then
-            CreateShortcutIcon = True
-        End If
-    End If
-
-    Err.Clear
-    If fso.FileExists(tempPsPath) Then
-        fso.DeleteFile tempPsPath, True
-    End If
-    On Error GoTo 0
-End Function
-
-Sub EnsureDesktopShortcut(scriptPath, workingFolder, sourcePngPath, edgeExecutable)
-    Dim desktopFolder
-    Dim shortcutPath
-    Dim iconFolder
-    Dim iconPath
-    Dim launcher
-    Dim wscriptPath
-
-    On Error Resume Next
-
-    desktopFolder = shell.SpecialFolders("Desktop")
-    shortcutPath = fso.BuildPath(desktopFolder, appTitle & ".lnk")
-
-    ' Keep an existing shortcut exactly as the user configured it.
-    If fso.FileExists(shortcutPath) Then
-        On Error GoTo 0
-        Exit Sub
-    End If
-
-    iconFolder = fso.BuildPath( _
-        shell.ExpandEnvironmentStrings("%LOCALAPPDATA%"), "NC-PROG-GEN")
-
-    If Not fso.FolderExists(iconFolder) Then
-        fso.CreateFolder iconFolder
-    End If
-
-    iconPath = fso.BuildPath(iconFolder, "NC-PROG-GEN.ico")
-
-    If Not fso.FileExists(iconPath) Then
-        CreateShortcutIcon sourcePngPath, iconPath
-    End If
-
-    wscriptPath = fso.BuildPath( _
-        shell.ExpandEnvironmentStrings("%SystemRoot%"), "System32\wscript.exe")
-
-    Set launcher = shell.CreateShortcut(shortcutPath)
-    launcher.TargetPath = wscriptPath
-    launcher.Arguments = """" & scriptPath & """"
-    launcher.WorkingDirectory = workingFolder
-    launcher.Description = appTitle
-
-    If fso.FileExists(iconPath) Then
-        launcher.IconLocation = iconPath & ",0"
-    ElseIf fso.FileExists(edgeExecutable) Then
-        launcher.IconLocation = edgeExecutable & ",0"
-    End If
-
-    launcher.Save
-    On Error GoTo 0
-End Sub
-
 appFolder = fso.GetParentFolderName(WScript.ScriptFullName)
 edgePath = shell.ExpandEnvironmentStrings("%ProgramFiles(x86)%") & _
            "\Microsoft\Edge\Application\msedge.exe"
@@ -383,9 +272,6 @@ If Not fso.FileExists(edgePath) Then
     edgePath = shell.ExpandEnvironmentStrings("%ProgramFiles%") & _
                "\Microsoft\Edge\Application\msedge.exe"
 End If
-
-iconSourcePath = fso.BuildPath(appFolder, "assets\icon-192.png")
-EnsureDesktopShortcut WScript.ScriptFullName, appFolder, iconSourcePath, edgePath
 
 ' Restore and focus an existing Edge app window, including a minimized window.
 If RestoreExistingEdgeWindow(appTitle) Then
